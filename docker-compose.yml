@@ -1,0 +1,122 @@
+version: "3.8"
+services:
+  react-app:
+    build:
+      context: .
+    ports:
+      - "3000:443"
+    depends_on:
+      - node-backend
+      - flask-backend
+      - mysql-db
+    networks:
+      - pinakastra-cloud_my-network
+    environment:
+      - REACT_APP_HOST_IP=${REACT_APP_HOST_IP}  # Dynamically pass the HOST_IP
+    volumes:
+      - shared-data:/usr/share/nginx/html
+
+  node-backend:
+    build:
+      context: ./backend/db
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mysql-db
+    environment:
+      - DB_HOST=mysql-db
+      - DB_USER=root
+      - DB_PASSWORD=Likith@172323
+      - DB_NAME=standalone
+      - EMAIL_USER=pinakastra.join@gmail.com
+      - EMAIL_PASS=sqei dbiv vxou ddsy
+      - SESSION_SECRET=your-secret-key
+    entrypoint: ["/bin/sh", "-c", "./wait-for-it-script.sh mysql-db node server.js"]
+    volumes:
+      - ./ssl:/etc/ssl  # Mount the SSL directory
+      - ./update-password.sh:/usr/src/app/update-password.sh
+      - ./.env:/usr/src/app/.env
+    networks:
+      - pinakastra-cloud_my-network
+
+  flask-backend:
+    build:
+      context: ./backend/python
+    depends_on:
+      - mysql-db
+    network_mode: host
+    volumes:
+      - ./ssl:/etc/ssl
+    environment:
+      - HOST_IP=${REACT_APP_HOST_IP}  # Add the host IP variable
+    command: gunicorn -w 4 -b 0.0.0.0:8000 --certfile=/etc/ssl/keycloak.crt --keyfile=/etc/ssl/keycloak.key app:app
+
+  script-service:
+    build:
+      context: ./backend/python/script
+    depends_on:
+      - mysql-db
+    volumes:
+      - shared-data:/home/d
+      - ./ssl:/etc/ssl
+    network_mode: host
+    command: gunicorn -w 4 -b 0.0.0.0:8888 --certfile=/etc/ssl/keycloak.crt --keyfile=/etc/ssl/keycloak.key script:app
+
+  monitor-service:
+    build:
+      context: ./backend/python/monitor
+    depends_on:
+      - mysql-db
+    network_mode: host
+    volumes:
+      - /var/log:/var/log 
+      - /home/pinaka/markers:/home/pinaka/markers
+      - ./ssl:/etc/ssl
+    command: gunicorn -w 4 -b 0.0.0.0:5055 --certfile=/etc/ssl/keycloak.crt --keyfile=/etc/ssl/keycloak.key server:app
+ 
+  deploy-service: 
+    build:
+      context: ./backend/python/ssh
+    depends_on:
+      - mysql-db
+    network_mode: host
+    volumes:
+      - ./ssl:/etc/ssl
+    command: gunicorn -w 4 -b 0.0.0.0:8080 --certfile=/etc/ssl/keycloak.crt --keyfile=/etc/ssl/keycloak.key deploy:app
+ 
+  mysql-db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: Likith@172323
+      MYSQL_DATABASE: standalone
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pinakastra-cloud_my-network
+
+  mongodb:
+    image: mongo:4.4 # Using the latest stable MongoDB image from Docker Hub
+    container_name: mongodb_container
+    # environment:
+    #   - MONGO_INITDB_ROOT_USERNAME=root
+    #   - MONGO_INITDB_ROOT_PASSWORD=pinaka
+    ports:
+      - "27017:27017" # Exposing MongoDB's default port to the host machine
+    volumes:
+      - mongodb_data:/data/db # Persist MongoDB data even after container restarts
+    networks:
+      - pinakastra-cloud_my-network
+volumes:
+  mysql-data:
+  shared-data:
+  mongodb_data:
+networks:
+  pinakastra-cloud_my-network:
+    external: true
