@@ -6,6 +6,8 @@ import {
   Breadcrumb,
   Input,
   Space,
+  Empty,
+  Typography,
 } from "antd";
 import { HomeOutlined } from "@ant-design/icons";
 import { CloudOutlined, InfoCircleOutlined } from "@ant-design/icons";
@@ -17,7 +19,7 @@ const getCloudNameFromMetadata = () => {
 
 const ActivateKey = () => {
   const cloudName = getCloudNameFromMetadata();
-
+  const [licenseCode, setLicenseCode] = useState("");
 
 
   return (
@@ -57,8 +59,30 @@ const ActivateKey = () => {
             placeholder="Enter code"
             style={{ width: 200 }}
           />
-          <Button type="primary">Check</Button>
+          <Button type="primary" >Check</Button>
         </Space>
+        {/* License details box */}
+        <label style={{ display: "block", fontWeight: 500, marginTop: "20px" }}>
+          License Deatils:
+        </label>
+        <div
+          style={{
+            marginTop: "16px",
+            padding: "12px",
+            minHeight: "60px",
+            border: "1px solid #d9d9d9",
+            borderRadius: "4px",
+            backgroundColor: "#fafafa",
+            fontSize: "14px",
+          }}
+        >
+          {/* Replace this with actual license details dynamically */}
+          <Empty description={
+            <Typography.Text>
+              No License Details
+            </Typography.Text>
+          } />
+        </div>
       </div>
 
     </div>
