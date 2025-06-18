@@ -25,11 +25,10 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%" }}>
+      <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%", marginBottom: "1.29%" }}>
         <CloudOutlined />
         &nbsp;&nbsp;{cloudName} Cloud
       </h5>
-
       <Breadcrumb style={{ marginBottom: "16px" }}>
         <Breadcrumb.Item>
           <HomeOutlined />
@@ -47,13 +46,13 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
           <div style={{ display: "flex", flexDirection: "column", gap: "60px" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <h5>Validation for development environment:</h5>
-              <Button type="primary" size="large" style={{ width: "120px", height:"35px" }}>
+              <Button type="primary" size="large" style={{ width: "120px", height: "35px" }}>
                 Validate
               </Button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <h5>Validation for production <br /> environment:</h5>
-              <Button type="primary" size="large" style={{ width: "120px",height:"35px" }}>
+              <Button type="primary" size="large" style={{ width: "120px", height: "35px" }}>
                 Validate
               </Button>
             </div>
@@ -70,19 +69,28 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
           />
 
           {/* Line with arrow */}
-          <div style={{ position: "relative", display:"flex",flex: 1, height: "3.9px", backgroundColor: "#000000" }}>
-            {/* Arrowhead at end of line */}
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              flex: 1,
+              height: "4px", // Slightly increased for consistency
+              backgroundColor: "#000000",
+              alignItems: "center",
+            }}
+          >
+            {/* Arrowhead at the end of the line */}
             <div
               style={{
                 position: "absolute",
-                top: "-4px",
-                right: "-4px",
+                right: 0,
+                top: "50%",
+                transform: "translateY(-50%) translateX(100%)",
                 width: 0,
                 height: 0,
-                display: "flex",
                 borderTop: "6px solid transparent",
                 borderBottom: "6px solid transparent",
-                borderLeft: "8px solid #000000"
+                borderLeft: "8px solid #000000",
               }}
             ></div>
           </div>

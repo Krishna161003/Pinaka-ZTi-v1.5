@@ -22,7 +22,7 @@ const App = () => {
   const [disabledTabs, setDisabledTabs] = useState(() => {
     // Initialize disabledTabs from sessionStorage or default
     const savedDisabledTabs = sessionStorage.getItem("disabledTabs");
-    return savedDisabledTabs ? JSON.parse(savedDisabledTabs) : { "2": true, "3": true, "4": true, "5": true, "6": true };
+    return savedDisabledTabs ? JSON.parse(savedDisabledTabs) : { "2": false, "3": false, "4": false, "5": true, "6": true };
   });
 
   const [selectedNodes, setSelectedNodes] = useState([]);
@@ -103,7 +103,7 @@ const App = () => {
             onIbnUpdate={handleIbnUpdate}
           />
         </Tabs.TabPane>
-        <Tabs.TabPane tab="Discovery" key="3" disabled={disabledTabs["3"]}>
+        <Tabs.TabPane tab="System Interface" key="3" disabled={disabledTabs["3"]}>
           <Discovery onNodeSelect={handleNodeSelection} onStart={() => handleTabStart(2)} />         
         </Tabs.TabPane>
         <Tabs.TabPane tab="Activate Key" key="4" disabled={disabledTabs["4"]}>

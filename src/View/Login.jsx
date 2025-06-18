@@ -10,8 +10,7 @@ import { useNavigate } from 'react-router-dom';
 const Login = (props) => {
   const { checkLogin } = props;
   const navigate = useNavigate();
-  // const hostIP = process.env.REACT_APP_HOST_IP || "localhost";
-  const hostIP = "192.168.20.13";
+  const hostIP = process.env.REACT_APP_HOST_IP || "localhost";
   const [ssoFormData, setSSOFormData] = useState({
     companyName: '',
     password: ''

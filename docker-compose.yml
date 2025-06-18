@@ -16,6 +16,7 @@ services:
     volumes:
       - shared-data:/usr/share/nginx/html
 
+
   node-backend:
     build:
       context: ./backend/db

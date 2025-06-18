@@ -26,7 +26,7 @@ COPY --from=build /app/build /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY ssl /etc/nginx/ssl
 # Expose port 80 (default for Nginx)
-EXPOSE 80 443
+EXPOSE  80 443
 
 # Start Nginx server
 CMD ["nginx", "-g", "daemon off;"]
