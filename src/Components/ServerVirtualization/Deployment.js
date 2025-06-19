@@ -149,6 +149,8 @@ const Deployment = () => {
         dataIndex: 'type',
         render: (_, record, index) => (
           <Select
+            mode='multiple'
+            allowClear
             style={{ width: '100%' }}
             value={record.types}
             placeholder="Select type"
