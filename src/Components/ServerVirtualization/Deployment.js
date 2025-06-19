@@ -16,10 +16,13 @@ import { Splitter } from 'antd';
 
 const { Option } = Select;
 
+const getCloudNameFromMetadata = () => {
+  let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
+  return cloudNameMeta ? cloudNameMeta.content : null; // Return the content of the meta tag
+};
 
 const Deployment = () => {
-  const cloudName = "Example"; // Replace with getCloudNameFromMetadata() if needed
-
+  const cloudName = getCloudNameFromMetadata();
   const [configType, setConfigType] = useState('default');
   const [tableData, setTableData] = useState([]);
   const [useVLAN, setUseVLAN] = useState(false);
@@ -37,22 +40,21 @@ const Deployment = () => {
     }));
 
   // Update table rows when config type changes
+  const getRowCount = () => {
+    if (configType === 'default') {
+      return useBond ? 4 : 2;
+    } else if (configType === 'segregated') {
+      return useBond ? 8 : 4;
+    }
+    return 2;
+  };
+
   useEffect(() => {
     const rows = generateRows(getRowCount());
     setTableData(rows);
   }, [configType, useBond, useVLAN]);
 
-  const getRowCount = () => {
-    if (configType === 'default') {
-      if (useBond) return 4;
-      return 2;
-    } else if (configType === 'segregated') {
-      if (useBond) return 8;
-      return 4;
-    }
-    return 2; // fallback
-  };
-  
+
   const handleReset = () => {
     setTableData(generateRows(getRowCount()));
   };
@@ -112,16 +114,16 @@ const Deployment = () => {
         ),
       },
       {
-        title: 'Roles',
-        dataIndex: 'roles',
+        title: 'Type',
+        dataIndex: 'type',
         render: (_: any, record: any, index: number) => (
           <Select
             style={{ width: '100%' }}
-            value={record.roles}
-            onChange={(value) => handleCellChange(index, 'roles', value)}
+            value={record.types}
+            onChange={(value) => handleCellChange(index, 'type', value)}
           >
-            <Option value="admin">Admin</Option>
-            <Option value="data">Data</Option>
+            <Option value="admin">Primary</Option>
+            <Option value="data">Secondary</Option>
           </Select>
         ),
       },
