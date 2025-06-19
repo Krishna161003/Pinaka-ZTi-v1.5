@@ -68,7 +68,7 @@ const DataTable = ({ onNodeSelect }) => {
           </Breadcrumb.Item>
           <Breadcrumb.Item>Deployment Options</Breadcrumb.Item>
           <Breadcrumb.Item>Validation</Breadcrumb.Item>
-          <Breadcrumb.Item>System Interfaces</Breadcrumb.Item>
+          <Breadcrumb.Item>System Interface</Breadcrumb.Item>
         </Breadcrumb>
 
         <Button
