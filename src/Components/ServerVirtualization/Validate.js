@@ -33,7 +33,7 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
         <Breadcrumb.Item>
           <HomeOutlined />
         </Breadcrumb.Item>
-        <Breadcrumb.Item>Deployment</Breadcrumb.Item>
+        <Breadcrumb.Item>Deployment Options</Breadcrumb.Item>
         <Breadcrumb.Item>Server Validation</Breadcrumb.Item>
       </Breadcrumb>
 

@@ -42,7 +42,7 @@ const ActivateKey = () => {
           <Breadcrumb.Item>
             <HomeOutlined />
           </Breadcrumb.Item>
-          <Breadcrumb.Item>Deployment</Breadcrumb.Item>
+          <Breadcrumb.Item>Deployment Options</Breadcrumb.Item>
           <Breadcrumb.Item>Validation</Breadcrumb.Item>
           <Breadcrumb.Item>System Interfaces</Breadcrumb.Item>
           <Breadcrumb.Item>License Activation</Breadcrumb.Item>

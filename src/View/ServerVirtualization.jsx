@@ -22,7 +22,7 @@ const App = () => {
   const [disabledTabs, setDisabledTabs] = useState(() => {
     // Initialize disabledTabs from sessionStorage or default
     const savedDisabledTabs = sessionStorage.getItem("disabledTabs");
-    return savedDisabledTabs ? JSON.parse(savedDisabledTabs) : { "2": false, "3": false, "4": false, "5": true, "6": true };
+    return savedDisabledTabs ? JSON.parse(savedDisabledTabs) : { "2": false, "3": false, "4": false, "5": false, "6": false };
   });
 
   const [selectedNodes, setSelectedNodes] = useState([]);
@@ -65,15 +65,6 @@ const App = () => {
     handleTabChange(nextTab);
   };
 
-  const handleNodeSelection = (nodes) => {
-    setSelectedNodes(nodes);
-    sessionStorage.setItem("selectedNodes", JSON.stringify(nodes)); // Persist to sessionStorage
-    setDisabledTabs((prevState) => ({
-      ...prevState,
-      "3": false,
-    }));
-    handleTabChange("3");
-  };
 
   const handleIbnUpdate = (newIbn) => {
     setIbn(newIbn);
@@ -90,7 +81,7 @@ const App = () => {
 
   return (
     <Zti>
-      <h2 style={{userSelect: "none"}}>Server Virtualization</h2>
+      <h2 style={{ userSelect: "none" }}>Server Virtualization</h2>
       <Tabs activeKey={activeTab} onChange={handleTabChange}>
         <Tabs.TabPane tab="Deployment Options" key="1">
           <DeploymentOptions onStart={() => handleTabStart(1)} />
@@ -104,16 +95,16 @@ const App = () => {
           />
         </Tabs.TabPane>
         <Tabs.TabPane tab="System Interface" key="3" disabled={disabledTabs["3"]}>
-          <Discovery onNodeSelect={handleNodeSelection} onStart={() => handleTabStart(2)} />         
+          <Discovery onStart={() => handleTabStart(2)} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Activate Key" key="4" disabled={disabledTabs["4"]}>
-          {activeTab === "4" && <ActivateKey ibn={ibn} />}
+          <ActivateKey />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Deployment" key="5" disabled={disabledTabs["5"]}>
-          {activeTab === "5" && <ActivateKey ibn={ibn} />}
+          <Deployment />
         </Tabs.TabPane>
-	<Tabs.TabPane tab="Report" key="6" disabled={disabledTabs["6"]}>
-          {activeTab === "6" && <Report ibn={ibn} />}
+        <Tabs.TabPane tab="Report" key="6" disabled={disabledTabs["6"]}>
+          <Report ibn={ibn} />
         </Tabs.TabPane>
       </Tabs>
     </Zti>
