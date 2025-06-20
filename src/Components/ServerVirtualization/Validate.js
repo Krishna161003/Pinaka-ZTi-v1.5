@@ -1,30 +1,80 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Divider, Table, Breadcrumb, Button, Popover, Input, Form, Modal, Select, Spin, notification, message } from "antd";
-import { HomeOutlined } from "@ant-design/icons";
+import React, { useState } from "react";
+import { Divider, Breadcrumb, Button, Spin, notification } from "antd";
+import { HomeOutlined, CloudOutlined } from "@ant-design/icons";
 import axios from "axios";
-import withReactContent from "sweetalert2-react-content";
-import Swal from "sweetalert2";
-import { CloudOutlined } from "@ant-design/icons";
-import { Row, Col } from 'antd';
-import ProgressModal from './ProgressModal';
-import DeploymentProgressBar from './DeploymentProgressBar'
-import { useLocation, useNavigate } from "react-router-dom";
-import requirementData from "../../Comparison/min_requirements.json";
-import dayjs from 'dayjs';
-
-// import Report from './Report';
 
 const getCloudNameFromMetadata = () => {
   let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
-  return cloudNameMeta ? cloudNameMeta.content : null; // Return the content of the meta tag
+  return cloudNameMeta ? cloudNameMeta.content : null;
 };
 
 const Validation = ({ nodes, onIbnUpdate, next }) => {
   const cloudName = getCloudNameFromMetadata();
-  // const hostIP = process.env.REACT_APP_HOST_IP || "localhost";  //retrive host ip
+  const [api, contextHolder] = notification.useNotification();
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleValidation = async (environment) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setResults(null);
+
+      const response = await axios.post("https://192.168.20.195:5000/validate", {
+        environment,
+        mode: "local",
+      });
+      const data = response.data?.[0];
+      setResults(data);
+    } catch (err) {
+      const errorMessage = "Validation failed. Please try again.";
+      setError(errorMessage);
+      console.error(err);
+
+      // 🚩 Show error using Ant Design Notification
+      api.error({
+        message: "Validation Error",
+        description: errorMessage,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderResult = () => {
+    if (!results && !error) {
+      return <p style={{ color: "#555" }}>Please run a validation to see results.</p>;
+    }
+    if (error) {
+      return <p style={{ color: "red" }}>{error}</p>;
+    }
+    if (results) {
+      return (
+        <div style={{ fontSize: "13px" }}>
+          <p>CPU Cores: {results.cpu_cores}</p>
+          <p>Memory: {results.memory_gb}GB</p>
+          <p>Data Disks: {results.data_disks}</p>
+          <p>Network Interfaces: {results.network_interfaces}</p>
+          <p>Validation Result: {results.validation_result}</p>
+          <div style={{ marginTop: "8px" }}>
+            <strong>Details:</strong>
+            <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+              <li>CPU: {results.validation.cpu ? "✅ Pass" : "❌ Fail"}</li>
+              <li>Disks: {results.validation.disks ? "✅ Pass" : "❌ Fail"}</li>
+              <li>Memory: {results.validation.memory ? "✅ Pass" : "❌ Fail"}</li>
+              <li>Network: {results.validation.network ? "✅ Pass" : "❌ Fail"}</li>
+            </ul>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div style={{ padding: "20px" }}>
+      {contextHolder}
       <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%", marginBottom: "1.29%" }}>
         <CloudOutlined />
         &nbsp;&nbsp;{cloudName} Cloud
@@ -38,35 +88,66 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
       </Breadcrumb>
 
       <Divider />
-      {/* <h4 style={{ userSelect: "none" }}>Server Validation</h4> */}
 
       <div style={{ display: "flex", flex: "1", gap: "30px", padding: "20px" }}>
         {/* Button Column */}
         <div style={{ display: "flex", flexDirection: "column", gap: "60px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "60px" }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <h5>Validation for development environment:</h5>
-              <Button type="primary" size="large" style={{ width: "120px", height: "35px" }}>
-                Validate
-              </Button>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <h5>Validation for production <br /> environment:</h5>
-              <Button type="primary" size="large" style={{ width: "120px", height: "35px" }}>
-                Validate
-              </Button>
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <h5>Validation for development environment:</h5>
+            <Button
+              type="primary"
+              size="large"
+              style={{ width: "120px", height: "35px" }}
+              onClick={() => handleValidation("development")}
+            >
+              Validate
+            </Button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <h5>
+              Validation for production <br /> environment:
+            </h5>
+            <Button
+              type="primary"
+              size="large"
+              style={{ width: "120px", height: "35px" }}
+              onClick={() => handleValidation("production")}
+            >
+              Validate
+            </Button>
           </div>
         </div>
 
-        {/* Image, Line, and Result Box Wrapper */}
+        {/* Image, Line, and Result Box */}
         <div style={{ display: "flex", alignItems: "center", flex: 1, gap: "20px" }}>
-          {/* Image */}
-          <img
-            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAACnElEQVR4nO1azWoUQRBuMIgeNGaz3V4igj8IvoBexKfYY6JvIIJTteBhbm68iw8RFm8q6EVZfYcknjYkgkpAk4u3T2rsLKuuYWa2ZzM9Wx/UpZfurqqvf+arXmMUCoVCocgNR7htCW8d4dAxUAsjHFrGm4td3DJVop3grmX8PPGA/2PiWzvBnWqi7+CUI2z5jD9bfIALpiYQXxzjufdtS3wNPollrI0mSLFg6oYUC46x7VfCWnj22Q+eYFWaHOPjDPf4hyNXJs7rfx+RxNgOugrsOPt+YJl0hvt7MErA5HkH1a2CTsb+5jj7dYYl3PNkfQqyVW3oAavGOGFTr4JOXOwHJ83Gxn7QVdCJk/1g5NkEq5VcKbPChKu7EBzhvV9C902kEN89ie8Kd3aMA+m8xFg0kUJ89wk4KNzZ1UDchDRNQFG4spmrGaZeASZyNDYBN1OcdoynjvDZMfYcYV3aKk+AEzk6Jk+raMvlH2HdX9NfxLy/vbxxTJMA/N0esu3YOsOfdYE9CXw5wTkxS/gqbfEngI6tMwwmJaCV4nyWAMJu9QmgzMFBlW05/euNtsBv9sXfJ3njaMoh2PMH4K4EH/YQJPyQji3CiokUS49xySfge+HOjtD3nV/JQCbG4Amv/eG5UXgA28U1y/h20t/w01oWQxdXCiegneB6UxJgH+Fq+S1AeBnjOSA+y/YtvQXc3B+CHMU1qFrAqhaAaoGWagGoFnCqBf6FagFSLQDVAqxaAKoFuExBhFULIJJ3gaHYvL4LDC+nOCNmCTvz+C4wlOBXHuJsloC5fBcg7Hj2xV99FzA5icz9F5lWhPXAIFrAEl406F2gX3iA5QQ3LGO/AWXxfSnxly8tEzaOKsRRmfhM6JcOXqFQKBSm+fgF8tw4l4opeaIAAAAASUVORK5CYII="
-            alt="server"
-            style={{ width: "200px", height: "220px", userSelect: "none", justifyItems: "center", marginLeft: "13%" }}
-          />
+          {/* Image + Loading Spinner */}
+          <div style={{ position: "relative" }}>
+            {loading && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  zIndex: 1,
+                }}
+              >
+                <Spin tip="Validating..." />
+              </div>
+            )}
+            <img
+              src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAACnElEQVR4nO1azWoUQRBuMIgeNGaz3V4igj8IvoBexKfYY6JvIIJTteBhbm68iw8RFm8q6EVZfYcknjYkgkpAk4u3T2rsLKuuYWa2ZzM9Wx/UpZfurqqvf+arXmMUCoVCocgNR7htCW8d4dAxUAsjHFrGm4td3DJVop3grmX8PPGA/2PiWzvBnWqi7+CUI2z5jD9bfIALpiYQXxzjufdtS3wNPollrI0mSLFg6oYUC46x7VfCWnj22Q+eYFWaHOPjDPf4hyNXJs7rfx+RxNgOugrsOPt+YJl0hvt7MErA5HkH1a2CTsb+5jj7dYYl3PNkfQqyVW3oAavGOGFTr4JOXOwHJ83Gxn7QVdCJk/1g5NkEq5VcKbPChKu7EBzhvV9C902kEN89ie8Kd3aMA+m8xFg0kUJ89wk4KNzZ1UDchDRNQFG4spmrGaZeASZyNDYBN1OcdoynjvDZMfYcYV3aKk+AEzk6Jk+raMvlH2HdX9NfxLy/vbxxTJMA/N0esu3YOsOfdYE9CXw5wTkxS/gqbfEngI6tMwwmJaCV4nyWAMJu9QmgzMFBlW05/euNtsBv9sXfJ3njaMoh2PMH4K4EH/YQJPyQji3CiokUS49xySfge+HOjtD3nV/JQCbG4Amv/eG5UXgA28U1y/h20t/w01oWQxdXCiegneB6UxJgH+Fq+S1AeBnjOSA+y/YtvQXc3B+CHMU1qFrAqhaAaoGWagGoFnCqBf6FagFSLQDVAqxaAKoFuExBhFULIJJ3gaHYvL4LDC+nOCNmCTvz+C4wlOBXHuJsloC5fBcg7Hj2xV99FzA5icz9F5lWhPXAIFrAEl406F2gX3iA5QQ3LGO/AWXxfSnxly8tEzaOKsRRmfhM6JcOXqFQKBSm+fgF8tw4l4opeaIAAAAASUVORK5CYII="
+              alt="server"
+              style={{
+                width: "200px",
+                height: "220px",
+                userSelect: "none",
+                justifyItems: "center",
+                marginLeft: "13%",
+                opacity: loading ? 0.3 : 1,
+              }}
+            />
+          </div>
 
           {/* Line with arrow */}
           <div
@@ -74,12 +155,11 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
               position: "relative",
               display: "flex",
               flex: 1,
-              height: "4px", // Slightly increased for consistency
+              height: "4px",
               backgroundColor: "#000000",
               alignItems: "center",
             }}
           >
-            {/* Arrowhead at the end of the line */}
             <div
               style={{
                 position: "absolute",
@@ -92,7 +172,7 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
                 borderBottom: "6px solid transparent",
                 borderLeft: "8px solid #000000",
               }}
-            ></div>
+            />
           </div>
 
           {/* Result Box */}
@@ -104,18 +184,33 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
               padding: "16px",
               width: "260px",
               height: "220px",
-              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+              boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
+              overflowY: "auto",
             }}
           >
-            <h4 style={{ marginBottom: "12px" }}>Validation Result</h4>
-            <p style={{ color: "#555" }}>
-              Please run a validation to see results.
-            </p>
+            <h4
+              style={{
+                marginBottom: "12px",
+                display: "flex",
+                alignItems: "center",
+                gap: "3px",
+              }}
+            >
+              Validation Result:
+              {results && (
+                results.validation_result === "failed" ? (
+                  <span style={{ fontSize: "1.2em", color: "red" }}>❌</span>
+                ) : (
+                  <span style={{ fontSize: "1.2em", color: "green" }}>✅</span>
+                )
+              )}
+            </h4>
+            {renderResult()}
           </div>
         </div>
       </div>
     </div>
   );
 };
-export default Validation;
 
+export default Validation;

@@ -4,9 +4,10 @@ import {
   Table,
   Button,
   Breadcrumb,
+  notification
 } from "antd";
 import { HomeOutlined } from "@ant-design/icons";
-import { CloudOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import { CloudOutlined } from "@ant-design/icons";
 
 
 const getCloudNameFromMetadata = () => {
@@ -17,16 +18,73 @@ const getCloudNameFromMetadata = () => {
 const DataTable = ({ onNodeSelect }) => {
   const cloudName = getCloudNameFromMetadata();
   const [isScanning, setIsScanning] = useState(false);
-  const [selectedNodes, setSelectedNodes] = useState([]);
   const [nodes, setNodes] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [numberOfSockets, setNumberOfSockets] = useState(0);
+  const [copyStatus, setCopyStatus] = useState("Copy Details");
   const itemsPerPage = 4;
+  const [api, contextHolder] = notification.useNotification();
   const hostIP = process.env.REACT_APP_HOST_IP;
 
-  useEffect(() => {
-    // scanNetwork();
-  }, []);
+  const fetchData = async () => {
+    try {
+      setIsScanning(true);
+      const res = await fetch("https://192.168.20.195:5000/get-interfaces");
+      if (!res.ok) {
+        throw new Error(`Error ${res.status}: ${res.statusText}`);
+      }
+      const data = await res.json();
+      setNumberOfSockets(data.cpu_sockets);
+      const formattedNodes = data.interfaces.map((iface) => ({
+        key: iface.ip,
+        interface: iface.iface,
+        mac: iface.mac,
+        ip: iface.ip,
+      }));
 
+      setNodes(formattedNodes);
+    } catch (error) {
+      console.error(error);
+      api.error({
+        message: "Data Fetch Error",
+        description:
+          error.message || "Something went wrong while fetching the data",
+      });
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+  
+  const handleCopyDetails = () => {
+    const licensesRequired = numberOfSockets;
+    const socketInfo = `Number of Sockets: ${numberOfSockets || 2}`;
+    const licenseInfo = `License Required: ${licensesRequired || 2}`;
+
+    const tableData = nodes
+      .map((node, index) =>
+        `${index + 1}. ${columns
+          .map((col) => `${col.title}: ${node[col.dataIndex]}`)
+          .join(", ")}`
+      )
+      .join("\n");
+
+    const textToCopy = `${socketInfo}\n${licenseInfo}\n\n${tableData}`;
+
+    navigator.clipboard
+      .writeText(textToCopy)
+      .then(() => {
+        setCopyStatus("Copied");
+        setTimeout(() => setCopyStatus("Copy Details"), 1000);
+      })
+      .catch(() => {
+        setCopyStatus("Failed");
+        setTimeout(() => setCopyStatus("Copy Details"), 1000);
+      });
+  };
 
   const columns = [
     {
@@ -48,6 +106,7 @@ const DataTable = ({ onNodeSelect }) => {
 
   return (
     <div style={{ padding: "20px" }}>
+      {contextHolder}
       <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%", marginBottom: "1.23%" }}>
         <CloudOutlined />
         &nbsp;&nbsp;{cloudName} Cloud
@@ -75,7 +134,6 @@ const DataTable = ({ onNodeSelect }) => {
           size="middle"
           style={{ width: "75px" }}
           type="primary"
-          disabled={selectedNodes.length === 0}
         >
           Next
         </Button>
@@ -85,45 +143,53 @@ const DataTable = ({ onNodeSelect }) => {
       <div style={{ display: "flex", gap: "40px", marginBottom: "16px", marginLeft: "3px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span>Number of Sockets:</span>
-          <div
-            style={{
-              border: "1px solid #d9d9d9",
-              borderRadius: "4px",
-              padding: "4px 12px",
-              minWidth: "40px",
-              textAlign: "center",
-              backgroundColor: "#fafafa",
-            }}
-          >
-            {/* {numberOfSockets} */}2
+          <div style={{
+            border: "1px solid #d9d9d9",
+            borderRadius: "4px",
+            padding: "4px 12px",
+            minWidth: "40px",
+            textAlign: "center",
+            backgroundColor: "#fafafa",
+          }}>
+            {numberOfSockets}
           </div>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span>License Required:</span>
-          <div
-            style={{
-              border: "1px solid #d9d9d9",
-              borderRadius: "4px",
-              padding: "4px 12px",
-              minWidth: "40px",
-              textAlign: "center",
-              backgroundColor: "#fafafa",
-            }}
-          >
-            {/* {licensesRequired} */}2
+          <div style={{
+            border: "1px solid #d9d9d9",
+            borderRadius: "4px",
+            padding: "4px 12px",
+            minWidth: "40px",
+            textAlign: "center",
+            backgroundColor: "#fafafa",
+          }}>
+            {numberOfSockets}
           </div>
         </div>
+
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <Button
             size="middle"
             style={{ width: "95px" }}
             type="primary"
+            onClick={handleCopyDetails}
           >
-            Copy Details
+            {copyStatus}
+          </Button>
+          <Button
+            size="middle"
+            style={{ width: "95px" }}
+            color="primary"
+            variant="outlined"
+            onClick={fetchData}
+          >
+            Refresh
           </Button>
         </div>
       </div>
+
 
       <Table
         columns={columns}
@@ -135,18 +201,12 @@ const DataTable = ({ onNodeSelect }) => {
           pageSize: itemsPerPage,
           onChange: (page) => setCurrentPage(page),
         }}
-        rowSelection={{
-          type: "radio",
-          onChange: (_, selectedNodes) => setSelectedNodes(selectedNodes),
-          selectedRowKeys: selectedNodes.length ? [selectedNodes[0].ip] : [],
-        }}
         loading={{
           spinning: isScanning,
           tip: "Scanning...",
         }}
       />
-      <div style={{ marginTop: "16px" }}>
-        <InfoCircleOutlined style={{ color: "#1890ff", fontSize: "15.5px", marginRight: "10px" }} />
+      <div style={{ marginTop: "16px", display: "flex", alignItems: "center" }}>
         <span style={{ fontSize: "14px" }}>
           <strong>Note:</strong>
           <br />
@@ -166,8 +226,4 @@ const DataTable = ({ onNodeSelect }) => {
   );
 };
 
-export const Discovery = ({ onNodeSelect }) => {
-  return <DataTable onNodeSelect={onNodeSelect} />;
-};
-
-export default Discovery;
+export default DataTable;

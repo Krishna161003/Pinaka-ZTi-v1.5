@@ -11,9 +11,10 @@ import {
   Table,
   Typography,
   Form,
-  Space
+  Space,
+  Tooltip
 } from 'antd';
-import { HomeOutlined, CloudOutlined } from '@ant-design/icons';
+import { HomeOutlined, CloudOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Splitter } from 'antd';
 
 const { Option } = Select;
@@ -124,11 +125,23 @@ const Deployment = () => {
       title: 'VLAN ID',
       dataIndex: 'vlanId',
       render: (_, record, index) => (
-        <Input
-          value={record.vlanId ?? ''}
-          placeholder="Enter Vlan ID"
-          onChange={(e) => handleCellChange(index, 'vlanId', e.target.value)}
-        />
+        <Tooltip placement='right' title="VLAN ID(1-4094)">
+          <Input
+            value={record.vlanId ?? ''}
+            placeholder="Enter VLAN ID"
+            onChange={(e) => {
+              const value = e.target.value;
+              // 1) Allow only digits
+              if (!/^[0-9]*$/.test(value)) return;
+              // 2) Allow max 4 digits
+              if (value.length > 4) return;
+              // 3) Allow only range 1–4094 when value is not empty
+              if (value && (Number(value) < 1 || Number(value) > 4094)) return;
+              // All checks passed ➔ call the handler
+              handleCellChange(index, 'vlanId', value);
+            }}
+          />
+        </Tooltip>
       ),
     };
 
@@ -163,15 +176,39 @@ const Deployment = () => {
           >
             {configType === 'segregated' ? (
               <>
-                <Option value="m">m</Option>
-                <Option value="e">e</Option>
-                <Option value="x">x</Option>
-                <Option value="y">y</Option>
+                <Option value="Management">
+                  <Tooltip placement="right" title="Mangement" >
+                    Mgmt
+                  </Tooltip>
+                </Option>
+                <Option value="VXLAN">
+                  <Tooltip placement="right" title="VXLAN">
+                    VXLAN
+                  </Tooltip>
+                </Option>
+                <Option value="Storage">
+                  <Tooltip placement="right" title="Storage">
+                    Storage
+                  </Tooltip>
+                </Option>
+                <Option value="External Traffic">
+                  <Tooltip placement="right" title="External Traffic">
+                    External Traffic
+                  </Tooltip>
+                </Option>
               </>
             ) : (
               <>
-                <Option value="admin">Primary</Option>
-                <Option value="data">Secondary</Option>
+                <Option value="primary">
+                  <Tooltip placement="right" title="Primary">
+                    Primary
+                  </Tooltip>
+                </Option>
+                <Option value="secondary">
+                  <Tooltip placement="right" title="Secondary">
+                    Secondary
+                  </Tooltip>
+                </Option>
               </>
             )}
           </Select>
@@ -334,13 +371,56 @@ const Deployment = () => {
           bordered
           size="small"
         />
+        <div style={{ marginTop: "20px" }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              fontWeight: 500,
+              marginBottom: "8px"
+            }}
+          >
+            Enter VIP
+            <InfoCircleOutlined
+              style={{
+                color: "#1890ff",
+                fontSize: "15.5px",
+                marginLeft: "6px",
+                height: "12px",
+                width: "12px"
+              }}
+            />
+          </label>
+          <Space>
+            <Input
+              maxLength={12}
+              placeholder="Enter VIP"
+              style={{ width: 200 }}
+            />
+          </Space>
+        </div>
       </div>
       <Divider />
-      <div style={{ display: "flex", marginTop: "20px", gap: "7px" }}>
-        <h4 style={{ userSelect: "none" }}>Provider Network</h4>
-        <p style={{ marginTop: "4px" }}>(optional)</p>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center", // ✅ This ensures vertical alignment
+          marginTop: "20px",
+          marginBottom: "8px",
+          gap: "7px"
+        }}
+      >
+        <h4 style={{ userSelect: "none", margin: 0 }}>Provider Network</h4>
+        <p style={{ margin: 0 }}>(optional)</p>
+        <InfoCircleOutlined
+          style={{
+            color: "#1890ff",
+            fontSize: "15.5px",
+            height: "12px",
+            width: "12px"
+          }}
+        />
       </div>
-
       <Form>
         <Space>
           <div style={{ display: "flex", gap: "40px" }}>
@@ -399,9 +479,25 @@ const Deployment = () => {
         </Space>
       </Form >
       <Divider />
-      <div style={{ display: "flex", marginTop: "20px", gap: "7px" }}>
-        <h4 style={{ userSelect: "none" }}>Tenant Network</h4>
-        <p style={{ marginTop: "4px" }}>(optional)</p>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center", // ✅ This ensures vertical alignment
+          marginTop: "20px",
+          marginBottom: "8px",
+          gap: "7px"
+        }}
+      >
+        <h4 style={{ userSelect: "none", margin: 0 }}>Tenant Network</h4>
+        <p style={{ margin: 0 }}>(optional)</p>
+        <InfoCircleOutlined
+          style={{
+            color: "#1890ff",
+            fontSize: "15.5px",
+            height: "12px",
+            width: "12px"
+          }}
+        />
       </div>
       <Form layout="vertical">
         <Space>
