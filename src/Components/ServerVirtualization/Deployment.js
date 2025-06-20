@@ -48,9 +48,9 @@ const Deployment = () => {
   // Update table rows when config type changes
   const getRowCount = () => {
     if (configType === 'default') {
-      return useBond ? 4 : 2;
+      return useBond ? 2 : 2;
     } else if (configType === 'segregated') {
-      return useBond ? 8 : 4;
+      return useBond ? 4 : 4;
     }
     return 2;
   };
@@ -89,6 +89,10 @@ const Deployment = () => {
       } else {
         delete row.errors[field];
       }
+    }
+
+    if (field === 'interface' && useBond && value.length > 2) {
+      value = value.slice(0, 2);
     }
 
     updatedData[index] = row;
@@ -134,9 +138,10 @@ const Deployment = () => {
         dataIndex: 'interface',
         render: (_, record, index) => (
           <Select
+            mode={useBond ? 'multiple' : undefined}
             style={{ width: '100%' }}
             value={record.interface}
-            placeholder="Select interface"
+            placeholder={useBond ? 'Select interfaces' : 'Select interface'}
             onChange={(value) => handleCellChange(index, 'interface', value)}
           >
             <Option value="eth0">eth0</Option>
@@ -149,15 +154,26 @@ const Deployment = () => {
         dataIndex: 'type',
         render: (_, record, index) => (
           <Select
-            mode='multiple'
+            mode={configType === 'segregated' ? 'multiple' : undefined}
             allowClear
             style={{ width: '100%' }}
-            value={record.types}
+            value={record.type}
             placeholder="Select type"
-            onChange={(value) => handleCellChange(index, 'types', value)}
+            onChange={(value) => handleCellChange(index, 'type', value)}
           >
-            <Option value="admin">Primary</Option>
-            <Option value="data">Secondary</Option>
+            {configType === 'segregated' ? (
+              <>
+                <Option value="m">m</Option>
+                <Option value="e">e</Option>
+                <Option value="x">x</Option>
+                <Option value="y">y</Option>
+              </>
+            ) : (
+              <>
+                <Option value="admin">Primary</Option>
+                <Option value="data">Secondary</Option>
+              </>
+            )}
           </Select>
         ),
       },
@@ -322,7 +338,7 @@ const Deployment = () => {
       <Divider />
       <div style={{ display: "flex", marginTop: "20px", gap: "7px" }}>
         <h4 style={{ userSelect: "none" }}>Provider Network</h4>
-        <p style={{ marginTop: "3px" }}>(optional)</p>
+        <p style={{ marginTop: "4px" }}>(optional)</p>
       </div>
 
       <Form>
@@ -385,7 +401,7 @@ const Deployment = () => {
       <Divider />
       <div style={{ display: "flex", marginTop: "20px", gap: "7px" }}>
         <h4 style={{ userSelect: "none" }}>Tenant Network</h4>
-        <p style={{ marginTop: "3px" }}>(optional)</p>
+        <p style={{ marginTop: "4px" }}>(optional)</p>
       </div>
       <Form layout="vertical">
         <Space>
