@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Divider,
   Table,
@@ -8,19 +8,57 @@ import {
   Space,
   Empty,
   Typography,
+  Result,
+  Spin,
 } from "antd";
-import { HomeOutlined } from "@ant-design/icons";
-import { CloudOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import {
+  HomeOutlined,
+  CloudOutlined,
+  CloseCircleOutlined,
+} from "@ant-design/icons";
+
+const { Paragraph, Text } = Typography;
 
 const getCloudNameFromMetadata = () => {
-  let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
-  return cloudNameMeta ? cloudNameMeta.content : null; // Return the content of the meta tag
+  const cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
+  return cloudNameMeta ? cloudNameMeta.content : null;
 };
 
 const ActivateKey = () => {
   const cloudName = getCloudNameFromMetadata();
   const [licenseCode, setLicenseCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null); // stores API response
+  const [errorMsg, setErrorMsg] = useState(""); // stores error message
 
+  const handleCheckLicense = async () => {
+    if (!licenseCode) return;
+
+    setLoading(true);
+    setResult(null);
+    setErrorMsg("");
+
+    try {
+      const response = await fetch("https://192.168.20.195:5000/decrypt-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ encrypted_code: licenseCode }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setResult(data);
+      } else {
+        setErrorMsg(data.message || "License validation failed.");
+      }
+    } catch (err) {
+      setErrorMsg("Network or server error.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{ padding: "20px" }}>
@@ -29,7 +67,6 @@ const ActivateKey = () => {
         &nbsp;&nbsp;{cloudName} Cloud
       </h5>
 
-      {/* Flex container to align Breadcrumb and Button in same row */}
       <div
         style={{
           display: "flex",
@@ -48,7 +85,9 @@ const ActivateKey = () => {
           <Breadcrumb.Item>License Activation</Breadcrumb.Item>
         </Breadcrumb>
       </div>
+
       <Divider />
+
       <div>
         <label style={{ display: "block", marginBottom: "8px", fontWeight: 500 }}>
           Enter your license code
@@ -58,35 +97,60 @@ const ActivateKey = () => {
             maxLength={12}
             placeholder="Enter code"
             style={{ width: 200 }}
+            value={licenseCode}
+            onChange={(e) => setLicenseCode(e.target.value)}
           />
-          <Button type="primary" >Check</Button>
+          <Button type="primary" onClick={handleCheckLicense} loading={loading}>
+            Check
+          </Button>
         </Space>
-        {/* License details box */}
+
         <label style={{ display: "block", fontWeight: 500, marginTop: "20px" }}>
-          License Deatils:
+          License Details:
         </label>
+
         <div
           style={{
             marginTop: "16px",
             padding: "12px",
-            minHeight: "60px",
+            minHeight: "80px",
             border: "1px solid #d9d9d9",
             borderRadius: "4px",
             backgroundColor: "#fafafa",
             fontSize: "14px",
           }}
         >
-          {/* Replace this with actual license details dynamically */}
-          <Empty description={
-            <Typography.Text>
-              No License Details
-            </Typography.Text>
-          } />
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "20px" }}>
+              <Spin />
+              <p style={{margin:"2px"}}>Validating...</p>
+            </div>
+          ) : result ? (
+            <Result
+              status="success"
+              title="Success"
+              subTitle={ `License Type: ${result.key_type} key | License Period: ${result.license_period} days | MAC: ${result.mac_address}`}
+            />
+          ) : errorMsg ? (
+            <Result status="error" title="Failed" subTitle="">
+              <div className="desc">
+                <Paragraph>
+                  <Text strong style={{ fontSize: 16 }}>
+                    The content you submitted has the following error:
+                  </Text>
+                </Paragraph>
+                <Paragraph>
+                  <CloseCircleOutlined className="site-result-demo-error-icon" /> {errorMsg}
+                </Paragraph>
+              </div>
+            </Result>
+          ) : (
+            <Empty description={<Typography.Text>No License Details</Typography.Text>} />
+          )}
         </div>
       </div>
-
     </div>
-  )
-}
+  );
+};
 
-export default ActivateKey
+export default ActivateKey;
