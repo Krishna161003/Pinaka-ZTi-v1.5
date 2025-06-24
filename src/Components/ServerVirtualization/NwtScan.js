@@ -15,6 +15,9 @@ const getCloudNameFromMetadata = () => {
   return cloudNameMeta ? cloudNameMeta.content : null; // Return the content of the meta tag
 };
 
+const hostIP = window.location.hostname;
+
+
 const DataTable = ({ onNodeSelect }) => {
   const cloudName = getCloudNameFromMetadata();
   const [isScanning, setIsScanning] = useState(false);
@@ -24,19 +27,18 @@ const DataTable = ({ onNodeSelect }) => {
   const [copyStatus, setCopyStatus] = useState("Copy Details");
   const itemsPerPage = 4;
   const [api, contextHolder] = notification.useNotification();
-  const hostIP = process.env.REACT_APP_HOST_IP;
 
   const fetchData = async () => {
     try {
       setIsScanning(true);
-      const res = await fetch("https://192.168.20.195:5000/get-interfaces");
+      const res = await fetch(`https://${hostIP}:2020/get-interfaces`);
       if (!res.ok) {
         throw new Error(`Error ${res.status}: ${res.statusText}`);
       }
       const data = await res.json();
       setNumberOfSockets(data.cpu_sockets);
-      const formattedNodes = data.interfaces.map((iface) => ({
-        key: iface.ip,
+      const formattedNodes = data.interfaces.map((iface, index) => ({
+        key: `${iface.iface}-${iface.mac}-${index}`, // guarantees uniqueness
         interface: iface.iface,
         mac: iface.mac,
         ip: iface.ip,
@@ -58,7 +60,7 @@ const DataTable = ({ onNodeSelect }) => {
   useEffect(() => {
     fetchData();
   }, []);
-  
+
   const handleCopyDetails = () => {
     const licensesRequired = numberOfSockets;
     const socketInfo = `Number of Sockets: ${numberOfSockets || 2}`;
@@ -195,7 +197,7 @@ const DataTable = ({ onNodeSelect }) => {
         columns={columns}
         dataSource={nodes}
         size="middle"
-        rowKey="ip"
+        rowKey="key"
         pagination={{
           current: currentPage,
           pageSize: itemsPerPage,

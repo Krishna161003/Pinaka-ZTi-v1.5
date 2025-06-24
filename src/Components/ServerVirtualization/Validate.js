@@ -7,6 +7,8 @@ const getCloudNameFromMetadata = () => {
   let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
   return cloudNameMeta ? cloudNameMeta.content : null;
 };
+const hostIP = window.location.hostname;
+
 
 const Validation = ({ nodes, onIbnUpdate, next }) => {
   const cloudName = getCloudNameFromMetadata();
@@ -21,7 +23,7 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
       setError(null);
       setResults(null);
 
-      const response = await axios.post("https://192.168.20.195:5000/validate", {
+      const response = await axios.post(`https://${hostIP}:2020/validate`, {
         environment,
         mode: "local",
       });
@@ -132,7 +134,7 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
                   zIndex: 1,
                 }}
               >
-                <Spin style={{marginLeft:"25px"}} ></Spin>
+                <Spin style={{ marginLeft: "25px" }} ></Spin>
                 <p>Validating...</p>
               </div>
             )}

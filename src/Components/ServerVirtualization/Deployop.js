@@ -4,11 +4,12 @@ import { HomeOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import '../../Styles/DeploymentOptions.css';
 
+const hostIP = window.location.hostname;
+
 const DeploymentOptions = ({ onStart }) => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [cloudName, setCloudName] = useState('');
-  const hostIP = process.env.REACT_APP_HOST_IP || 'localhost';
 
   const inputRef = useRef(null); // Create a reference for the input
 

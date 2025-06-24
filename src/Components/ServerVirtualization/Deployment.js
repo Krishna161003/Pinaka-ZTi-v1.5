@@ -17,6 +17,7 @@ import {
 import { HomeOutlined, CloudOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Splitter } from 'antd';
 
+const hostIP = window.location.hostname;
 const { Option } = Select;
 const ipRegex = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/;
 const subnetRegex = /^(255|254|252|248|240|224|192|128|0+)\.((255|254|252|248|240|224|192|128|0+)\.){2}(255|254|252|248|240|224|192|128|0+)$/;
@@ -26,12 +27,21 @@ const getCloudNameFromMetadata = () => {
   return cloudNameMeta ? cloudNameMeta.content : null; // Return the content of the meta tag
 };
 
+
+
 const Deployment = () => {
   const cloudName = getCloudNameFromMetadata();
   const [configType, setConfigType] = useState('default');
   const [tableData, setTableData] = useState([]);
   const [useVLAN, setUseVLAN] = useState(false);
   const [useBond, setUseBond] = useState(false);
+  const [Providerform] = Form.useForm();
+  const [Tenantform] = Form.useForm();
+  const [vipform] = Form.useForm();
+
+  const shouldDisableFields = (record) =>
+    configType === 'default' && record.type === 'secondary';
+
 
 
   // Generate rows based on selected config type
@@ -65,35 +75,55 @@ const Deployment = () => {
   const handleReset = () => {
     setTableData(generateRows(getRowCount()));
   };
+
   const handleCellChange = (index, field, value) => {
     const updatedData = [...tableData];
     const row = updatedData[index];
 
-    // Initialize errors if not present
     if (!row.errors) row.errors = {};
 
-    // Assign value
-    row[field] = value;
+    if (field === 'type' && configType === 'default') {
+      row.type = value;
 
-    // Validation
-    if (['ip', 'dns', 'gateway'].includes(field)) {
-      if (!ipRegex.test(value)) {
-        row.errors[field] = 'Should be a valid address';
-      } else {
-        delete row.errors[field];
+      const otherIndex = index === 0 ? 1 : 0;
+      const otherRow = updatedData[otherIndex];
+
+      if (value === 'primary') {
+        otherRow.type = 'secondary';
+      } else if (value === 'secondary') {
+        otherRow.type = 'primary';
       }
-    }
 
-    if (field === 'subnet') {
-      if (!subnetRegex.test(value)) {
-        row.errors[field] = 'Invalid subnet format';
-      } else {
-        delete row.errors[field];
+      updatedData[otherIndex] = otherRow;
+    } else {
+      row[field] = value;
+
+      // Validation for IP/DNS/Gateway
+      if (['ip', 'dns', 'gateway'].includes(field)) {
+        if (!ipRegex.test(value)) {
+          row.errors[field] = 'Should be a valid address';
+        } else {
+          delete row.errors[field];
+        }
       }
-    }
 
-    if (field === 'interface' && useBond && value.length > 2) {
-      value = value.slice(0, 2);
+      // Validation for subnet
+      if (field === 'subnet') {
+        if (!subnetRegex.test(value)) {
+          row.errors[field] = 'Invalid subnet format';
+        } else {
+          delete row.errors[field];
+        }
+      }
+
+      if (field === 'interface') {
+        // For bonding, limit to max 2 interfaces
+        if (useBond && value.length > 2) {
+          value = value.slice(0, 2);
+        }
+
+        row.interface = value;
+      }
     }
 
     updatedData[index] = row;
@@ -149,18 +179,49 @@ const Deployment = () => {
       {
         title: 'Interfaces Required',
         dataIndex: 'interface',
-        render: (_, record, index) => (
-          <Select
-            mode={useBond ? 'multiple' : undefined}
-            style={{ width: '100%' }}
-            value={record.interface}
-            placeholder={useBond ? 'Select interfaces' : 'Select interface'}
-            onChange={(value) => handleCellChange(index, 'interface', value)}
-          >
-            <Option value="eth0">eth0</Option>
-            <Option value="eth1">eth1</Option>
-          </Select>
-        ),
+        render: (_, record, index) => {
+          // Collect all selected interfaces from other rows
+          const selectedInterfaces = tableData
+            .filter((_, i) => i !== index) // exclude current row
+            .flatMap(row => {
+              if (useBond && Array.isArray(row.interface)) return row.interface;
+              if (!useBond && row.interface) return [row.interface];
+              return [];
+            });
+
+          const allInterfaces = ['eth0', 'eth1', 'eth2', 'eth3']; // Add more if needed
+          const currentSelection = useBond
+            ? Array.isArray(record.interface) ? record.interface : []
+            : record.interface ? [record.interface] : [];
+
+          const availableInterfaces = allInterfaces.filter(
+            (iface) => !selectedInterfaces.includes(iface) || currentSelection.includes(iface)
+          );
+
+          return (
+            <Select
+              mode={useBond ? 'multiple' : undefined}
+              style={{ width: '100%' }}
+              value={record.interface}
+              allowClear
+              placeholder={useBond ? 'Select interfaces' : 'Select interface'}
+              onChange={(value) => {
+                // Enforce max 2 if bond is enabled
+                if (useBond && Array.isArray(value) && value.length > 2) {
+                  value = value.slice(0, 2);
+                }
+                handleCellChange(index, 'interface', value);
+              }}
+              maxTagCount={2}
+            >
+              {availableInterfaces.map((iface) => (
+                <Option key={iface} value={iface}>
+                  {iface}
+                </Option>
+              ))}
+            </Select>
+          );
+        },
       },
       {
         title: 'Type',
@@ -225,6 +286,7 @@ const Deployment = () => {
           >
             <Input
               value={record.ip}
+              disabled={shouldDisableFields(record)}
               placeholder="Enter IP Address"
               onChange={(e) => handleCellChange(index, 'ip', e.target.value)}
             />
@@ -242,6 +304,7 @@ const Deployment = () => {
           >
             <Input
               value={record.subnet}
+              disabled={shouldDisableFields(record)}
               placeholder="Enter Subnet"
               onChange={(e) => handleCellChange(index, 'subnet', e.target.value)}
             />
@@ -260,6 +323,7 @@ const Deployment = () => {
             <Input
               value={record.dns}
               placeholder="Enter Nameserver"
+              disabled={shouldDisableFields(record)}
               onChange={(e) => handleCellChange(index, 'dns', e.target.value)}
             />
           </Form.Item>
@@ -277,6 +341,7 @@ const Deployment = () => {
             <Input
               value={record.gateway}
               placeholder="Enter Gateway"
+              disabled={shouldDisableFields(record)}
               onChange={(e) => handleCellChange(index, 'gateway', e.target.value)}
             />
           </Form.Item>
@@ -371,57 +436,88 @@ const Deployment = () => {
           bordered
           size="small"
         />
-        <div style={{ marginTop: "20px" }}>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              fontWeight: 500,
-              marginBottom: "8px"
-            }}
-          >
-            Enter VIP
-            <InfoCircleOutlined
-              style={{
-                color: "#1890ff",
-                fontSize: "15.5px",
-                marginLeft: "6px",
-                height: "12px",
-                width: "12px"
-              }}
-            />
-          </label>
-          <Space>
-            <Input
-              maxLength={12}
-              placeholder="Enter VIP"
-              style={{ width: 200 }}
-            />
-          </Space>
-        </div>
       </div>
+      <Divider />
+      <Form form={vipform} layout="vertical">
+        <div style={{ display: "flex", gap: "40px", marginTop: "20px" }}>
+          <Form.Item
+            name="vip"
+            label={
+              <span>
+                Enter VIP&nbsp;
+                <Tooltip placement="right" title="Virtual IP Address" >
+                  <InfoCircleOutlined style={{
+                    color: "#1890ff", fontSize: "14px", height: "12px",
+                    width: "12px"
+                  }} />
+                </Tooltip>
+              </span>
+            }
+            rules={[
+              { required: true, message: 'VIP is required' },
+              {
+                pattern: /^(([0-9]{1,3}\.){3}[0-9]{1,3})\/([0-9]|[1-2][0-9]|3[0-2])$/,
+                message: 'Invalid VIP format (e.g. 192.168.1.0/24)',
+              },
+            ]}
+          >
+            <Input maxLength={18} placeholder="Enter VIP" style={{ width: 200 }} />
+          </Form.Item>
+
+          <Form.Item
+            name="disk"
+            label={
+              <span>
+                Select Disks&nbsp;
+                <Tooltip placement="right" title="Ceph OSD" >
+                  <InfoCircleOutlined style={{
+                    color: "#1890ff", fontSize: "14px", height: "12px",
+                    width: "12px"
+                  }} />
+                </Tooltip>
+              </span>
+            }
+            rules={[
+              { required: true, message: 'Disk is required' }
+            ]}
+          >
+            <Select
+              placeholder="Select Disk"
+              style={{ width: 200 }}
+              allowClear
+              mode='multiple'
+            >
+              <Option>
+                /dev/sda
+              </Option>
+            </Select>
+          </Form.Item>
+        </div>
+      </Form>
       <Divider />
       <div
         style={{
           display: "flex",
           alignItems: "center", // ✅ This ensures vertical alignment
           marginTop: "20px",
-          marginBottom: "8px",
+          marginBottom: "5px",
           gap: "7px"
         }}
       >
         <h4 style={{ userSelect: "none", margin: 0 }}>Provider Network</h4>
         <p style={{ margin: 0 }}>(optional)</p>
-        <InfoCircleOutlined
-          style={{
-            color: "#1890ff",
-            fontSize: "15.5px",
-            height: "12px",
-            width: "12px"
-          }}
-        />
+        <Tooltip placement="right" title="Provider Network" >
+          <InfoCircleOutlined
+            style={{
+              color: "#1890ff",
+              fontSize: "15.5px",
+              height: "12px",
+              width: "12px"
+            }}
+          />
+        </Tooltip>
       </div>
-      <Form>
+      <Form form={Providerform} >
         <Space>
           <div style={{ display: "flex", gap: "40px" }}>
             <Form.Item
@@ -490,16 +586,18 @@ const Deployment = () => {
       >
         <h4 style={{ userSelect: "none", margin: 0 }}>Tenant Network</h4>
         <p style={{ margin: 0 }}>(optional)</p>
-        <InfoCircleOutlined
-          style={{
-            color: "#1890ff",
-            fontSize: "15.5px",
-            height: "12px",
-            width: "12px"
-          }}
-        />
+        <Tooltip placement="right" title="Tenant Network" >
+          <InfoCircleOutlined
+            style={{
+              color: "#1890ff",
+              fontSize: "15.5px",
+              height: "12px",
+              width: "12px"
+            }}
+          />
+        </Tooltip>
       </div>
-      <Form layout="vertical">
+      <Form form={Tenantform} layout="vertical">
         <Space>
           <div style={{ display: "flex", gap: "40px" }}>
             {/* CIDR Field */}
@@ -557,7 +655,12 @@ const Deployment = () => {
       </Form>
       <Flex justify="flex-end">
         <Space>
-          <Button htmlType="button" danger >
+          <Button htmlType="button" danger onClick={() => {
+            vipform.resetFields();
+            Providerform.resetFields();
+            Tenantform.resetFields();
+            handleReset(); // resets the table
+          }}>
             Reset Values
           </Button>
           <Button type="primary" htmlType="submit">

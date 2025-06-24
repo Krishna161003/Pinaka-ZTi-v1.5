@@ -23,6 +23,9 @@ const getCloudNameFromMetadata = () => {
   const cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
   return cloudNameMeta ? cloudNameMeta.content : null;
 };
+const hostIP = window.location.hostname;
+// const hostIP = "192.168.20.195"
+
 
 const ActivateKey = () => {
   const cloudName = getCloudNameFromMetadata();
@@ -39,7 +42,7 @@ const ActivateKey = () => {
     setErrorMsg("");
 
     try {
-      const response = await fetch("https://192.168.20.195:5000/decrypt-code", {
+      const response = await fetch(`https://${hostIP}:2020/decrypt-code`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

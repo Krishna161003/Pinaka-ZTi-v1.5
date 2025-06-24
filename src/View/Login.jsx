@@ -7,11 +7,11 @@ import axios from 'axios';
 import img1 from '../Images/ZTi.png';
 import { useNavigate } from 'react-router-dom';
 
+const hostIP = window.location.hostname;
+
 const Login = (props) => {
   const { checkLogin } = props;
   const navigate = useNavigate();
-  // const hostIP = process.env.REACT_APP_HOST_IP || "localhost";
-  const hostIP = "192.168.20.13";
   const [ssoFormData, setSSOFormData] = useState({
     companyName: '',
     password: ''
@@ -27,82 +27,82 @@ const Login = (props) => {
     setError('');
   };
 
-const handleSSOSubmit = async (e) => {
-  e.preventDefault();
-  const { companyName, password } = ssoFormData;
+  const handleSSOSubmit = async (e) => {
+    e.preventDefault();
+    const { companyName, password } = ssoFormData;
 
-  try {
-    // 1. Obtain the access token using client credentials
-    const tokenResponse = await axios.post(
-      `https://${hostIP}:9090/realms/zti-realm/protocol/openid-connect/token`,
-      new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: 'zti-client',
-        client_secret: process.env.REACT_APP_CLIENT_SECRET,
-      })
-    );
+    try {
+      // 1. Obtain the access token using client credentials
+      const tokenResponse = await axios.post(
+        `https://${hostIP}:9090/realms/zti-realm/protocol/openid-connect/token`,
+        new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: 'zti-client',
+          client_secret: process.env.REACT_APP_CLIENT_SECRET,
+        })
+      );
 
-    const accessToken = tokenResponse.data.access_token;
+      const accessToken = tokenResponse.data.access_token;
 
-    // 2. Use the access token to authenticate the user via password grant
-    const userResponse = await axios.post(
-      `https://${hostIP}:9090/realms/zti-realm/protocol/openid-connect/token`,
-      new URLSearchParams({
-        grant_type: 'password',
-        username: companyName,
-        password: password,
-        client_id: 'zti-client',
-        client_secret: process.env.REACT_APP_CLIENT_SECRET,
-        scope: 'openid',  // Request openid scope
-      }),
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-
-    if (userResponse.data.access_token) {
-      // Store the access token separately
-      sessionStorage.setItem('accessToken', userResponse.data.access_token);
-
-      // Fetch user details from Keycloak
-      const userDetailsResponse = await axios.get(
-        `https://${hostIP}:9090/realms/zti-realm/protocol/openid-connect/userinfo`,
+      // 2. Use the access token to authenticate the user via password grant
+      const userResponse = await axios.post(
+        `https://${hostIP}:9090/realms/zti-realm/protocol/openid-connect/token`,
+        new URLSearchParams({
+          grant_type: 'password',
+          username: companyName,
+          password: password,
+          client_id: 'zti-client',
+          client_secret: process.env.REACT_APP_CLIENT_SECRET,
+          scope: 'openid',  // Request openid scope
+        }),
         {
           headers: {
-            Authorization: `Bearer ${userResponse.data.access_token}`,
+            Authorization: `Bearer ${accessToken}`,
           },
         }
       );
 
-      const userId = userDetailsResponse.data.sub; // Fetch the user ID
+      if (userResponse.data.access_token) {
+        // Store the access token separately
+        sessionStorage.setItem('accessToken', userResponse.data.access_token);
 
-      // Store authentication details in sessionStorage (except access token)
-      const loginDetails = {
-        loginStatus: true,
-        data: {
-          companyName: companyName,
-          id: userId, // Store the user ID
-        },
-      };
+        // Fetch user details from Keycloak
+        const userDetailsResponse = await axios.get(
+          `https://${hostIP}:9090/realms/zti-realm/protocol/openid-connect/userinfo`,
+          {
+            headers: {
+              Authorization: `Bearer ${userResponse.data.access_token}`,
+            },
+          }
+        );
 
-      sessionStorage.setItem('loginDetails', JSON.stringify(loginDetails));
+        const userId = userDetailsResponse.data.sub; // Fetch the user ID
 
-      // Send user ID to backend for storage in MySQL (optional)
-      await axios.post(`https://${hostIP}:5000/store-user-id`, { userId });
+        // Store authentication details in sessionStorage (except access token)
+        const loginDetails = {
+          loginStatus: true,
+          data: {
+            companyName: companyName,
+            id: userId, // Store the user ID
+          },
+        };
 
-      // Redirect to home page with notification
-      checkLogin(true);
-      navigate('/', { replace: true, state: { notification: 'SSO Login Successful! Welcome back!' } });
-    } else {
+        sessionStorage.setItem('loginDetails', JSON.stringify(loginDetails));
+
+        // Send user ID to backend for storage in MySQL (optional)
+        await axios.post(`https://${hostIP}:5000/store-user-id`, { userId });
+
+        // Redirect to home page with notification
+        checkLogin(true);
+        navigate('/', { replace: true, state: { notification: 'SSO Login Successful! Welcome back!' } });
+      } else {
+        setError('Invalid SSO credentials');
+      }
+    } catch (err) {
+      console.error(err);
       setError('Invalid SSO credentials');
     }
-  } catch (err) {
-    console.error(err);
-    setError('Invalid SSO credentials');
-  }
-};
+  };
 
   const renderSSOForm = () => (
     <form name="sso-login" onSubmit={handleSSOSubmit}>
