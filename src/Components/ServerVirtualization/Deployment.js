@@ -12,7 +12,8 @@ import {
   Typography,
   Form,
   Space,
-  Tooltip
+  Tooltip,
+  message
 } from 'antd';
 import { HomeOutlined, CloudOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Splitter } from 'antd';
@@ -43,6 +44,84 @@ const Deployment = () => {
     configType === 'default' && record.type === 'secondary';
 
 
+  const handleSubmit = async () => {
+    try {
+      // 1. Validate VIP form
+      const vipValues = await vipform.validateFields();
+
+      if (configType === 'segregated' && !vipValues.defaultGateway) {
+        message.error('Default Gateway is required in segregated mode.');
+        return;
+      }
+
+      // 2. Validate Table Rows
+      for (let i = 0; i < tableData.length; i++) {
+        const row = tableData[i];
+
+        // Enforce interface selection
+        if (!row.interface || (useBond && row.interface.length !== 2)) {
+          message.error(`Row ${i + 1}: Please select ${useBond ? 'exactly two' : 'a'} interface${useBond ? 's' : ''}.`);
+          return;
+        }
+
+        // Ensure type is selected
+        if (!row.type || (Array.isArray(row.type) && row.type.length === 0)) {
+          message.error(`Row ${i + 1}: Please select a Type.`);
+          return;
+        }
+
+        // In 'default' mode, skip validation for 'secondary' row
+        const isSecondaryInDefault = configType === 'default' && row.type === 'secondary';
+        if (!isSecondaryInDefault) {
+          const requiredFields = ['ip', 'subnet', 'dns', 'gateway'];
+          for (const field of requiredFields) {
+            if (!row[field]) {
+              message.error(`Row ${i + 1}: Please enter ${field.toUpperCase()}.`);
+              return;
+            }
+          }
+        }
+
+        // Validate if any errors exist
+        if (Object.keys(row.errors || {}).length > 0) {
+          message.error(`Row ${i + 1} contains invalid entries. Please fix them.`);
+          return;
+        }
+      }
+
+      // 3. Validate Provider Network
+      const providerValues = Providerform.getFieldsValue();
+      const providerFields = ['cidr', 'gateway', 'startingIp', 'endingIp'];
+      const providerTouched = providerFields.some((field) => !!providerValues[field]);
+      if (providerTouched) {
+        for (const field of providerFields) {
+          if (!providerValues[field]) {
+            message.error(`Provider Network: Please fill in the ${field} field.`);
+            return;
+          }
+        }
+      }
+
+      // 4. Validate Tenant Network
+      const tenantValues = Tenantform.getFieldsValue();
+      const tenantFields = ['cidr', 'gateway', 'nameserver'];
+      const tenantTouched = tenantFields.some((field) => !!tenantValues[field]);
+      if (tenantTouched) {
+        for (const field of tenantFields) {
+          if (!tenantValues[field]) {
+            message.error(`Tenant Network: Please fill in the ${field} field.`);
+            return;
+          }
+        }
+      }
+
+      // ✅ All good
+      message.success('All validations passed. Proceeding to submit...');
+      // TODO: Add submit logic here
+    } catch (error) {
+      message.error('Please fix the errors in required fields.');
+    }
+  };
 
   // Generate rows based on selected config type
   const generateRows = (count) =>
@@ -456,8 +535,8 @@ const Deployment = () => {
             rules={[
               { required: true, message: 'VIP is required' },
               {
-                pattern: /^(([0-9]{1,3}\.){3}[0-9]{1,3})\/([0-9]|[1-2][0-9]|3[0-2])$/,
-                message: 'Invalid VIP format (e.g. 192.168.1.0/24)',
+                pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                message: 'Invalid VIP format (e.g. 192.168.1.0)',
               },
             ]}
           >
@@ -492,6 +571,35 @@ const Deployment = () => {
               </Option>
             </Select>
           </Form.Item>
+          {configType === 'segregated' && (
+            <Form.Item
+              name="defaultGateway"
+              label={
+                <span>
+                  Enter Default Gateway&nbsp;
+                  <Tooltip placement="right" title="Default Gateway">
+                    <InfoCircleOutlined
+                      style={{
+                        color: "#1890ff",
+                        fontSize: "14px",
+                        height: "12px",
+                        width: "12px"
+                      }}
+                    />
+                  </Tooltip>
+                </span>
+              }
+              rules={[
+                { required: true, message: 'Gateway is required' },
+                {
+                  pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                  message: 'Invalid IP format (e.g. 192.168.1.1)',
+                },
+              ]}
+            >
+              <Input maxLength={18} placeholder="Enter Gateway" style={{ width: 200 }} />
+            </Form.Item>
+          )}
         </div>
       </Form>
       <Divider />
@@ -663,7 +771,7 @@ const Deployment = () => {
           }}>
             Reset Values
           </Button>
-          <Button type="primary" htmlType="submit">
+          <Button type="primary" onClick={handleSubmit}>
             Submit
           </Button>
         </Space>
