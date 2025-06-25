@@ -30,6 +30,7 @@ const getCloudNameFromMetadata = () => {
 
 
 
+
 const Deployment = () => {
   const cloudName = getCloudNameFromMetadata();
   const [configType, setConfigType] = useState('default');
@@ -42,7 +43,6 @@ const Deployment = () => {
 
   const shouldDisableFields = (record) =>
     configType === 'default' && record.type === 'secondary';
-
 
   const handleSubmit = async () => {
     try {
@@ -58,19 +58,31 @@ const Deployment = () => {
       for (let i = 0; i < tableData.length; i++) {
         const row = tableData[i];
 
-        // Enforce interface selection
+        // Bond: must select 2 interfaces
         if (!row.interface || (useBond && row.interface.length !== 2)) {
           message.error(`Row ${i + 1}: Please select ${useBond ? 'exactly two' : 'a'} interface${useBond ? 's' : ''}.`);
           return;
         }
 
-        // Ensure type is selected
+        // Must select Type
         if (!row.type || (Array.isArray(row.type) && row.type.length === 0)) {
           message.error(`Row ${i + 1}: Please select a Type.`);
           return;
         }
 
-        // In 'default' mode, skip validation for 'secondary' row
+        // If bond is enabled, Bond Name is required
+        if (useBond && !row.bondName?.trim()) {
+          message.error(`Row ${i + 1}: Please enter a Bond Name.`);
+          return;
+        }
+
+        // If VLAN is enabled, VLAN ID is required
+        if (useVLAN && !row.vlanId?.trim()) {
+          message.error(`Row ${i + 1}: Please enter a VLAN ID.`);
+          return;
+        }
+
+        // Skip field validation for 'secondary' in default mode
         const isSecondaryInDefault = configType === 'default' && row.type === 'secondary';
         if (!isSecondaryInDefault) {
           const requiredFields = ['ip', 'subnet', 'dns', 'gateway'];
@@ -82,7 +94,7 @@ const Deployment = () => {
           }
         }
 
-        // Validate if any errors exist
+        // Check for inline validation errors
         if (Object.keys(row.errors || {}).length > 0) {
           message.error(`Row ${i + 1} contains invalid entries. Please fix them.`);
           return;
@@ -115,12 +127,136 @@ const Deployment = () => {
         }
       }
 
-      // ✅ All good
+      // ✅ All validations passed
       message.success('All validations passed. Proceeding to submit...');
-      // TODO: Add submit logic here
+      // TODO: Add actual submission logic
     } catch (error) {
       message.error('Please fix the errors in required fields.');
     }
+
+    try {
+      const vipValues = await vipform.validateFields();
+      const providerValues = Providerform.getFieldsValue();
+      const tenantValues = Tenantform.getFieldsValue();
+
+      // validation logic here (already written in your previous messages)
+      const rawData = {
+        tableData,
+        configType,
+        useBond,
+        useVLAN,
+        vip: vipform.getFieldValue("vip"),
+        disk: vipform.getFieldValue("disk"),
+        defaultGateway: configType === "segregated" ? vipform.getFieldValue("defaultGateway") : "",
+        providerNetwork: providerValues,
+        tenantNetwork: tenantValues,
+      };
+
+      await submitToBackend(rawData);
+
+    } catch (err) {
+      message.error("Validation or submission failed.");
+    }
+  };
+
+
+
+  const submitToBackend = async (data) => {
+    try {
+      const response = await fetch(`https://${hostIP}:2020/submit-network-config`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        message.success("Data submitted successfully!");
+      } else {
+        message.error(`Error: ${result.message || "Submission failed"}`);
+      }
+    } catch (err) {
+      message.error(`Server Error: ${err.message}`);
+    }
+  };
+
+  const formatSubmissionData = ({ tableData, configType, useBond, useVLAN, vipValues, providerValues, tenantValues, disk }) => {
+    const payload = {
+      using_interfaces: {},
+      provider_cidr: providerValues?.cidr || "N/A",
+      provider_gateway: providerValues?.gateway || "N/A",
+      provider_startingip: providerValues?.startingIp || "N/A",
+      provider_endingip: providerValues?.endingIp || "N/A",
+      tenant_cidr: tenantValues?.cidr || "10.0.0.0/24",
+      tenant_gateway: tenantValues?.gateway || "10.0.0.1",
+      tenant_nameserver: tenantValues?.nameserver || "8.8.8.8",
+      disk: vipValues?.disk || "",
+      vip: vipValues?.vip || ""
+    };
+
+    if (configType === "segregated" && vipValues?.defaultGateway) {
+      payload.default_gateway = vipValues.defaultGateway;
+    }
+
+    let bondIndex = 1;
+    let ifaceIndex = 1;
+
+    for (const row of tableData) {
+      const isBondRow = !!row.bondName;
+      const isSecondary = row?.type?.includes("Secondary") || row?.type?.includes("External_Traffic");
+
+      if (isBondRow) {
+        const bondKey = `bond${bondIndex++}`;
+        payload.using_interfaces[bondKey] = {
+          interface_name: row.bondName,
+          type: row.type,
+          vlan_id: useVLAN ? row.vlan_id : "NULL",
+          ...(isSecondary
+            ? {}
+            : {
+              Properties: {
+                IP_ADDRESS: row.ip,
+                Netmask: row.subnet,
+                DNS: row.dns,
+                gateway: row.gateway,
+              },
+            }),
+        };
+      } else {
+        const ifaceKey = `interface_${ifaceIndex.toString().padStart(2, "0")}`;
+        ifaceIndex++;
+        payload.using_interfaces[ifaceKey] = {
+          interface_name: row.interface,
+          Bond_Slave: useBond ? "YES" : "NO",
+          ...(useBond && {
+            Bond_Interface_Name: row.bondName || "",
+          }),
+        };
+
+        if (!useBond) {
+          payload.using_interfaces[ifaceKey] = {
+            ...payload.using_interfaces[ifaceKey],
+            type: row.type,
+            vlan_id: useVLAN ? row.vlan_id : "NULL",
+            ...(isSecondary
+              ? {}
+              : {
+                Properties: {
+                  IP_ADDRESS: row.ip,
+                  Netmask: row.subnet,
+                  DNS: row.dns,
+                  gateway: row.gateway,
+                },
+              }),
+          };
+        }
+      }
+    }
+
+    return payload;
   };
 
   // Generate rows based on selected config type
@@ -566,9 +702,8 @@ const Deployment = () => {
               allowClear
               mode='multiple'
             >
-              <Option>
-                /dev/sda
-              </Option>
+              <Option value="/dev/sda">/dev/sda</Option>
+              <Option value="/dev/sdb">/dev/sdb</Option> {/* Add more if needed */}
             </Select>
           </Form.Item>
           {configType === 'segregated' && (

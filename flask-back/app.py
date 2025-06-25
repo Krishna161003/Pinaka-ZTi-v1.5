@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from datetime import datetime
 import psutil
 import os
 import json
@@ -24,8 +25,9 @@ ENV_REQUIREMENTS = {
         "memory_gb": 128,
         "disks": 4,
         "network": 2,
-    }
+    },
 }
+
 
 # ---------- Local Validation ----------
 def validate_local(env_type):
@@ -37,17 +39,25 @@ def validate_local(env_type):
     memory_gb = round(psutil.virtual_memory().total / (1024**3))
 
     disk_partitions = psutil.disk_partitions()
-    data_disks = [d for d in disk_partitions if not d.mountpoint.startswith('/boot') and 'boot' not in d.device.lower()]
-    data_disks = [d for d in data_disks if psutil.disk_usage(d.mountpoint).total > 500 * 1024**3 and d.mountpoint != '/']
+    data_disks = [
+        d
+        for d in disk_partitions
+        if not d.mountpoint.startswith("/boot") and "boot" not in d.device.lower()
+    ]
+    data_disks = [
+        d
+        for d in data_disks
+        if psutil.disk_usage(d.mountpoint).total > 500 * 1024**3 and d.mountpoint != "/"
+    ]
 
     net_ifaces = psutil.net_if_addrs()
     network_count = len([iface for iface in net_ifaces if iface != "lo"])
 
     validation = {
-        "cpu": cpu_cores >= requirements['cpu_cores'],
-        "memory": memory_gb >= requirements['memory_gb'],
-        "disks": len(data_disks) >= requirements['disks'],
-        "network": network_count >= requirements['network']
+        "cpu": cpu_cores >= requirements["cpu_cores"],
+        "memory": memory_gb >= requirements["memory_gb"],
+        "disks": len(data_disks) >= requirements["disks"],
+        "network": network_count >= requirements["network"],
     }
 
     result_status = "passed" if all(validation.values()) else "failed"
@@ -58,9 +68,10 @@ def validate_local(env_type):
         "data_disks": len(data_disks),
         "network_interfaces": network_count,
         "validation": validation,
-        "validation_result": result_status
+        "validation_result": result_status,
     }
     return result, 200
+
 
 # ---------- Remote SSH Validation ----------
 def validate_remote(env_type, host, username, pem_path):
@@ -77,23 +88,23 @@ def validate_remote(env_type, host, username, pem_path):
         commands = {
             "cpu": "nproc --all",
             "memory": "free -g | awk '/Mem:/ {print $2}'",
-            "disks": "BOOT_DISK=$(lsblk -no PKNAME $(findmnt -no SOURCE /boot/efi)); lsblk -nd -o NAME | grep -v \"$BOOT_DISK\" | wc -l",
-            "network": "ls -d /sys/class/net/* | grep -v lo | while read iface; do if [ -e \"$iface/device\" ]; then basename \"$iface\"; fi; done | wc -l"
+            "disks": 'BOOT_DISK=$(lsblk -no PKNAME $(findmnt -no SOURCE /boot/efi)); lsblk -nd -o NAME | grep -v "$BOOT_DISK" | wc -l',
+            "network": 'ls -d /sys/class/net/* | grep -v lo | while read iface; do if [ -e "$iface/device" ]; then basename "$iface"; fi; done | wc -l',
         }
 
         results = {}
         for key, cmd in commands.items():
             stdin, stdout, stderr = ssh.exec_command(cmd)
             output = stdout.read().decode().strip()
-            results[key] = int(re.findall(r'\d+', output)[0])
+            results[key] = int(re.findall(r"\d+", output)[0])
 
         ssh.close()
 
         validation = {
-            "cpu": results["cpu"] >= requirements['cpu_cores'],
-            "memory": results["memory"] >= requirements['memory_gb'],
-            "disks": results["disks"] >= requirements['disks'],
-            "network": results["network"] >= requirements['network']
+            "cpu": results["cpu"] >= requirements["cpu_cores"],
+            "memory": results["memory"] >= requirements["memory_gb"],
+            "disks": results["disks"] >= requirements["disks"],
+            "network": results["network"] >= requirements["network"],
         }
 
         result_status = "passed" if all(validation.values()) else "failed"
@@ -104,7 +115,7 @@ def validate_remote(env_type, host, username, pem_path):
             "data_disks": results["disks"],
             "network_interfaces": results["network"],
             "validation": validation,
-            "validation_result": result_status
+            "validation_result": result_status,
         }
 
         return result, 200
@@ -134,9 +145,11 @@ def validate():
     else:
         return jsonify({"error": "Invalid mode (should be 'local' or 'remote')"}), 400
 
+
 # ------------------------------------------------ Server Validation End --------------------------------------------
 
 # ------------------------------------------------ local Interface list Start --------------------------------------------
+
 
 @app.route("/get-interfaces", methods=["GET"])
 def get_interfaces():
@@ -198,6 +211,7 @@ def get_interfaces():
 
     return jsonify(response)
 
+
 # Function to get the CPU socket count
 def get_cpu_socket_count():
     try:
@@ -220,6 +234,7 @@ def get_cpu_socket_count():
 
 # ------------------------------------------------ Encryption code run Start --------------------------------------------
 
+
 @app.route("/trigger-program", methods=["POST"])
 def trigger_program():
     try:
@@ -228,7 +243,10 @@ def trigger_program():
         if data["action"] == "runProgram":
             # Run the Python program (example with 'your_program.py')
             result = subprocess.run(
-                ["sudo","python3", "encrypt.py"], check=True, capture_output=True, text=True
+                ["sudo", "python3", "encrypt.py"],
+                check=True,
+                capture_output=True,
+                text=True,
             )
 
             # If the program runs successfully, return a success response
@@ -240,7 +258,9 @@ def trigger_program():
         # In case of any error, return an error message
         return jsonify({"success": False, "message": str(e)})
 
+
 # ------------------------------------------------ Encryption code run End --------------------------------------------
+
 
 # ------------------------------------------------ Validate License Start --------------------------------------------
 # Function to decrypt a code (lookup MAC address, key, and key type)
@@ -408,12 +428,9 @@ def check_license_used(file_path, license_code):
 
 
 # Define the path where you want to store the data.json and license.txt files
-DATA_DIRECTORY = (
-    "/home/pinaka/"  # Change this to the desired directory
-)
-LICENSE_FILE_PATH = (
-    "/home/pinaka/license.txt"  # Path for the license file
-)
+DATA_DIRECTORY = "/home/pinaka/"  # Change this to the desired directory
+LICENSE_FILE_PATH = "/home/pinaka/license.txt"  # Path for the license file
+
 
 # Function to save data to a JSON file and license code to a license.txt file
 def save_to_json_file(file_name, data):
@@ -450,5 +467,136 @@ def save_to_json_file(file_name, data):
 
 # ------------------------------------------------ Validate License End --------------------------------------------
 
+
+@app.route("/submit-network-config", methods=["POST"])
+def submit_network_config():
+    try:
+        data = request.get_json(force=True)
+
+        print("✅ Received data:", json.dumps(data, indent=2))
+
+        table_data = data.get("tableData", [])
+        config_type = data.get("configType", "default")
+        use_bond = data.get("useBond", False)
+        use_vlan = data.get("useVLAN", False)
+
+        provider = data.get("providerNetwork", {})
+        tenant = data.get("tenantNetwork", {})
+
+        # Handle disk input (may be string or list)
+        disk = data.get("disk", [])
+        if not isinstance(disk, list):
+            disk = [disk] if disk else []
+
+        vip = data.get("vip", "")
+        default_gateway = data.get("defaultGateway", "")
+
+        # Error if tableData is empty
+        if not table_data:
+            return jsonify({"error": "Missing or empty tableData"}), 400
+
+        response_json = {
+            "using_interfaces": {},
+            "provider_cidr": provider.get("cidr", "N/A"),
+            "provider_gateway": provider.get("gateway", "N/A"),
+            "provider_startingip": provider.get("startingIp", "N/A"),
+            "provider_endingip": provider.get("endingIp", "N/A"),
+            "tenant_cidr": tenant.get("cidr", "10.0.0.0/24"),
+            "tenant_gateway": tenant.get("gateway", "10.0.0.1"),
+            "tenant_nameserver": tenant.get("nameserver", "8.8.8.8"),
+            "disk": disk,
+            "vip": vip,
+        }
+
+        if config_type == "segregated":
+            response_json["default_gateway"] = default_gateway
+
+        bond_count = 0
+        iface_count = 1
+
+        for row in table_data:
+            row_type = row.get("type", [])
+            if isinstance(row_type, str):
+                row_type = [row_type]
+
+            is_secondary = "Secondary" in row_type or row_type == ["secondary"]
+
+            # BOND group
+            if use_bond and "bondName" in row and row["bondName"]:
+                bond_key = f"bond{bond_count + 1}"
+                response_json["using_interfaces"][bond_key] = {
+                    "interface_name": row["bondName"],
+                    "type": row_type,
+                    "vlan_id": row.get("vlanId", "NULL") if use_vlan else "NULL",
+                }
+
+                if not is_secondary:
+                    response_json["using_interfaces"][bond_key]["Properties"] = {
+                        "IP_ADDRESS": row.get("ip", ""),
+                        "Netmask": row.get("subnet", ""),
+                        "DNS": row.get("dns", ""),
+                        "gateway": row.get("gateway", ""),
+                    }
+
+                # Add slave interfaces
+                for iface in row.get("interface", []):
+                    iface_key = f"interface_0{iface_count}"
+                    response_json["using_interfaces"][iface_key] = {
+                        "interface_name": iface,
+                        "Bond_Slave": "YES",
+                        "Bond_Interface_Name": row["bondName"],
+                    }
+                    iface_count += 1
+
+                bond_count += 1
+
+            else:
+                # Non-bonded interface
+                iface_key = f"interface_0{iface_count}"
+                interface_name = (
+                    row["interface"][0]
+                    if isinstance(row["interface"], list)
+                    else row["interface"]
+                )
+                interface_entry = {
+                    "interface_name": interface_name,
+                    "type": row_type,
+                    "vlan_id": row.get("vlanId", "NULL") if use_vlan else "NULL",
+                    "Bond_Slave": "NO",
+                }
+
+                if not is_secondary or config_type == "segregated":
+                    interface_entry["Properties"] = {
+                        "IP_ADDRESS": row.get("ip", ""),
+                        "Netmask": row.get("subnet", ""),
+                        "DNS": row.get("dns", ""),
+                        "gateway": row.get("gateway", ""),
+                    }
+
+                response_json["using_interfaces"][iface_key] = interface_entry
+                iface_count += 1
+
+        # Save JSON to file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"network_config_{timestamp}.json"
+        file_path = os.path.join("submitted_configs", filename)
+        os.makedirs("submitted_configs", exist_ok=True)
+
+        with open(file_path, "w") as f:
+            json.dump(response_json, f, indent=4)
+
+        return jsonify({"message": "Config saved", "filename": filename}), 200
+
+    except Exception as e:
+        print("❌ Exception occurred:", str(e))
+        return jsonify({"error": f"Bad Request: {str(e)}"}), 400
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", ssl_context=('cert.pem', 'key.pem'),port=2020, threaded=True, debug=True)
+    app.run(
+        host="0.0.0.0",
+        ssl_context=("cert.pem", "key.pem"),
+        port=2020,
+        threaded=True,
+        debug=True,
+    )

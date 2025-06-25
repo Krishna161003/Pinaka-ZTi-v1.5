@@ -1,0 +1,38 @@
+{
+    "using_interfaces": {
+        "interface_01": {
+            "interface_name": "eth0",
+            "type": [
+                "primary"
+            ],
+            "vlan_id": "NULL",
+            "Bond_Slave": "NO",
+            "Properties": {
+                "IP_ADDRESS": "1.1.1.1",
+                "Netmask": "255.0.0.0",
+                "DNS": "2.2.2.2",
+                "gateway": "3.3.3.3"
+            }
+        },
+        "interface_02": {
+            "interface_name": "eth1",
+            "type": [
+                "secondary"
+            ],
+            "vlan_id": "NULL",
+            "Bond_Slave": "NO"
+        }
+    },
+    "provider_cidr": "N/A",
+    "provider_gateway": "N/A",
+    "provider_startingip": "N/A",
+    "provider_endingip": "N/A",
+    "tenant_cidr": "10.0.0.0/24",
+    "tenant_gateway": "10.0.0.1",
+    "tenant_nameserver": "8.8.8.8",
+    "disk": [
+        "/dev/sda",
+        "/dev/sdb"
+    ],
+    "vip": "8.8.8.8"
+}
