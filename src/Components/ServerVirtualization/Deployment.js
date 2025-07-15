@@ -13,10 +13,12 @@ import {
   Form,
   Space,
   Tooltip,
-  message
+  message,
+  Spin
 } from 'antd';
 import { HomeOutlined, CloudOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { Splitter } from 'antd';
+import axios from 'axios';
 
 const hostIP = window.location.hostname;
 const { Option } = Select;
@@ -40,16 +42,64 @@ const Deployment = () => {
   const [Providerform] = Form.useForm();
   const [Tenantform] = Form.useForm();
   const [vipform] = Form.useForm();
+  const [interfaces, setInterfaces] = useState([]);
+  const [disks, setDisks] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+
+
+
+  useEffect(() => {
+    const fetchInterfaces = async () => {
+      try {
+        const response = await axios.get(`https://${hostIP}:2020/get-interfaces`);
+        if (response.data?.interfaces) {
+          setInterfaces(response.data.interfaces);
+        } else {
+          console.warn('No interfaces found in response');
+        }
+      } catch (error) {
+        console.error('Error fetching interfaces:', error);
+      }
+    };
+
+    const fetchDisks = async () => {
+      try {
+        const response = await axios.get(`https://${hostIP}:2020/get-disks`);
+        const allDisks = response.data.disks || [];
+
+        // Remove duplicates based on disk name
+        const uniqueDisks = Array.from(
+          new Map(allDisks.map(d => [d.name, d])).values()
+        );
+
+        setDisks(uniqueDisks);
+      } catch (error) {
+        console.error('Failed to fetch disks:', error);
+      }
+    };
+
+
+    // Call both functions
+    fetchInterfaces();
+    fetchDisks();
+  }, []);
+
+
+
 
   const shouldDisableFields = (record) =>
     configType === 'default' && record.type === 'secondary';
 
   const handleSubmit = async () => {
+    setLoading(true); // Start loading spinner
+
     try {
       // 1. Validate VIP form
       const vipValues = await vipform.validateFields();
 
       if (configType === 'segregated' && !vipValues.defaultGateway) {
+        setLoading(false);
         message.error('Default Gateway is required in segregated mode.');
         return;
       }
@@ -60,24 +110,28 @@ const Deployment = () => {
 
         // Bond: must select 2 interfaces
         if (!row.interface || (useBond && row.interface.length !== 2)) {
+          setLoading(false);
           message.error(`Row ${i + 1}: Please select ${useBond ? 'exactly two' : 'a'} interface${useBond ? 's' : ''}.`);
           return;
         }
 
         // Must select Type
         if (!row.type || (Array.isArray(row.type) && row.type.length === 0)) {
+          setLoading(false);
           message.error(`Row ${i + 1}: Please select a Type.`);
           return;
         }
 
         // If bond is enabled, Bond Name is required
         if (useBond && !row.bondName?.trim()) {
+          setLoading(false);
           message.error(`Row ${i + 1}: Please enter a Bond Name.`);
           return;
         }
 
         // If VLAN is enabled, VLAN ID is required
         if (useVLAN && !row.vlanId?.trim()) {
+          setLoading(false);
           message.error(`Row ${i + 1}: Please enter a VLAN ID.`);
           return;
         }
@@ -88,6 +142,7 @@ const Deployment = () => {
           const requiredFields = ['ip', 'subnet', 'dns', 'gateway'];
           for (const field of requiredFields) {
             if (!row[field]) {
+              setLoading(false);
               message.error(`Row ${i + 1}: Please enter ${field.toUpperCase()}.`);
               return;
             }
@@ -96,6 +151,7 @@ const Deployment = () => {
 
         // Check for inline validation errors
         if (Object.keys(row.errors || {}).length > 0) {
+          setLoading(false);
           message.error(`Row ${i + 1} contains invalid entries. Please fix them.`);
           return;
         }
@@ -108,6 +164,7 @@ const Deployment = () => {
       if (providerTouched) {
         for (const field of providerFields) {
           if (!providerValues[field]) {
+            setLoading(false);
             message.error(`Provider Network: Please fill in the ${field} field.`);
             return;
           }
@@ -121,6 +178,7 @@ const Deployment = () => {
       if (tenantTouched) {
         for (const field of tenantFields) {
           if (!tenantValues[field]) {
+            setLoading(false);
             message.error(`Tenant Network: Please fill in the ${field} field.`);
             return;
           }
@@ -128,7 +186,7 @@ const Deployment = () => {
       }
 
       // ✅ All validations passed
-      message.success('All validations passed. Proceeding to submit...');
+      // message.success('All validations passed. Proceeding to submit...');
       // TODO: Add actual submission logic
     } catch (error) {
       message.error('Please fix the errors in required fields.');
@@ -156,10 +214,10 @@ const Deployment = () => {
 
     } catch (err) {
       message.error("Validation or submission failed.");
+    } finally {
+      setLoading(false); // Stop loading spinner
     }
   };
-
-
 
   const submitToBackend = async (data) => {
     try {
@@ -395,22 +453,21 @@ const Deployment = () => {
         title: 'Interfaces Required',
         dataIndex: 'interface',
         render: (_, record, index) => {
-          // Collect all selected interfaces from other rows
           const selectedInterfaces = tableData
-            .filter((_, i) => i !== index) // exclude current row
+            .filter((_, i) => i !== index)
             .flatMap(row => {
               if (useBond && Array.isArray(row.interface)) return row.interface;
               if (!useBond && row.interface) return [row.interface];
               return [];
             });
 
-          const allInterfaces = ['eth0', 'eth1', 'eth2', 'eth3']; // Add more if needed
           const currentSelection = useBond
             ? Array.isArray(record.interface) ? record.interface : []
             : record.interface ? [record.interface] : [];
 
-          const availableInterfaces = allInterfaces.filter(
-            (iface) => !selectedInterfaces.includes(iface) || currentSelection.includes(iface)
+          const availableInterfaces = interfaces.filter(
+            (iface) =>
+              !selectedInterfaces.includes(iface.iface) || currentSelection.includes(iface.iface)
           );
 
           return (
@@ -421,7 +478,6 @@ const Deployment = () => {
               allowClear
               placeholder={useBond ? 'Select interfaces' : 'Select interface'}
               onChange={(value) => {
-                // Enforce max 2 if bond is enabled
                 if (useBond && Array.isArray(value) && value.length > 2) {
                   value = value.slice(0, 2);
                 }
@@ -429,9 +485,9 @@ const Deployment = () => {
               }}
               maxTagCount={2}
             >
-              {availableInterfaces.map((iface) => (
-                <Option key={iface} value={iface}>
-                  {iface}
+              {availableInterfaces.map((ifaceObj) => (
+                <Option key={ifaceObj.iface} value={ifaceObj.iface}>
+                  {ifaceObj.iface}
                 </Option>
               ))}
             </Select>
@@ -601,316 +657,343 @@ const Deployment = () => {
 
       <Divider />
       <h4 style={{ userSelect: "none" }}>Network Configuration</h4>
-      <Splitter
-        style={{
-          height: 150,
-          boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
-        }}
-      >
-        <Splitter.Panel size="50%" resizable={false}>
-          <div style={{ padding: 20 }}>
-            <Typography.Title level={5} style={{ marginBottom: 16 }}>
-              Configuration Type
-            </Typography.Title>
-            <Radio.Group
-              value={configType}
-              onChange={(e) => setConfigType(e.target.value)}
+      <div style={{ height: '830px' }}>
+        <Spin
+          spinning={loading}
+          tip="Validating the input..."
+          size="large"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: '230px',
+          }}
+        >
+          <div>
+            <Splitter
+              style={{
+                height: 150,
+                boxShadow: '0 0 10px rgba(0, 0, 0, 0.1)',
+              }}
             >
-              <Flex vertical gap="small">
-                <Radio value="default">Default</Radio>
-                <Radio value="segregated">Segregated</Radio>
-              </Flex>
-            </Radio.Group>
-          </div>
-        </Splitter.Panel>
+              <Splitter.Panel size="50%" resizable={false}>
+                <div style={{ padding: 20 }}>
+                  <Typography.Title level={5} style={{ marginBottom: 16 }}>
+                    Configuration Type
+                  </Typography.Title>
+                  <Radio.Group
+                    value={configType}
+                    onChange={(e) => setConfigType(e.target.value)}
+                  >
+                    <Flex vertical gap="small">
+                      <Radio value="default">Default</Radio>
+                      <Radio value="segregated">Segregated</Radio>
+                    </Flex>
+                  </Radio.Group>
+                </div>
+              </Splitter.Panel>
 
-        <Splitter.Panel resizable={false}>
-          <div style={{ padding: 20 }}>
-            <Typography.Title level={5} style={{ marginBottom: 16 }}>
-              Advanced Networking Options
-            </Typography.Title>
-            <Flex vertical gap="small">
-              <Checkbox checked={useVLAN} onChange={(e) => setUseVLAN(e.target.checked)}>VLAN</Checkbox>
-              <Checkbox checked={useBond} onChange={(e) => setUseBond(e.target.checked)}>BOND</Checkbox>
+              <Splitter.Panel resizable={false}>
+                <div style={{ padding: 20 }}>
+                  <Typography.Title level={5} style={{ marginBottom: 16 }}>
+                    Advanced Networking Options
+                  </Typography.Title>
+                  <Flex vertical gap="small">
+                    <Checkbox checked={useVLAN} onChange={(e) => setUseVLAN(e.target.checked)}>VLAN</Checkbox>
+                    <Checkbox checked={useBond} onChange={(e) => setUseBond(e.target.checked)}>BOND</Checkbox>
+                  </Flex>
+                </div>
+              </Splitter.Panel>
+            </Splitter>
+
+            <Flex justify="flex-end" style={{ margin: '16px 0' }}>
+              <Button type="text" danger onClick={handleReset} style={{ width: "100px", height: "35px" }}>
+                Reset Table
+              </Button>
+            </Flex>
+
+            <div style={{ marginTop: 24 }}>
+              <Table
+                columns={getColumns()}  // ← dynamic columns logic goes here
+                dataSource={tableData}
+                pagination={false}
+                bordered
+                size="small"
+              />
+            </div>
+            <Divider />
+            <Form form={vipform} layout="vertical">
+              <div style={{ display: "flex", gap: "40px", marginTop: "20px" }}>
+                <Form.Item
+                  name="vip"
+                  label={
+                    <span>
+                      Enter VIP&nbsp;
+                      <Tooltip placement="right" title="Virtual IP Address" >
+                        <InfoCircleOutlined style={{
+                          color: "#1890ff", fontSize: "14px", height: "12px",
+                          width: "12px"
+                        }} />
+                      </Tooltip>
+                    </span>
+                  }
+                  rules={[
+                    { required: true, message: 'VIP is required' },
+                    {
+                      pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                      message: 'Invalid VIP format (e.g. 192.168.1.0)',
+                    },
+                  ]}
+                >
+                  <Input maxLength={18} placeholder="Enter VIP" style={{ width: 200 }} />
+                </Form.Item>
+
+                <Form.Item
+                  name="disk"
+                  label={
+                    <span>
+                      Select Disks&nbsp;
+                      <Tooltip placement="right" title="Ceph OSD">
+                        <InfoCircleOutlined
+                          style={{
+                            color: "#1890ff",
+                            fontSize: "14px",
+                            height: "12px",
+                            width: "12px",
+                          }}
+                        />
+                      </Tooltip>
+                    </span>
+                  }
+                  rules={[{ required: true, message: 'Disk is required' }]}
+                >
+                  <Select
+                    placeholder="Select Disk"
+                    style={{ width: 200 }}
+                    allowClear
+                    mode="multiple"
+                    optionLabelProp="label"
+                  >
+                    {disks.map((disk) => (
+                      <Option key={disk.wwn} value={disk.wwn} label={disk.name}>
+                        <div>
+                          <strong>{disk.name}</strong> &nbsp;
+                          <span style={{ color: '#888' }}>
+                            ({disk.size}, WWN: {disk.wwn || 'N/A'})
+                          </span>
+                        </div>
+                      </Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+                {configType === 'segregated' && (
+                  <Form.Item
+                    name="defaultGateway"
+                    label={
+                      <span>
+                        Enter Default Gateway&nbsp;
+                        <Tooltip placement="right" title="Default Gateway">
+                          <InfoCircleOutlined
+                            style={{
+                              color: "#1890ff",
+                              fontSize: "14px",
+                              height: "12px",
+                              width: "12px"
+                            }}
+                          />
+                        </Tooltip>
+                      </span>
+                    }
+                    rules={[
+                      { required: true, message: 'Gateway is required' },
+                      {
+                        pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                        message: 'Invalid IP format (e.g. 192.168.1.1)',
+                      },
+                    ]}
+                  >
+                    <Input maxLength={18} placeholder="Enter Gateway" style={{ width: 200 }} />
+                  </Form.Item>
+                )}
+              </div>
+            </Form>
+            <Divider />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center", // ✅ This ensures vertical alignment
+                marginTop: "20px",
+                marginBottom: "5px",
+                gap: "7px"
+              }}
+            >
+              <h4 style={{ userSelect: "none", margin: 0 }}>Provider Network</h4>
+              <p style={{ margin: 0 }}>(optional)</p>
+              <Tooltip placement="right" title="Provider Network" >
+                <InfoCircleOutlined
+                  style={{
+                    color: "#1890ff",
+                    fontSize: "15.5px",
+                    height: "12px",
+                    width: "12px"
+                  }}
+                />
+              </Tooltip>
+            </div>
+            <Form form={Providerform} >
+              <Space>
+                <div style={{ display: "flex", gap: "40px" }}>
+                  <Form.Item
+                    name="cidr"
+                    rules={[
+                      // {
+                      //   required: true,
+                      //   message: 'CIDR is required',
+                      // },
+                      {
+                        pattern: /^(([0-9]{1,3}\.){3}[0-9]{1,3})\/([0-9]|[1-2][0-9]|3[0-2])$/,
+                        message: 'Invalid CIDR format (e.g. 192.168.1.0/24)',
+                      },
+                    ]}
+                  >
+                    <Input placeholder="Enter CIDR" style={{ width: 200 }} />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="gateway"
+                    rules={[
+                      {
+                        pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                        message: 'Invalid IP address',
+                      },
+                    ]}
+                  >
+                    <Input placeholder="Enter Gateway" style={{ width: 200 }} />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="startingIp"
+                    rules={[
+                      {
+                        pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                        message: 'Invalid IP address',
+                      },
+                    ]}
+                  >
+                    <Input placeholder="Enter Starting IP" style={{ width: 200 }} />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="endingIp"
+                    rules={[
+                      {
+                        pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                        message: 'Invalid IP address',
+                      },
+                    ]}
+                  >
+                    <Input placeholder="Enter Ending IP" style={{ width: 200 }} />
+                  </Form.Item>
+                </div>
+              </Space>
+            </Form >
+            <Divider />
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center", // ✅ This ensures vertical alignment
+                marginTop: "20px",
+                marginBottom: "8px",
+                gap: "7px"
+              }}
+            >
+              <h4 style={{ userSelect: "none", margin: 0 }}>Tenant Network</h4>
+              <p style={{ margin: 0 }}>(optional)</p>
+              <Tooltip placement="right" title="Tenant Network" >
+                <InfoCircleOutlined
+                  style={{
+                    color: "#1890ff",
+                    fontSize: "15.5px",
+                    height: "12px",
+                    width: "12px"
+                  }}
+                />
+              </Tooltip>
+            </div>
+            <Form form={Tenantform} layout="vertical">
+              <Space>
+                <div style={{ display: "flex", gap: "40px" }}>
+                  {/* CIDR Field */}
+                  <Form.Item
+                    name="cidr"
+                    rules={[
+                      // { required: true, message: 'CIDR is required' },
+                      {
+                        pattern: /^(([0-9]{1,3}\.){3}[0-9]{1,3})\/([0-9]|[1-2][0-9]|3[0-2])$/,
+                        message: 'Invalid CIDR format (e.g. 10.0.0.0/24)',
+                      },
+                    ]}
+                  >
+                    <Input
+                      placeholder="CIDR default:10.0.0.0/24"
+                      style={{ width: 200 }}
+                    />
+                  </Form.Item>
+
+                  {/* Gateway Field */}
+                  <Form.Item
+                    name="gateway"
+                    rules={[
+                      // { required: true, message: 'Gateway is required' },
+                      {
+                        pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                        message: 'Invalid Gateway IP (e.g. 10.0.0.1)',
+                      },
+                    ]}
+                  >
+                    <Input
+                      placeholder="Gateway default:10.0.0.1"
+                      style={{ width: 200 }}
+                    />
+                  </Form.Item>
+
+                  {/* Nameserver Field */}
+                  <Form.Item
+                    name="nameserver"
+                    rules={[
+                      // { required: true, message: 'Nameserver is required' },
+                      {
+                        pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                        message: 'Invalid Nameserver IP (e.g. 8.8.8.8)',
+                      },
+                    ]}
+                  >
+                    <Input
+                      placeholder="Nameserver default:8.8.8.8"
+                      style={{ width: 200 }}
+                    />
+                  </Form.Item>
+                </div>
+              </Space>
+            </Form>
+            <Flex justify="flex-end">
+              <Space>
+                <Button htmlType="button" danger onClick={() => {
+                  vipform.resetFields();
+                  Providerform.resetFields();
+                  Tenantform.resetFields();
+                  handleReset(); // resets the table
+                }}>
+                  Reset Values
+                </Button>
+                <Button type="primary" onClick={handleSubmit}>
+                  Submit
+                </Button>
+              </Space>
             </Flex>
           </div>
-        </Splitter.Panel>
-      </Splitter>
-
-      <Flex justify="flex-end" style={{ margin: '16px 0' }}>
-        <Button type="text" danger onClick={handleReset} style={{ width: "100px", height: "35px" }}>
-          Reset Table
-        </Button>
-      </Flex>
-
-      <div style={{ marginTop: 24 }}>
-        <Table
-          columns={getColumns()}  // ← dynamic columns logic goes here
-          dataSource={tableData}
-          pagination={false}
-          bordered
-          size="small"
-        />
+        </Spin>
       </div>
-      <Divider />
-      <Form form={vipform} layout="vertical">
-        <div style={{ display: "flex", gap: "40px", marginTop: "20px" }}>
-          <Form.Item
-            name="vip"
-            label={
-              <span>
-                Enter VIP&nbsp;
-                <Tooltip placement="right" title="Virtual IP Address" >
-                  <InfoCircleOutlined style={{
-                    color: "#1890ff", fontSize: "14px", height: "12px",
-                    width: "12px"
-                  }} />
-                </Tooltip>
-              </span>
-            }
-            rules={[
-              { required: true, message: 'VIP is required' },
-              {
-                pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
-                message: 'Invalid VIP format (e.g. 192.168.1.0)',
-              },
-            ]}
-          >
-            <Input maxLength={18} placeholder="Enter VIP" style={{ width: 200 }} />
-          </Form.Item>
-
-          <Form.Item
-            name="disk"
-            label={
-              <span>
-                Select Disks&nbsp;
-                <Tooltip placement="right" title="Ceph OSD" >
-                  <InfoCircleOutlined style={{
-                    color: "#1890ff", fontSize: "14px", height: "12px",
-                    width: "12px"
-                  }} />
-                </Tooltip>
-              </span>
-            }
-            rules={[
-              { required: true, message: 'Disk is required' }
-            ]}
-          >
-            <Select
-              placeholder="Select Disk"
-              style={{ width: 200 }}
-              allowClear
-              mode='multiple'
-            >
-              <Option value="/dev/sda">/dev/sda</Option>
-              <Option value="/dev/sdb">/dev/sdb</Option> {/* Add more if needed */}
-            </Select>
-          </Form.Item>
-          {configType === 'segregated' && (
-            <Form.Item
-              name="defaultGateway"
-              label={
-                <span>
-                  Enter Default Gateway&nbsp;
-                  <Tooltip placement="right" title="Default Gateway">
-                    <InfoCircleOutlined
-                      style={{
-                        color: "#1890ff",
-                        fontSize: "14px",
-                        height: "12px",
-                        width: "12px"
-                      }}
-                    />
-                  </Tooltip>
-                </span>
-              }
-              rules={[
-                { required: true, message: 'Gateway is required' },
-                {
-                  pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
-                  message: 'Invalid IP format (e.g. 192.168.1.1)',
-                },
-              ]}
-            >
-              <Input maxLength={18} placeholder="Enter Gateway" style={{ width: 200 }} />
-            </Form.Item>
-          )}
-        </div>
-      </Form>
-      <Divider />
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center", // ✅ This ensures vertical alignment
-          marginTop: "20px",
-          marginBottom: "5px",
-          gap: "7px"
-        }}
-      >
-        <h4 style={{ userSelect: "none", margin: 0 }}>Provider Network</h4>
-        <p style={{ margin: 0 }}>(optional)</p>
-        <Tooltip placement="right" title="Provider Network" >
-          <InfoCircleOutlined
-            style={{
-              color: "#1890ff",
-              fontSize: "15.5px",
-              height: "12px",
-              width: "12px"
-            }}
-          />
-        </Tooltip>
-      </div>
-      <Form form={Providerform} >
-        <Space>
-          <div style={{ display: "flex", gap: "40px" }}>
-            <Form.Item
-              name="cidr"
-              rules={[
-                // {
-                //   required: true,
-                //   message: 'CIDR is required',
-                // },
-                {
-                  pattern: /^(([0-9]{1,3}\.){3}[0-9]{1,3})\/([0-9]|[1-2][0-9]|3[0-2])$/,
-                  message: 'Invalid CIDR format (e.g. 192.168.1.0/24)',
-                },
-              ]}
-            >
-              <Input placeholder="Enter CIDR" style={{ width: 200 }} />
-            </Form.Item>
-
-            <Form.Item
-              name="gateway"
-              rules={[
-                {
-                  pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
-                  message: 'Invalid IP address',
-                },
-              ]}
-            >
-              <Input placeholder="Enter Gateway" style={{ width: 200 }} />
-            </Form.Item>
-
-            <Form.Item
-              name="startingIp"
-              rules={[
-                {
-                  pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
-                  message: 'Invalid IP address',
-                },
-              ]}
-            >
-              <Input placeholder="Enter Starting IP" style={{ width: 200 }} />
-            </Form.Item>
-
-            <Form.Item
-              name="endingIp"
-              rules={[
-                {
-                  pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
-                  message: 'Invalid IP address',
-                },
-              ]}
-            >
-              <Input placeholder="Enter Ending IP" style={{ width: 200 }} />
-            </Form.Item>
-          </div>
-        </Space>
-      </Form >
-      <Divider />
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center", // ✅ This ensures vertical alignment
-          marginTop: "20px",
-          marginBottom: "8px",
-          gap: "7px"
-        }}
-      >
-        <h4 style={{ userSelect: "none", margin: 0 }}>Tenant Network</h4>
-        <p style={{ margin: 0 }}>(optional)</p>
-        <Tooltip placement="right" title="Tenant Network" >
-          <InfoCircleOutlined
-            style={{
-              color: "#1890ff",
-              fontSize: "15.5px",
-              height: "12px",
-              width: "12px"
-            }}
-          />
-        </Tooltip>
-      </div>
-      <Form form={Tenantform} layout="vertical">
-        <Space>
-          <div style={{ display: "flex", gap: "40px" }}>
-            {/* CIDR Field */}
-            <Form.Item
-              name="cidr"
-              rules={[
-                // { required: true, message: 'CIDR is required' },
-                {
-                  pattern: /^(([0-9]{1,3}\.){3}[0-9]{1,3})\/([0-9]|[1-2][0-9]|3[0-2])$/,
-                  message: 'Invalid CIDR format (e.g. 10.0.0.0/24)',
-                },
-              ]}
-            >
-              <Input
-                placeholder="CIDR default:10.0.0.0/24"
-                style={{ width: 200 }}
-              />
-            </Form.Item>
-
-            {/* Gateway Field */}
-            <Form.Item
-              name="gateway"
-              rules={[
-                // { required: true, message: 'Gateway is required' },
-                {
-                  pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
-                  message: 'Invalid Gateway IP (e.g. 10.0.0.1)',
-                },
-              ]}
-            >
-              <Input
-                placeholder="Gateway default:10.0.0.1"
-                style={{ width: 200 }}
-              />
-            </Form.Item>
-
-            {/* Nameserver Field */}
-            <Form.Item
-              name="nameserver"
-              rules={[
-                // { required: true, message: 'Nameserver is required' },
-                {
-                  pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
-                  message: 'Invalid Nameserver IP (e.g. 8.8.8.8)',
-                },
-              ]}
-            >
-              <Input
-                placeholder="Nameserver default:8.8.8.8"
-                style={{ width: 200 }}
-              />
-            </Form.Item>
-          </div>
-        </Space>
-      </Form>
-      <Flex justify="flex-end">
-        <Space>
-          <Button htmlType="button" danger onClick={() => {
-            vipform.resetFields();
-            Providerform.resetFields();
-            Tenantform.resetFields();
-            handleReset(); // resets the table
-          }}>
-            Reset Values
-          </Button>
-          <Button type="primary" onClick={handleSubmit}>
-            Submit
-          </Button>
-        </Space>
-      </Flex>
     </div >
   );
 };

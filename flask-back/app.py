@@ -7,6 +7,9 @@ import json
 import paramiko
 import re
 import subprocess
+import subprocess
+import time
+
 
 app = Flask(__name__)
 CORS(app)
@@ -243,10 +246,7 @@ def trigger_program():
         if data["action"] == "runProgram":
             # Run the Python program (example with 'your_program.py')
             result = subprocess.run(
-                ["sudo", "python3", "encrypt.py"],
-                check=True,
-                capture_output=True,
-                text=True,
+                ["python3", "encrypt.py"], check=True, capture_output=True, text=True
             )
 
             # If the program runs successfully, return a success response
@@ -293,6 +293,7 @@ def is_mac_address_available(mac_address):
 # Function to remove specified files
 def remove_files():
     files_to_remove = [
+        "lookup_table.json",
         "perpetual_keys.json",
         "trial_keys.json",
         "yearly_keys.json",
@@ -382,7 +383,7 @@ def decrypt_code_endpoint():
         return jsonify({"success": False, "message": "Code not found!"}), 404
 
     # Path to the license.txt file
-    license_file_path = "/home/pinaka/license.txt"
+    license_file_path = "/home/pinakasupport/.pinaka_wd/.markers/license.txt"
 
     # Check if the license code already exists in the license.txt file
     if check_license_used(license_file_path, encrypted_code):
@@ -397,7 +398,6 @@ def decrypt_code_endpoint():
         # Get the license period based on the key type
         license_period = export_license_period(key_type)
 
-        # Remove unnecessary files after processing
         remove_files()
 
         # Send response to frontend
@@ -428,8 +428,12 @@ def check_license_used(file_path, license_code):
 
 
 # Define the path where you want to store the data.json and license.txt files
-DATA_DIRECTORY = "/home/pinaka/"  # Change this to the desired directory
-LICENSE_FILE_PATH = "/home/pinaka/license.txt"  # Path for the license file
+DATA_DIRECTORY = (
+    "/home/pinakasupport/.pinaka_wd/.scripts/"  # Change this to the desired directory
+)
+LICENSE_FILE_PATH = (
+    "/home/pinakasupport/.pinaka_wd/.markers/license.txt"  # Path for the license file
+)
 
 
 # Function to save data to a JSON file and license code to a license.txt file
@@ -468,6 +472,7 @@ def save_to_json_file(file_name, data):
 # ------------------------------------------------ Validate License End --------------------------------------------
 
 
+# ------------------------------------------------- Save and validate deploy config start----------------------------
 @app.route("/submit-network-config", methods=["POST"])
 def submit_network_config():
     try:
@@ -483,7 +488,6 @@ def submit_network_config():
         provider = data.get("providerNetwork", {})
         tenant = data.get("tenantNetwork", {})
 
-        # Handle disk input (may be string or list)
         disk = data.get("disk", [])
         if not isinstance(disk, list):
             disk = [disk] if disk else []
@@ -491,10 +495,90 @@ def submit_network_config():
         vip = data.get("vip", "")
         default_gateway = data.get("defaultGateway", "")
 
-        # Error if tableData is empty
+        # === Top-level validation ===
         if not table_data:
-            return jsonify({"error": "Missing or empty tableData"}), 400
+            app.logger.error(f"Missing tableData: {data}")
+            return jsonify({"success": False, "message": "tableData is required"}), 400
 
+        if config_type not in ["default", "segregated"]:
+            app.logger.error(f"Invalid configType: {config_type}")
+            return jsonify({"success": False, "message": "Invalid configType"}), 400
+
+        # === Validate each row in tableData ===
+        for i, row in enumerate(table_data):
+            interface = row.get("interface")
+            if not interface:
+                app.logger.error(f"Missing 'interface' in row {i+1}: {row}")
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": f"'interface' is required in row {i+1}",
+                        }
+                    ),
+                    400,
+                )
+
+            if isinstance(interface, str):
+                interface = [interface]
+
+            for iface in interface:
+                if not iface.strip():
+                    app.logger.error(f"Empty interface name in row {i+1}: {row}")
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "message": f"Blank interface in row {i+1}",
+                            }
+                        ),
+                        400,
+                    )
+
+                # Check if the interface is up
+                if not is_interface_up(iface):
+                    app.logger.error(f"Interface {iface} is down.")
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "message": f"Network interface '{iface}' is down. Please bring it up",
+                            }
+                        ),
+                        400,
+                    )
+
+            # Only check bond name if bonding is used
+            if use_bond and "bondName" in row:
+                if not row["bondName"]:
+                    app.logger.error(f"Empty bondName in row {i+1}")
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "message": f"'bondName' cannot be empty in row {i+1}",
+                            }
+                        ),
+                        400,
+                    )
+
+            # Only check VLAN ID if VLAN is used and provided
+            if use_vlan and "vlanId" in row and row["vlanId"] != "":
+                try:
+                    int(row["vlanId"])
+                except ValueError:
+                    app.logger.error(f"Invalid VLAN ID in row {i+1}: {row['vlanId']}")
+                    return (
+                        jsonify(
+                            {
+                                "success": False,
+                                "message": f"VLAN ID must be an integer in row {i+1}",
+                            }
+                        ),
+                        400,
+                    )
+
+        # === Build output JSON ===
         response_json = {
             "using_interfaces": {},
             "provider_cidr": provider.get("cidr", "N/A"),
@@ -521,7 +605,6 @@ def submit_network_config():
 
             is_secondary = "Secondary" in row_type or row_type == ["secondary"]
 
-            # BOND group
             if use_bond and "bondName" in row and row["bondName"]:
                 bond_key = f"bond{bond_count + 1}"
                 response_json["using_interfaces"][bond_key] = {
@@ -538,7 +621,6 @@ def submit_network_config():
                         "gateway": row.get("gateway", ""),
                     }
 
-                # Add slave interfaces
                 for iface in row.get("interface", []):
                     iface_key = f"interface_0{iface_count}"
                     response_json["using_interfaces"][iface_key] = {
@@ -551,7 +633,6 @@ def submit_network_config():
                 bond_count += 1
 
             else:
-                # Non-bonded interface
                 iface_key = f"interface_0{iface_count}"
                 interface_name = (
                     row["interface"][0]
@@ -576,7 +657,7 @@ def submit_network_config():
                 response_json["using_interfaces"][iface_key] = interface_entry
                 iface_count += 1
 
-        # Save JSON to file
+        # === Save the file ===
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"network_config_{timestamp}.json"
         file_path = os.path.join("submitted_configs", filename)
@@ -585,18 +666,130 @@ def submit_network_config():
         with open(file_path, "w") as f:
             json.dump(response_json, f, indent=4)
 
-        return jsonify({"message": "Config saved", "filename": filename}), 200
+        return (
+            jsonify({"success": True, "message": "Config saved", "filename": filename}),
+            200,
+        )
 
     except Exception as e:
-        print("❌ Exception occurred:", str(e))
-        return jsonify({"error": f"Bad Request: {str(e)}"}), 400
+        app.logger.error(f"❌ Exception occurred: {str(e)}")
+        return jsonify({"success": False, "message": f"Bad Request: {str(e)}"}), 400
+
+
+def is_interface_up(interface):
+    """Check if the given network interface is up. If not, attempt to bring it up."""
+    try:
+        result = subprocess.run(
+            ["ip", "link", "show", interface],
+            stdout=subprocess.PIPE,
+            universal_newlines=True,
+        )
+
+        if "state UP" in result.stdout:
+            return True  # Interface is already up
+
+        print(f"Interface {interface} is down. Attempting to bring it up...")
+
+        subprocess.run(["sudo", "ip", "link", "set", interface, "up"], check=False)
+        subprocess.run(["sudo", "systemctl", "restart", "networking"], check=False)
+        time.sleep(10)
+
+        result = subprocess.run(
+            ["ip", "link", "show", interface],
+            stdout=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        if "state UP" in result.stdout:
+            return True
+
+        print(f"Retrying with ifconfig for {interface}...")
+        subprocess.run(["sudo", "ifconfig", interface, "up"], check=False)
+        subprocess.run(["sudo", "systemctl", "restart", "networking"], check=False)
+        time.sleep(10)
+
+        result = subprocess.run(
+            ["ip", "link", "show", interface],
+            stdout=subprocess.PIPE,
+            universal_newlines=True,
+        )
+        if "state UP" in result.stdout:
+            return True
+
+        print(f"Error: Interface {interface} is still down after multiple attempts.")
+        return False
+
+    except Exception as e:
+        print(f"Error checking interface {interface}: {e}")
+        return False
+
+
+# ------------------------------------------------- Save and validate deploy config end----------------------------
+
+
+# ------------------------------------------------GET DISK LIST FROM THE RUNNING SERVER Start-----------------------
+
+
+def get_root_disk():
+    """Find the root disk name."""
+    try:
+        result = subprocess.run(
+            ["lsblk", "-o", "NAME,MOUNTPOINT", "-J"], capture_output=True, text=True
+        )
+        data = json.loads(result.stdout)
+
+        for disk in data.get("blockdevices", []):
+            if "children" in disk:
+                for part in disk["children"]:
+                    if part.get("mountpoint") == "/":
+                        return disk["name"]  # Root disk name (e.g., "sda")
+
+        return None  # Return None if no root disk is found
+    except Exception as e:
+        return None
+
+
+def get_disk_list():
+    """Fetch disk list using lsblk and exclude the root disk."""
+    try:
+        # Get disk details including WWN
+        result = subprocess.run(
+            ["lsblk", "-o", "NAME,SIZE,WWN", "-J"], capture_output=True, text=True
+        )
+        disks = json.loads(result.stdout).get("blockdevices", [])
+
+        # Get the root disk name
+        root_disk = get_root_disk()
+
+        # Filter out small-sized disks (KB, MB) and the root disk
+        small_size_pattern = re.compile(r"\b(\d+(\.\d+)?)\s*(K|M)\b", re.IGNORECASE)
+        filtered_disks = [
+            {
+                "name": disk["name"],
+                "size": disk["size"],
+                "wwn": disk.get("wwn", "N/A"),  # Some disks may not have WWN
+            }
+            for disk in disks
+            if not small_size_pattern.search(disk["size"]) and disk["name"] != root_disk
+        ]
+
+        return filtered_disks
+    except Exception as e:
+        return str(e)
+
+
+@app.route("/get-disks", methods=["GET"])
+def get_disks():
+    """API endpoint to get the list of available disks."""
+    disks = get_disk_list()
+    return jsonify({"disks": disks, "status": "success"})
+
+
+# ------------------------------------------------GET DISK LIST FROM THE RUNNING SERVER End-----------------------
 
 
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
-        ssl_context=("cert.pem", "key.pem"),
         port=2020,
-        threaded=True,
-        debug=True,
+        ssl_context=("cert.pem", "key.pem"),  # (certificate, private key)
     )

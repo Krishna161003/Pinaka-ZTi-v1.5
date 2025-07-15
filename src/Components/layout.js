@@ -229,6 +229,17 @@ const AppLayout = ({ children }) => {
     },
   ];
 
+  const siderStyle = {
+    overflow: 'auto',
+    height: '100vh',
+    position: 'sticky',
+    // insetInlineStart: 0,
+    top: 0,
+    bottom: 0,
+    scrollbarWidth: 'thin',
+    scrollbarGutter: 'stable',
+  };
+
   useEffect(() => {
     try {
       const data = JSON.parse(sessionStorage.getItem("loginDetails"));
@@ -242,7 +253,7 @@ const AppLayout = ({ children }) => {
 
   return (
     <Layout style={{ minHeight: "100vh", backgroundColor: "black" }}>
-      <Sider trigger={null} collapsible collapsed={collapsed}>
+      <Sider style={siderStyle} trigger={null} collapsible collapsed={collapsed}>
         <div style={{ padding: "16px", textAlign: "center" }}>
           <img
             src={collapsed ? img2 : img1}
@@ -274,6 +285,9 @@ const AppLayout = ({ children }) => {
         <Header
           style={{
             padding: 0,
+            top: 0,
+            zIndex: 1,
+            position: 'sticky',
             background: colorBgContainer,
             display: "flex",
             justifyContent: "space-between",
