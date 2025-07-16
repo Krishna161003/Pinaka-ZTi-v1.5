@@ -18,7 +18,7 @@ const getCloudNameFromMetadata = () => {
 const hostIP = window.location.hostname;
 
 
-const DataTable = ({ onNodeSelect }) => {
+const DataTable = ({ onNodeSelect, next }) => {
   const cloudName = getCloudNameFromMetadata();
   const [isScanning, setIsScanning] = useState(false);
   const [nodes, setNodes] = useState([]);
@@ -136,6 +136,7 @@ const DataTable = ({ onNodeSelect }) => {
           size="middle"
           style={{ width: "75px" }}
           type="primary"
+          onClick={next}
         >
           Next
         </Button>

@@ -10,7 +10,7 @@ const getCloudNameFromMetadata = () => {
 const hostIP = window.location.hostname;
 
 
-const Validation = ({ nodes, onIbnUpdate, next }) => {
+const Validation = ({ nodes, onIbnUpdate, next, onValidationResult }) => {
   const cloudName = getCloudNameFromMetadata();
   const [api, contextHolder] = notification.useNotification();
   const [loading, setLoading] = useState(false);
@@ -29,6 +29,17 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
       });
       const data = response.data?.[0];
       setResults(data);
+      // Notify parent of validation result
+      if (onValidationResult) {
+        if (
+          typeof data.validation_result === "string" &&
+          data.validation_result.trim().toLowerCase() === "passed"
+        ) {
+          onValidationResult("passed");
+        } else {
+          onValidationResult("failed");
+        }
+      }
     } catch (err) {
       const errorMessage = "Validation failed. Please try again.";
       setError(errorMessage);
@@ -81,13 +92,27 @@ const Validation = ({ nodes, onIbnUpdate, next }) => {
         <CloudOutlined />
         &nbsp;&nbsp;{cloudName} Cloud
       </h5>
-      <Breadcrumb style={{ marginBottom: "16px" }}>
-        <Breadcrumb.Item>
-          <HomeOutlined />
-        </Breadcrumb.Item>
-        <Breadcrumb.Item>Deployment Options</Breadcrumb.Item>
-        <Breadcrumb.Item>Server Validation</Breadcrumb.Item>
-      </Breadcrumb>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px' }}>
+        <Breadcrumb style={{ margin: 0 }}>
+          <Breadcrumb.Item>
+            <HomeOutlined />
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>Deployment Options</Breadcrumb.Item>
+          <Breadcrumb.Item>Server Validation</Breadcrumb.Item>
+        </Breadcrumb>
+        <Button
+          type="primary"
+          style={{ width: 70, minWidth: 80, height: 36, marginLeft: 8, verticalAlign: 'middle' }}
+          disabled={!(
+            results &&
+            typeof results.validation_result === "string" &&
+            results.validation_result.trim().toLowerCase() === "passed"
+          )}
+          onClick={next}
+        >
+          Next
+        </Button>
+      </div>
 
       <Divider />
 

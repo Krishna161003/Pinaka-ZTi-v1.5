@@ -27,7 +27,7 @@ const hostIP = window.location.hostname;
 // const hostIP = "192.168.20.195"
 
 
-const ActivateKey = () => {
+const ActivateKey = ({ next }) => {
   const cloudName = getCloudNameFromMetadata();
   const [licenseCode, setLicenseCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -87,6 +87,14 @@ const ActivateKey = () => {
           <Breadcrumb.Item>System Interface</Breadcrumb.Item>
           <Breadcrumb.Item>License Activation</Breadcrumb.Item>
         </Breadcrumb>
+        <Button
+          type="primary"
+          style={{ width: 75 }}
+          disabled={!(result && result.success)}
+          onClick={next}
+        >
+          Next
+        </Button>
       </div>
 
       <Divider />

@@ -33,7 +33,7 @@ const getCloudNameFromMetadata = () => {
 
 
 
-const Deployment = () => {
+const Deployment = ({ next }) => {
   const cloudName = getCloudNameFromMetadata();
   const [configType, setConfigType] = useState('default');
   const [tableData, setTableData] = useState([]);
@@ -233,6 +233,8 @@ const Deployment = () => {
 
       if (response.ok) {
         message.success("Data submitted successfully!");
+        message.success("The Deployment will start in a moment");
+        if (next) next();
       } else {
         message.error(`Error: ${result.message || "Submission failed"}`);
       }
@@ -397,6 +399,16 @@ const Deployment = () => {
 
         row.interface = value;
       }
+
+      if (field === 'bondName') {
+        // Ensure bond name is unique
+        const isDuplicate = updatedData.some((r, i) => i !== index && r.bondName === value);
+        if (isDuplicate) {
+          row.errors[field] = 'Bond name must be unique';
+        } else {
+          delete row.errors[field];
+        }
+      }
     }
 
     updatedData[index] = row;
@@ -415,13 +427,20 @@ const Deployment = () => {
     const bondColumn = {
       title: 'Bond Name',
       dataIndex: 'bondName',
-      render: (_, record, index) => (
-        <Input
-          value={record.bondName ?? ''}
-          placeholder="Enter Bond Name"
-          onChange={(e) => handleCellChange(index, 'bondName', e.target.value)}
-        />
-      ),
+      render: (_, record, index) => {
+        const error = record.errors?.bondName;
+        return (
+          <div>
+            <Input
+              value={record.bondName ?? ''}
+              placeholder="Enter Bond Name"
+              status={error ? 'error' : ''}
+              onChange={(e) => handleCellChange(index, 'bondName', e.target.value)}
+            />
+            {error && <div style={{ color: 'red', fontSize: 12 }}>{error}</div>}
+          </div>
+        );
+      },
     };
 
     const vlanColumn = {

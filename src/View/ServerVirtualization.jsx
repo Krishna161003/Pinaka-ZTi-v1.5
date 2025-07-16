@@ -20,10 +20,15 @@ const App = () => {
   });
 
   const [disabledTabs, setDisabledTabs] = useState(() => {
-    // Initialize disabledTabs from sessionStorage or default
-    const savedDisabledTabs = sessionStorage.getItem("disabledTabs");
-    return savedDisabledTabs ? JSON.parse(savedDisabledTabs) : { "2": false, "3": false, "4": false, "5": false, "6": false };
+    // By default, only Deployment Options is enabled; all others disabled
+    return { "2": true, "3": true, "4": true, "5": true, "6": true };
   });
+
+  // On initial mount, force disabledTabs to default (only Deployment Options enabled)
+  useEffect(() => {
+    setDisabledTabs({ "2": true, "3": true, "4": true, "5": true, "6": true });
+    sessionStorage.setItem("disabledTabs", JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
+  }, []);
 
   const [selectedNodes, setSelectedNodes] = useState([]);
   const [ibn, setIbn] = useState("");
@@ -41,13 +46,11 @@ const App = () => {
     if (savedIbn) setIbn(savedIbn);
   }, [location.search]);
 
-  // Persist activeTab in sessionStorage whenever it changes
   useEffect(() => {
     sessionStorage.setItem("activeTab", activeTab);
     navigate(`?tab=${activeTab}`); // Update query params in URL
   }, [activeTab, navigate]);
 
-  // Persist disabledTabs in sessionStorage whenever it changes
   useEffect(() => {
     sessionStorage.setItem("disabledTabs", JSON.stringify(disabledTabs));
   }, [disabledTabs]);
@@ -56,15 +59,18 @@ const App = () => {
     setActiveTab(key);
   };
 
-  const handleTabStart = (currentTab) => {
-    const nextTab = (currentTab + 1).toString();
-    setDisabledTabs((prevState) => ({
-      ...prevState,
-      [nextTab]: false,
-    }));
-    handleTabChange(nextTab);
+  // Handler to enable only Validation tab after Deployment Option modal is confirmed
+  const handleDeploymentStart = (cloudName) => {
+    setDisabledTabs({
+      "2": false, // Enable Validation
+      "3": true,
+      "4": true,
+      "5": true,
+      "6": true,
+    });
+    setActiveTab("2"); // Optionally switch to Validation tab
+    // Optionally store cloudName if needed
   };
-
 
   const handleIbnUpdate = (newIbn) => {
     setIbn(newIbn);
@@ -79,29 +85,61 @@ const App = () => {
     handleTabChange("4");
   };
 
+
   return (
     <Zti>
       <h2 style={{ userSelect: "none" }}>Server Virtualization</h2>
       <Tabs activeKey={activeTab} onChange={handleTabChange}>
         <Tabs.TabPane tab="Deployment Options" key="1">
-          <DeploymentOptions onStart={() => handleTabStart(1)} />
+          <DeploymentOptions onStart={handleDeploymentStart} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Validation" key="2" disabled={disabledTabs["2"]}>
-          <Validation
-            next={handleNextButtonClick}
-            nodes={selectedNodes}
-            onStart={() => handleTabStart(3)}
-            onIbnUpdate={handleIbnUpdate}
+          <Validation 
+            next={() => {
+              setDisabledTabs((prev) => ({ ...prev, "3": false }));
+              setActiveTab("3");
+            }}
+            onValidationResult={(result) => {
+              if (result === "failed") {
+                setDisabledTabs({
+                  "2": false,
+                  "3": true,
+                  "4": true,
+                  "5": true,
+                  "6": true,
+                });
+              }
+            }}
           />
         </Tabs.TabPane>
         <Tabs.TabPane tab="System Interface" key="3" disabled={disabledTabs["3"]}>
-          <Discovery onStart={() => handleTabStart(2)} />
+          <Discovery next={() => {
+            setDisabledTabs(prev => ({
+              ...prev,
+              "2": false, // Validation enabled
+              "3": false, // System Interface enabled
+              "4": false  // Activate Key enabled
+            }));
+            setActiveTab("4");
+          }} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Activate Key" key="4" disabled={disabledTabs["4"]}>
-          <ActivateKey />
+          <ActivateKey next={() => {
+            setDisabledTabs(prev => ({
+              ...prev,
+              "5": false, // Enable Deployment tab
+            }));
+            setActiveTab("5");
+          }} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Deployment" key="5" disabled={disabledTabs["5"]}>
-          <Deployment />
+          <Deployment next={() => {
+            setDisabledTabs(prev => ({
+              ...prev,
+              "6": false, // Enable Report tab
+            }));
+            setActiveTab("6");
+          }} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Report" key="6" disabled={disabledTabs["6"]}>
           <Report ibn={ibn} />

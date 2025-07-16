@@ -9,6 +9,7 @@ import re
 import subprocess
 import subprocess
 import time
+import ipaddress
 
 
 app = Flask(__name__)
@@ -18,11 +19,17 @@ CORS(app)
 #  Validation criteria
 ENV_REQUIREMENTS = {
     "development": {
-        "cpu_cores": 8,
-        "memory_gb": 32,
-        "disks": 2,
-        "network": 2,
+        "cpu_cores": 2,
+        "memory_gb": 3,
+        "disks": 0,
+        "network": 1,
     },
+    # "development": {
+    #     "cpu_cores": 8,
+    #     "memory_gb": 32,
+    #     "disks": 2,
+    #     "network": 2,
+    # },
     "production": {
         "cpu_cores": 48,
         "memory_gb": 128,
@@ -238,25 +245,20 @@ def get_cpu_socket_count():
 # ------------------------------------------------ Encryption code run Start --------------------------------------------
 
 
-@app.route("/trigger-program", methods=["POST"])
+# @app.route("/trigger-program", methods=["POST"])
 def trigger_program():
     try:
-        # Extract any data sent with the request if needed
-        data = request.get_json()
-        if data["action"] == "runProgram":
-            # Run the Python program (example with 'your_program.py')
-            result = subprocess.run(
-                ["python3", "encrypt.py"], check=True, capture_output=True, text=True
-            )
-
-            # If the program runs successfully, return a success response
-            return jsonify({"success": True, "output": result.stdout})
-        else:
-            return jsonify({"success": False, "message": "Invalid action"})
-
+        result = subprocess.run(
+            ["python3", "encrypt.py"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        return {"success": True, "output": result.stdout}
+    except subprocess.CalledProcessError as e:
+        return {"success": False, "message": e.stderr}
     except Exception as e:
-        # In case of any error, return an error message
-        return jsonify({"success": False, "message": str(e)})
+        return {"success": False, "message": str(e)}
 
 
 # ------------------------------------------------ Encryption code run End --------------------------------------------
@@ -327,6 +329,12 @@ def export_license_period(key_type):
 
 @app.route("/decrypt-code", methods=["POST"])
 def decrypt_code_endpoint():
+
+    encrypt_result = trigger_program()
+
+    if not encrypt_result["success"]:
+        return jsonify(encrypt_result), 500 
+        
     data = request.get_json()
 
     if not data or "encrypted_code" not in data:
@@ -577,6 +585,63 @@ def submit_network_config():
                         ),
                         400,
                     )
+                    # Check if interface IP is on a reachable network
+            if row.get("ip") and not is_network_available(row["ip"]):
+                app.logger.error(f"Unreachable interface IP in row {i+1}: {row['ip']}")
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": f"Interface IP {row['ip']} in row {i+1} is unreachable. Please check the network.",
+                        }
+                    ),
+                    400,
+                )
+
+            if row.get("gateway") and not is_network_available(row["gateway"]):
+                app.logger.error(f"Unreachable gateway in row {i+1}: {row['gateway']}")
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": f"Gateway {row['gateway']} in row {i+1} is unreachable. Please check the network.",
+                        }
+                    ),
+                    400,
+                )
+
+            if row.get("dns") and not is_ip_reachable(row["dns"]):
+                app.logger.error(f"Unreachable DNS in row {i+1}: {row['dns']}")
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": f"DNS {row['dns']} in row {i+1} is unreachable (ping failed).",
+                        }
+                    ),
+                    400,
+                )
+
+                # ✅ Validate VIP
+        if vip:
+            try:
+                ipaddress.ip_address(vip)
+            except ValueError:
+                return jsonify({"success": False, "message": "Invalid VIP format"}), 400
+
+            if not is_network_available(vip):
+                return (
+                    jsonify(
+                        {"success": False, "message": "VIP network is not available"}
+                    ),
+                    400,
+                )
+
+            if is_ip_reachable(vip) or is_ip_assigned(vip):
+                return (
+                    jsonify({"success": False, "message": "VIP is already in use"}),
+                    400,
+                )
 
         # === Build output JSON ===
         response_json = {
@@ -594,6 +659,21 @@ def submit_network_config():
 
         if config_type == "segregated":
             response_json["default_gateway"] = default_gateway
+
+        if default_gateway:
+            if not is_network_available(default_gateway):
+                app.logger.error(
+                    f"Default gateway {default_gateway} is not available on local network"
+                )
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": f"Default gateway {default_gateway} is not reachable from the host",
+                        }
+                    ),
+                    400,
+                )
 
         bond_count = 0
         iface_count = 1
@@ -720,6 +800,78 @@ def is_interface_up(interface):
 
     except Exception as e:
         print(f"Error checking interface {interface}: {e}")
+        return False
+
+
+def is_network_available(ip):
+    try:
+        subnet = ".".join(ip.split(".")[:3])
+
+        interfaces = psutil.net_if_addrs()
+        network_available = False
+        for interface, addresses in interfaces.items():
+            for addr in addresses:
+                if addr.family.name == "AF_INET":
+                    local_subnet = ".".join(addr.address.split(".")[:3])
+                    if local_subnet == subnet:
+                        network_available = True
+                        break
+            if network_available:
+                break
+
+        if not network_available:
+            print(f"Error: No network interface available in the subnet {subnet}.")
+            return False
+
+        active_hosts = []
+        for i in range(1, 6):
+            host_ip = f"{subnet}.{i}"
+            result = subprocess.run(
+                ["ping", "-c", "1", host_ip], capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                active_hosts.append(host_ip)
+
+        return len(active_hosts) > 0
+    except Exception as e:
+        print(f"Error checking network availability: {e}")
+        return False
+
+
+def is_ip_reachable(dns_ip, count=1, timeout=2):
+    """
+    Ping a DNS server IP to check if it's reachable.
+
+    Args:
+        dns_ip (str): The DNS IP address to check.
+        count (int): Number of ping packets to send.
+        timeout (int): Timeout per ping attempt in seconds.
+
+    Returns:
+        bool: True if reachable, False otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["ping", "-c", str(count), "-W", str(timeout), dns_ip],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return result.returncode == 0
+    except Exception as e:
+        print(f"Error pinging DNS {dns_ip}: {e}")
+        return False
+
+
+def is_ip_assigned(ip):
+    try:
+        interfaces = psutil.net_if_addrs()
+        for interface in interfaces.values():
+            for addr in interface:
+                if addr.family.name == "AF_INET" and addr.address == ip:
+                    return True
+        return False
+    except Exception as e:
+        print(f"Error checking if IP is assigned: {e}")
         return False
 
 
