@@ -18,6 +18,7 @@ const Login = (props) => {
   });
 
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSSOChange = (e) => {
     setSSOFormData({
@@ -29,6 +30,7 @@ const Login = (props) => {
 
   const handleSSOSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     const { companyName, password } = ssoFormData;
 
     try {
@@ -97,11 +99,14 @@ const Login = (props) => {
         navigate('/', { replace: true, state: { notification: 'SSO Login Successful! Welcome back!' } });
       } else {
         setError('Invalid SSO credentials');
+        setLoading(false);
       }
     } catch (err) {
       console.error(err);
       setError('Invalid SSO credentials');
+      setLoading(false);
     }
+    setLoading(false);
   };
 
   const renderSSOForm = () => (
@@ -130,7 +135,7 @@ const Login = (props) => {
         />
       </div>
       {error && <Alert message={error} type="error" showIcon />}
-      <Button type="primary" htmlType="submit">Login</Button>
+      <Button type="primary" htmlType="submit" loading={loading}>Login</Button>
     </form>
   );
 

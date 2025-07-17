@@ -939,6 +939,39 @@ def get_disks():
 # ------------------------------------------------GET DISK LIST FROM THE RUNNING SERVER End-----------------------
 
 
+# ------------------- Deployment Progress Endpoint -------------------
+
+@app.route("/deployment-progress", methods=["GET"])
+def deployment_progress():
+    # folder_path = "/home/pinakasupport/.pinaka_wd/.progress/"  # Change as needed
+    folder_path = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/progress/"  # Change as needed
+    steps = [
+        ("file1.txt", "Step 1: Initialized"),
+        ("file2.txt", "Step 2: Resources created"),
+        ("file3.txt", "Step 3: Configuration applied"),
+        ("file4.txt", "Step 4: Services started"),
+        ("file5.txt", "Step 5: Finalizing deployment"),
+    ]
+    completed = []
+    percent = 0
+
+    try:
+        os.makedirs(folder_path, exist_ok=True)
+        for idx, (fname, msg) in enumerate(steps):
+            if os.path.exists(os.path.join(folder_path, fname)):
+                completed.append(msg)
+                percent = (idx + 1) * 20
+            else:
+                break
+        if percent == 100:
+            completed.append("Deployment Completed")
+        return jsonify({
+            "percent": percent,
+            "completed_steps": completed
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",

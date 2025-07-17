@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Layout1 from "../Components/layout";
-import { theme, Layout, Card } from "antd";
+import { theme, Layout, Card, Spin } from "antd";
 import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 
 const { Content } = Layout;
@@ -41,7 +41,26 @@ const Dashboard = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  if (isLoading) return <div>Loading...</div>; // Optional loading state
+  if (isLoading) return (
+    <Layout1>
+      <Layout>
+        <Content style={{ margin: "16px 16px" }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '400px',
+              background: colorBgContainer,
+              borderRadius: borderRadiusLG,
+            }}
+          >
+            <Spin size="large" />
+          </div>
+        </Content>
+      </Layout>
+    </Layout1>
+  );
 
   return (
     <Layout1>

@@ -39,6 +39,15 @@ const App = () => {
     const tabKey = params.get("tab") || activeTab; // Default to saved tab
     setActiveTab(tabKey);
 
+    // Restore disabledTabs from sessionStorage if present
+    const savedDisabledTabs = sessionStorage.getItem("disabledTabs");
+    let parsedDisabledTabs = savedDisabledTabs ? JSON.parse(savedDisabledTabs) : null;
+    // If last active tab was Report, ensure tab 1 stays disabled
+    if (tabKey === "6") {
+      parsedDisabledTabs = { ...(parsedDisabledTabs || {}), "1": true, "6": false };
+    }
+    if (parsedDisabledTabs) setDisabledTabs(parsedDisabledTabs);
+
     const savedNodes = sessionStorage.getItem("selectedNodes");
     const savedIbn = sessionStorage.getItem("ibn");
 
@@ -89,8 +98,23 @@ const App = () => {
   return (
     <Zti>
       <h2 style={{ userSelect: "none" }}>Server Virtualization</h2>
-      <Tabs activeKey={activeTab} onChange={handleTabChange}>
-        <Tabs.TabPane tab="Deployment Options" key="1">
+      <Tabs
+        activeKey={activeTab}
+        onChange={(key) => {
+          setActiveTab(key);
+          if (key === "6") {
+            setDisabledTabs({
+              "1": true,
+              "2": true,
+              "3": true,
+              "4": true,
+              "5": true,
+              "6": false
+            });
+          }
+        }}
+      >
+        <Tabs.TabPane tab="Deployment Options" key="1" disabled={disabledTabs["1"]}>
           <DeploymentOptions onStart={handleDeploymentStart} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Validation" key="2" disabled={disabledTabs["2"]}>
@@ -124,20 +148,34 @@ const App = () => {
           }} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Activate Key" key="4" disabled={disabledTabs["4"]}>
-          <ActivateKey next={() => {
-            setDisabledTabs(prev => ({
-              ...prev,
-              "5": false, // Enable Deployment tab
-            }));
-            setActiveTab("5");
-          }} />
+          <ActivateKey 
+            next={() => {
+              setDisabledTabs(prev => ({
+                ...prev,
+                "5": false, // Enable Deployment tab
+              }));
+              setActiveTab("5");
+            }}
+            onValidationResult={(result) => {
+              if (result === "failed") {
+                setDisabledTabs(prev => ({
+                  ...prev,
+                  "5": true // Disable Deployment tab if validation fails
+                }));
+              }
+            }}
+          />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Deployment" key="5" disabled={disabledTabs["5"]}>
           <Deployment next={() => {
-            setDisabledTabs(prev => ({
-              ...prev,
-              "6": false, // Enable Report tab
-            }));
+            setDisabledTabs({
+              "1": true,
+              "2": true,
+              "3": true,
+              "4": true,
+              "5": true,
+              "6": false
+            });
             setActiveTab("6");
           }} />
         </Tabs.TabPane>

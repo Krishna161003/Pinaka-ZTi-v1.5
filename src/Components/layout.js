@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import img1 from "../Images/ZTi.png";
 import img2 from "../Images/favicon.png";
 import logo from "../Images/logo.png";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   MenuFoldOutlined,
   CheckCircleOutlined,
@@ -31,7 +31,7 @@ const AppLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(
     () => JSON.parse(sessionStorage.getItem("isSiderCollapsed")) || false
   );
-  const [selectedKey, setSelectedKey] = useState("1");
+
   const [userData, setUserData] = useState({});
   const [, updateState] = useState();
   const forceUpdate = useCallback(() => updateState({}), []);
@@ -40,12 +40,6 @@ const AppLayout = ({ children }) => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  useEffect(() => {
-    const savedSelectedKey = sessionStorage.getItem("selectedMenuKey");
-    if (savedSelectedKey) {
-      setSelectedKey(savedSelectedKey);
-    }
-  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -54,10 +48,28 @@ const AppLayout = ({ children }) => {
   };
 
   const handleMenuClick = (e) => {
-    setSelectedKey(e.key);
-    sessionStorage.setItem("selectedMenuKey", e.key);
     forceUpdate();
   };
+
+  const location = useLocation();
+  const routeKeyMap = {
+    "/": "1",
+    "/servervirtualization": "2",
+    "/iaas": "3",
+    "/inventory": "4",
+    "/hpc": "5",
+    "/aiworkbench": "6",
+    "/vdi": "7",
+    "/siem": "8",
+    "/noc": "9",
+    "/lifecyclemgmt": "10",
+    "/migration": "11",
+    "/compliance": "12",
+    "/marketplace": "13",
+    "/setting": "14",
+    "/administration": "15",
+  };
+
 
   const toggleSider = () => {
     setCollapsed(!collapsed);
@@ -271,7 +283,7 @@ const AppLayout = ({ children }) => {
           theme="dark"
           mode="inline"
           onClick={handleMenuClick}
-          selectedKeys={[selectedKey]}
+          selectedKeys={[routeKeyMap[location.pathname] || "1"]}
           style={{ backgroundColor: "transparent" }}
         >
           {menuItems.map((item) => (

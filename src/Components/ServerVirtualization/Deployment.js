@@ -49,6 +49,10 @@ const Deployment = ({ next }) => {
 
 
 
+  // Use refs to expose fetchers for button without hoisting
+  const fetchInterfacesRef = React.useRef(null);
+  const fetchDisksRef = React.useRef(null);
+
   useEffect(() => {
     const fetchInterfaces = async () => {
       try {
@@ -67,20 +71,18 @@ const Deployment = ({ next }) => {
       try {
         const response = await axios.get(`https://${hostIP}:2020/get-disks`);
         const allDisks = response.data.disks || [];
-
-        // Remove duplicates based on disk name
         const uniqueDisks = Array.from(
           new Map(allDisks.map(d => [d.name, d])).values()
         );
-
         setDisks(uniqueDisks);
       } catch (error) {
         console.error('Failed to fetch disks:', error);
       }
     };
 
+    fetchInterfacesRef.current = fetchInterfaces;
+    fetchDisksRef.current = fetchDisks;
 
-    // Call both functions
     fetchInterfaces();
     fetchDisks();
   }, []);
@@ -726,6 +728,12 @@ const Deployment = ({ next }) => {
             </Splitter>
 
             <Flex justify="flex-end" style={{ margin: '16px 0' }}>
+              <Button color="primary" variant="text" onClick={() => {
+                if (fetchInterfacesRef.current) fetchInterfacesRef.current();
+                if (fetchDisksRef.current) fetchDisksRef.current();
+              }} style={{ marginRight: 8, width: "100px", height: "35px" }}>
+                Refetch Data
+              </Button>
               <Button type="text" danger onClick={handleReset} style={{ width: "100px", height: "35px" }}>
                 Reset Table
               </Button>

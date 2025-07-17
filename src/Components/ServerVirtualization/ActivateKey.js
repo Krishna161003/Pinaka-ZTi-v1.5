@@ -27,7 +27,7 @@ const hostIP = window.location.hostname;
 // const hostIP = "192.168.20.195"
 
 
-const ActivateKey = ({ next }) => {
+const ActivateKey = ({ next, onValidationResult }) => {
   const cloudName = getCloudNameFromMetadata();
   const [licenseCode, setLicenseCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,11 +53,14 @@ const ActivateKey = ({ next }) => {
       const data = await response.json();
       if (data.success) {
         setResult(data);
+        if (onValidationResult) onValidationResult("success");
       } else {
         setErrorMsg(data.message || "License validation failed.");
+        if (onValidationResult) onValidationResult("failed");
       }
     } catch (err) {
       setErrorMsg("Network or server error.");
+      if (onValidationResult) onValidationResult("failed");
     } finally {
       setLoading(false);
     }
