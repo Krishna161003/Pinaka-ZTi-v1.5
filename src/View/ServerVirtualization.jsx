@@ -10,6 +10,36 @@ import ActivateKey from "../Components/ServerVirtualization/ActivateKey";
 import Deployment from "../Components/ServerVirtualization/Deployment";
 
 const App = () => {
+  const hostIP = window.location.hostname;
+  // Auto-redirect to Report tab if deployment in progress
+  useEffect(() => {
+    // Use loginDetails for user ID
+    const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
+    const userId = loginDetails?.data?.id;
+    if (!userId) return;
+    fetch(`https://${hostIP}:5000/api/deployment-activity-log/latest-in-progress/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.inProgress) {
+          setActiveTab("6");
+          setDisabledTabs({
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": true,
+            "6": false
+          });
+          // Update the URL to tab=6 if not already
+          navigate("?tab=6", { replace: true });
+        }
+      })
+      .catch(err => {
+        // Optionally handle error
+        console.error("Error checking deployment progress", err);
+      });
+  }, []);
+
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -118,7 +148,7 @@ const App = () => {
           <DeploymentOptions onStart={handleDeploymentStart} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Validation" key="2" disabled={disabledTabs["2"]}>
-          <Validation 
+          <Validation
             next={() => {
               setDisabledTabs((prev) => ({ ...prev, "3": false }));
               setActiveTab("3");
@@ -148,7 +178,7 @@ const App = () => {
           }} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Activate Key" key="4" disabled={disabledTabs["4"]}>
-          <ActivateKey 
+          <ActivateKey
             next={() => {
               setDisabledTabs(prev => ({
                 ...prev,

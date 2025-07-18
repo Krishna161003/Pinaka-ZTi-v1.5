@@ -391,7 +391,7 @@ def decrypt_code_endpoint():
         return jsonify({"success": False, "message": "Code not found!"}), 404
 
     # Path to the license.txt file
-    license_file_path = "/home/pinakasupport/.pinaka_wd/.markers/license.txt"
+    license_file_path = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/license/license.txt"
 
     # Check if the license code already exists in the license.txt file
     if check_license_used(license_file_path, encrypted_code):
@@ -434,47 +434,6 @@ def check_license_used(file_path, license_code):
         app.logger.error(f"Error checking license code in {file_path}: {e}")
         return False
 
-
-# Define the path where you want to store the data.json and license.txt files
-DATA_DIRECTORY = (
-    "/home/pinakasupport/.pinaka_wd/.scripts/"  # Change this to the desired directory
-)
-LICENSE_FILE_PATH = (
-    "/home/pinakasupport/.pinaka_wd/.markers/license.txt"  # Path for the license file
-)
-
-
-# Function to save data to a JSON file and license code to a license.txt file
-def save_to_json_file(file_name, data):
-    try:
-        # Ensure the directory exists
-        if not os.path.exists(DATA_DIRECTORY):
-            os.makedirs(DATA_DIRECTORY)  # Create the directory if it doesn't exist
-
-        # Define the full file path for the data.json file
-        file_path = os.path.join(DATA_DIRECTORY, file_name)
-
-        # Write data to the data.json file
-        with open(file_path, "w") as file:
-            json.dump(data, file, indent=4)
-
-        # Extract the license code from the data
-        license_code = data.get("licenseCode")
-
-        # Check if the license code exists and write it to the license.txt file
-        if license_code:
-            # Open the license file in append mode ('a')
-            with open(LICENSE_FILE_PATH, "a") as license_file:
-                license_file.write(f"{license_code}\n")
-            app.logger.info(f"License code saved to {LICENSE_FILE_PATH}")
-        else:
-            app.logger.error("License code not found in data")
-
-        return True
-
-    except Exception as e:
-        app.logger.error(f"Error saving data to file: {e}")
-        return False
 
 
 # ------------------------------------------------ Validate License End --------------------------------------------

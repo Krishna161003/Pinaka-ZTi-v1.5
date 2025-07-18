@@ -77,7 +77,7 @@ cd - || { echo "Failed to return to the original directory"; exit 1; }
 echo "SSL files have been successfully generated and stored in the '$SSL_DIR' directory."
 
 # Start the SSL watch script in the background
-sudo systemctl restart zti-daemon.service
+#sudo systemctl restart zti-daemon.service
 
 # Step 2: Start Keycloak container
 if docker-compose -f docker-compose-keycloak.yml up --build -d; then

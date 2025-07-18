@@ -268,8 +268,89 @@ db.connect((err) => {
     if (err) throw err;
     console.log("Hardware_info table checked/created...");
   });
+
+  // Create new deployment_activity_log table
+  const deploymentActivityLogTableSQL = `
+    CREATE TABLE IF NOT EXISTS deployment_activity_log (
+      id INT AUTO_INCREMENT PRIMARY KEY, -- S.NO
+      serverid CHAR(36) UNIQUE NOT NULL, -- serverid (generate with nanoid or uuid in app code)
+      user_id CHAR(36),                  -- Userid
+      username VARCHAR(255),             -- username
+      cloudname VARCHAR(255),            -- cloudname
+      serverip VARCHAR(15),              -- serverip
+      status VARCHAR(255),               -- status
+      type VARCHAR(255),                 -- type
+      datetime DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB;
+  `;
+
+  db.query(deploymentActivityLogTableSQL, (err, result) => {
+    if (err) throw err;
+    console.log("Deployment_Activity_log table checked/created...");
+  });
 });
 
+
+// Insert new deployment activity log
+const { nanoid } = require('nanoid');
+
+app.post('/api/deployment-activity-log', (req, res) => {
+  const { user_id, username, cloudname, serverip } = req.body;
+  if (!user_id || !username || !cloudname || !serverip) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  const status = 'progress';
+  const type = 'host';
+  const serverid = nanoid();
+  const sql = `
+    INSERT INTO deployment_activity_log
+      (serverid, user_id, username, cloudname, serverip, status, type)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `;
+  db.query(sql, [serverid, user_id, username, cloudname, serverip, status, type], (err, result) => {
+    if (err) {
+      console.error('Error inserting deployment activity log:', err);
+      return res.status(500).json({ error: 'Failed to insert deployment activity log' });
+    }
+    res.status(200).json({ message: 'Deployment activity log created', serverid });
+  });
+});
+
+// Update deployment activity log status to completed
+app.patch('/api/deployment-activity-log/:serverid', (req, res) => {
+  const { serverid } = req.params;
+  const { status } = req.body;
+  const newStatus = status || 'completed';
+  const sql = `UPDATE deployment_activity_log SET status = ? WHERE serverid = ?`;
+  db.query(sql, [newStatus, serverid], (err, result) => {
+    if (err) {
+      console.error('Error updating deployment activity log:', err);
+      return res.status(500).json({ error: 'Failed to update deployment activity log' });
+    }
+    res.status(200).json({ message: `Deployment activity log updated to ${newStatus}` });
+  });
+});
+
+// Get latest in-progress deployment activity log for a user
+app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
+  const { user_id } = req.params;
+  const sql = `
+    SELECT * FROM deployment_activity_log
+    WHERE user_id = ? AND status = 'progress' AND type = 'host'
+    ORDER BY datetime DESC LIMIT 1
+  `;
+  db.query(sql, [user_id], (err, results) => {
+    if (err) {
+      console.error('Error fetching deployment activity log:', err);
+      return res.status(500).json({ error: 'Failed to fetch deployment activity log' });
+    }
+    if (results.length > 0) {
+      res.status(200).json({ inProgress: true, log: results[0] });
+    } else {
+      res.status(200).json({ inProgress: false });
+    }
+  });
+});
 
 // Nodemailer setup
 const transporter = nodemailer.createTransport({
