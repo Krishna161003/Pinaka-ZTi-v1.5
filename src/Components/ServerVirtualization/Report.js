@@ -9,7 +9,7 @@ const getCloudNameFromMetadata = () => {
 
 const hostIP = window.location.hostname;
 
-const Report = () => {
+const Report = ({ ibn, onDeploymentComplete }) => {
   const [completionWindowActive, setCompletionWindowActive] = useState(false);
   const completionWindowTimeoutRef = useRef(null);
   const revertedRef = useRef(false);
@@ -124,6 +124,10 @@ const Report = () => {
         
         console.log(`Deployment finalized as ${server_type}`);
         sessionStorage.removeItem('currentServerid');
+        serveridRef.current = null;
+        if (typeof onDeploymentComplete === 'function') {
+          onDeploymentComplete();
+        }
       } catch (e) {
         console.error('Error completing deployment:', e);
       }
@@ -159,10 +163,7 @@ const Report = () => {
 
             debugFetchProgress(data);
 
-            // Log deployment start in DB if just started
-            if ((data.percent || 0) > 0 && !serveridRef.current) {
-              await logDeploymentStart();
-            }
+
             // Log deployment completion in DB if just completed
             if ((data.percent || 0) === 100 && serveridRef.current) {
               await logDeploymentComplete();
@@ -205,6 +206,10 @@ const Report = () => {
     };
     // First, check for in-progress deployment, then start polling
     checkInProgress().then(() => {
+      // If not already in progress, log deployment start
+      if (!serveridRef.current) {
+        logDeploymentStart();
+      }
       fetchProgress();
       interval = setInterval(fetchProgress, 2000);
     });
@@ -214,7 +219,7 @@ const Report = () => {
       if (stopTimeout) clearTimeout(stopTimeout);
       if (completionWindowTimeoutRef.current) clearTimeout(completionWindowTimeoutRef.current);
     };
-  }, [cloudName]);
+  }, [cloudName, completionWindowActive, onDeploymentComplete]);
 
   // Define all possible steps as in backend
   const allSteps = [

@@ -81,15 +81,6 @@ app.get("/api/check-password-status/:userId", (req, res) => {
   });
 });
 
-
-
-
-
-
-
-
-
-
 // /run-script API to update password and set user status
 app.post("/run-script", (req, res) => {
   const { userUsername, userId, newPassword } = req.body;
@@ -175,11 +166,15 @@ app.post("/run-script", (req, res) => {
 });
 
 
-
-const options = {
-  key: fs.readFileSync('/etc/ssl/keycloak.key'),  // Path to your private key
-  cert: fs.readFileSync('/etc/ssl/keycloak.crt') // Path to your certificate
-};
+try {
+  options = {
+    key: fs.readFileSync('/etc/ssl/keycloak.key'),
+    cert: fs.readFileSync('/etc/ssl/keycloak.crt'),
+  };
+} catch (err) {
+  console.error('❌ Failed to read SSL certificates:', err.message);
+  process.exit(1);
+}
 
 app.get('/', (req, res) => {
   res.send('NODE BACKEND IS RUNNING SUCCESSFULLY!');
@@ -281,7 +276,8 @@ db.connect((err) => {
       status VARCHAR(255),               -- status
       type VARCHAR(255),                 -- type
       server_vip VARCHAR(255),           -- Server_vip (can be NULL or value)
-      datetime DATETIME DEFAULT CURRENT_TIMESTAMP
+      datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_user_id (user_id)        -- Added index for foreign key
     ) ENGINE=InnoDB;
   `;
 
@@ -368,7 +364,7 @@ app.post('/api/deployment-activity-log', (req, res) => {
   const serverid = nanoid();
   const sql = `
     INSERT INTO deployment_activity_log
-      (serverid, user_id, username, cloudname, serverip, status, type, vip)
+      (serverid, user_id, username, cloudname, serverip, status, type, server_vip)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
   db.query(sql, [serverid, user_id, username, cloudname, serverip, status, type, vip], (err, result) => {
@@ -379,7 +375,7 @@ app.post('/api/deployment-activity-log', (req, res) => {
     // Insert license details if provided
     const { license_code, license_type, license_period } = req.body;
     if (license_code) {
-      const licenseInsertSQL = `INSERT INTO License (license_code, license_type, license_period, license_status, server_id) VALUES (?, ?, ?, 'pending', ?)
+      const licenseInsertSQL = `INSERT INTO License (license_code, license_type, license_period, license_status, server_id) VALUES (?, ?, ?, 'validated', ?)
         ON DUPLICATE KEY UPDATE license_type=VALUES(license_type), license_period=VALUES(license_period), server_id=VALUES(server_id)`;
       db.query(licenseInsertSQL, [license_code, license_type, license_period, serverid], (licErr) => {
         if (licErr) {
@@ -440,10 +436,12 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
 
       // Update license status to 'activated' and timestamp
       if (licenseCodeToUse) {
-        const updateLicenseSQL = `UPDATE License SET license_status = 'activated', license_period = license_period, server_id = ?, activated_at = NOW() WHERE license_code = ?`;
-        db.query(updateLicenseSQL, [deployment.serverid, licenseCodeToUse], (licUpdateErr) => {
+        const updateLicenseSQL = `UPDATE License SET license_status = 'activated', server_id = ? WHERE license_code = ?`;
+        db.query(updateLicenseSQL, [deployment.serverid, licenseCodeToUse], (licUpdateErr, result) => {
           if (licUpdateErr) {
             console.error('Error updating license status:', licUpdateErr);
+          } else {
+            console.log('License status updated:', result);
           }
         });
       }
@@ -451,7 +449,7 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
       if (server_type === 'host') {
         // Insert into Host table
         const hostSQL = `
-          INSERT INTO Host (user_id, server_id, cloudname, serverip, servervip, role, license_code)
+          INSERT IGNORE INTO Host (user_id, server_id, cloudname, serverip, servervip, role, license_code)
           VALUES (?, ?, ?, ?, ?, ?, ?)
         `;
         db.query(hostSQL, [
@@ -494,155 +492,155 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
       }
     });
   });
+});
 
-
-  // Get latest in-progress deployment activity log for a user
-  app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
-    const { user_id } = req.params;
-    const sql = `
+// Get latest in-progress deployment activity log for a user
+app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
+  const { user_id } = req.params;
+  const sql = `
     SELECT * FROM deployment_activity_log
     WHERE user_id = ? AND status = 'progress' AND type = 'host'
     ORDER BY datetime DESC LIMIT 1
   `;
-    db.query(sql, [user_id], (err, results) => {
-      if (err) {
-        console.error('Error fetching deployment activity log:', err);
-        return res.status(500).json({ error: 'Failed to fetch deployment activity log' });
-      }
-      if (results.length > 0) {
-        res.status(200).json({ inProgress: true, log: results[0] });
-      } else {
-        res.status(200).json({ inProgress: false });
-      }
-    });
-  });
-
-  // Nodemailer setup
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  app.post("/check-cloud-name", async (req, res) => {
-    const { cloudName } = req.body;
-
-    try {
-      const existingCloud = await new Promise((resolve, reject) => {
-        const query = "SELECT * FROM deployment_activity_log WHERE cloudname = ?";
-        db.query(query, [cloudName], (err, result) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(result);
-          }
-        });
-      });
-
-      if (existingCloud.length > 0) {
-        return res.status(400).json({ message: "Cloud name already exists. Please choose a different name." });
-      }
-
-      res.status(200).json({ message: "Cloud name is available." });
-    } catch (error) {
-      console.error("Error checking cloud name:", error);
-      res.status(500).json({ message: "An error occurred while checking the cloud name." });
+  db.query(sql, [user_id], (err, results) => {
+    if (err) {
+      console.error('Error fetching deployment activity log:', err);
+      return res.status(500).json({ error: 'Failed to fetch deployment activity log' });
+    }
+    if (results.length > 0) {
+      res.status(200).json({ inProgress: true, log: results[0] });
+    } else {
+      res.status(200).json({ inProgress: false });
     }
   });
+});
 
-  app.post('/store-user-id', (req, res) => {
-    const { userId } = req.body;
-    if (!userId) return res.status(400).json({ message: 'User ID is required' });
+// Nodemailer setup
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
-    const sql = 'INSERT IGNORE INTO users (id) VALUES (?)';
-    db.query(sql, [userId], (err) => {
-      if (err) return res.status(500).json({ message: 'Error storing user ID' });
-      res.status(200).json({ message: 'User ID stored successfully' });
+app.post("/check-cloud-name", async (req, res) => {
+  const { cloudName } = req.body;
+
+  try {
+    const existingCloud = await new Promise((resolve, reject) => {
+      const query = "SELECT * FROM deployment_activity_log WHERE cloudname = ?";
+      db.query(query, [cloudName], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
+      });
     });
-  });
 
-
-  // API to fetch bmc data from the `all_in_one` table
-  app.post("/api/get-power-details", (req, res) => {
-    const { userID } = req.body;
-
-    if (!userID) {
-      return res.status(400).json({ error: "Missing userID" });
+    if (existingCloud.length > 0) {
+      return res.status(400).json({ message: "Cloud name already exists. Please choose a different name." });
     }
 
-    // Query to fetch data
-    const query = "SELECT bmc_ip AS ip, bmc_username AS username, bmc_password AS password, cloudName FROM all_in_one WHERE user_id = ?";
-    db.query(query, [userID], (err, results) => {
-      if (err) {
-        console.error("Database query error:", err);
-        return res.status(500).json({ error: "Database query failed" });
-      }
+    res.status(200).json({ message: "Cloud name is available." });
+  } catch (error) {
+    console.error("Error checking cloud name:", error);
+    res.status(500).json({ message: "An error occurred while checking the cloud name." });
+  }
+});
 
-      if (results.length === 0) {
-        return res.status(404).json({ error: "No data found for the given userID" });
-      }
+app.post('/store-user-id', (req, res) => {
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ message: 'User ID is required' });
 
-      // Return all matching records
-      res.json(results);  // Return the entire results array
-    });
+  const sql = 'INSERT IGNORE INTO users (id) VALUES (?)';
+  db.query(sql, [userId], (err) => {
+    if (err) return res.status(500).json({ message: 'Error storing user ID' });
+    res.status(200).json({ message: 'User ID stored successfully' });
   });
+});
+
+
+// API to fetch bmc data from the `all_in_one` table
+app.post("/api/get-power-details", (req, res) => {
+  const { userID } = req.body;
+
+  if (!userID) {
+    return res.status(400).json({ error: "Missing userID" });
+  }
+
+  // Query to fetch data
+  const query = "SELECT bmc_ip AS ip, bmc_username AS username, bmc_password AS password, cloudName FROM all_in_one WHERE user_id = ?";
+  db.query(query, [userID], (err, results) => {
+    if (err) {
+      console.error("Database query error:", err);
+      return res.status(500).json({ error: "Database query failed" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: "No data found for the given userID" });
+    }
+
+    // Return all matching records
+    res.json(results);  // Return the entire results array
+  });
+});
 
 
 
-  app.post("/register", async (req, res) => {
-    const { companyName, email, password } = req.body;
+app.post("/register", async (req, res) => {
+  const { companyName, email, password } = req.body;
 
-    try {
-      // Check if the email already exists
-      const existingUser = await new Promise((resolve, reject) => {
-        const checkEmailSql = "SELECT * FROM users WHERE email = ?";
-        db.query(checkEmailSql, [email], (err, result) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(result);
-          }
-        });
+  try {
+    // Check if the email already exists
+    const existingUser = await new Promise((resolve, reject) => {
+      const checkEmailSql = "SELECT * FROM users WHERE email = ?";
+      db.query(checkEmailSql, [email], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
       });
+    });
 
-      if (existingUser.length > 0) {
-        return res.status(400).json({ message: "Email already exists !" });
-      }
+    if (existingUser.length > 0) {
+      return res.status(400).json({ message: "Email already exists !" });
+    }
 
-      // Dynamically import nanoid with custom alphabet
-      const { customAlphabet } = await import("nanoid");
-      const nanoid = customAlphabet("ABCDEVSR0123456789abcdefgzkh", 6);
-      const id = nanoid(); // Generate unique ID with custom alphabet
+    // Dynamically import nanoid with custom alphabet
+    const { customAlphabet } = await import("nanoid");
+    const nanoid = customAlphabet("ABCDEVSR0123456789abcdefgzkh", 6);
+    const id = nanoid(); // Generate unique ID with custom alphabet
 
-      // Hash the password
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
+    // Hash the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      const sql =
-        "INSERT INTO users (id, companyName, email, password) VALUES (?, ?, ?, ?)";
-      await new Promise((resolve, reject) => {
-        db.query(sql, [id, companyName, email, hashedPassword], (err, result) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(result);
-          }
-        });
+    const sql =
+      "INSERT INTO users (id, companyName, email, password) VALUES (?, ?, ?, ?)";
+    await new Promise((resolve, reject) => {
+      db.query(sql, [id, companyName, email, hashedPassword], (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
       });
+    });
 
 
-      // Set the user session after registration
-      req.session.userId = id;
+    // Set the user session after registration
+    req.session.userId = id;
 
-      // Send registration email
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        cc: ["support@pinakastra.cloud"],
-        subject: "Welcome to Pinakastra!",
-        html: `
+    // Send registration email
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      cc: ["support@pinakastra.cloud"],
+      subject: "Welcome to Pinakastra!",
+      html: `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
       
       <!-- Banner/Header -->
@@ -692,30 +690,29 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
       </div>
     </div>
   `
-      };
+    };
 
-      await new Promise((resolve, reject) => {
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            reject(error);
-          } else {
-            console.log("Email sent:", info.response);
-            resolve(info);
-          }
-        });
+    await new Promise((resolve, reject) => {
+      transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+          reject(error);
+        } else {
+          console.log("Email sent:", info.response);
+          resolve(info);
+        }
       });
+    });
 
-      res
-        .status(200)
-        .json({ message: "User registered successfully", userId: id });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Error registering user" });
-    }
-  });
+    res
+      .status(200)
+      .json({ message: "User registered successfully", userId: id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error registering user" });
+  }
+});
 
-  // Start the server with HTTPS
-  https.createServer(options, app).listen(5000, () => {
-    console.log('Node.js backend is running on HTTPS at port 5000');
-  });
+
+https.createServer(options, app).listen(5000, () => {
+  console.log('Node.js backend is running on HTTPS at port 5000');
 });

@@ -210,7 +210,12 @@ const App = () => {
           }} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Report" key="6" disabled={disabledTabs["6"]}>
-          <Report ibn={ibn} />
+          <Report ibn={ibn} onDeploymentComplete={() => {
+            setActiveTab("1");
+            setDisabledTabs({ "2": true, "3": true, "4": true, "5": true, "6": true });
+            sessionStorage.setItem("activeTab", "1");
+            sessionStorage.setItem("disabledTabs", JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
+          }} />
         </Tabs.TabPane>
       </Tabs>
     </Zti>
