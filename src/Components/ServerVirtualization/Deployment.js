@@ -188,6 +188,11 @@ const Deployment = ({ next }) => {
       }
 
       // ✅ All validations passed
+      // Store VIP in sessionStorage
+      const vipSessionValue = vipform.getFieldValue("vip");
+      if (vipSessionValue) {
+        sessionStorage.setItem("vip", vipSessionValue);
+      }
       // message.success('All validations passed. Proceeding to submit...');
       // TODO: Add actual submission logic
     } catch (error) {

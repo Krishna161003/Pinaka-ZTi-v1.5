@@ -53,6 +53,13 @@ const ActivateKey = ({ next, onValidationResult }) => {
       const data = await response.json();
       if (data.success) {
         setResult(data);
+        // Store license_code, period, status, type in sessionStorage
+        sessionStorage.setItem('licenseStatus', JSON.stringify({
+          license_code: data.license_code || licenseCode,
+          period: data.license_period,
+          status: 'validated',
+          type: data.key_type
+        }));
         if (onValidationResult) onValidationResult("success");
       } else {
         setErrorMsg(data.message || "License validation failed.");

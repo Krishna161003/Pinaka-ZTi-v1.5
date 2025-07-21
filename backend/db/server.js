@@ -173,16 +173,16 @@ app.post("/run-script", (req, res) => {
     );
   });
 });
-	
+
 
 
 const options = {
-    key: fs.readFileSync('/etc/ssl/keycloak.key'),  // Path to your private key
-    cert: fs.readFileSync('/etc/ssl/keycloak.crt') // Path to your certificate
+  key: fs.readFileSync('/etc/ssl/keycloak.key'),  // Path to your private key
+  cert: fs.readFileSync('/etc/ssl/keycloak.crt') // Path to your certificate
 };
 
 app.get('/', (req, res) => {
-    res.send('NODE BACKEND IS RUNNING SUCCESSFULLY!');
+  res.send('NODE BACKEND IS RUNNING SUCCESSFULLY!');
 });
 
 // Create a MySQL connection
@@ -280,6 +280,7 @@ db.connect((err) => {
       serverip VARCHAR(15),              -- serverip
       status VARCHAR(255),               -- status
       type VARCHAR(255),                 -- type
+      server_vip VARCHAR(255),           -- Server_vip (can be NULL or value)
       datetime DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB;
   `;
@@ -288,6 +289,69 @@ db.connect((err) => {
     if (err) throw err;
     console.log("Deployment_Activity_log table checked/created...");
   });
+
+  // Create License table
+  const licenseTableSQL = `
+    CREATE TABLE IF NOT EXISTS License (
+      id INT AUTO_INCREMENT PRIMARY KEY, -- S.No
+      license_code VARCHAR(255) UNIQUE NOT NULL, -- License_code (Primary Key)
+      license_type VARCHAR(255), -- License_type
+      license_period VARCHAR(255), -- License_period
+      license_status VARCHAR(255), -- License_status
+      server_id CHAR(36), -- Server_id (Foreign Key)
+      FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid)
+    ) ENGINE=InnoDB;
+  `;
+
+  db.query(licenseTableSQL, (err, result) => {
+    if (err) throw err;
+    console.log("License table checked/created...");
+  });
+
+  // Create Host table
+  const hostTableSQL = `
+    CREATE TABLE IF NOT EXISTS Host (
+      id INT AUTO_INCREMENT PRIMARY KEY, -- S.No
+      user_id CHAR(36), -- User_id (Foreign Key)
+      server_id CHAR(36), -- Server_id (Foreign Key)
+      cloudname VARCHAR(255), -- Cloudname
+      serverip VARCHAR(15), -- ServerIP
+      servervip VARCHAR(255), -- ServerVIP
+      role VARCHAR(255), -- Role
+      license_code VARCHAR(255), -- License_code (Foreign Key)
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Timestamp
+      FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
+      FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
+      FOREIGN KEY (license_code) REFERENCES License(license_code)
+    ) ENGINE=InnoDB;
+  `;
+
+  db.query(hostTableSQL, (err, result) => {
+    if (err) throw err;
+    console.log("Host table checked/created...");
+  });
+
+  // Create Child Node table
+  const childNodeTableSQL = `
+    CREATE TABLE IF NOT EXISTS child_node (
+      id INT AUTO_INCREMENT PRIMARY KEY, -- S.No
+      user_id CHAR(36), -- User_id (Foreign Key)
+      server_id CHAR(36), -- Server_id (Foreign Key)
+      host_serverid VARCHAR(255), -- Host_serverid
+      serverip VARCHAR(15), -- ServerIP
+      role VARCHAR(255), -- Role
+      license_code VARCHAR(255), -- License_code (Foreign Key)
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Timestamp
+      FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
+      FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
+      FOREIGN KEY (license_code) REFERENCES License(license_code)
+    ) ENGINE=InnoDB;
+  `;
+
+  db.query(childNodeTableSQL, (err, result) => {
+    if (err) throw err;
+    console.log("Child Node table checked/created...");
+  });
 });
 
 
@@ -295,7 +359,7 @@ db.connect((err) => {
 const { nanoid } = require('nanoid');
 
 app.post('/api/deployment-activity-log', (req, res) => {
-  const { user_id, username, cloudname, serverip } = req.body;
+  const { user_id, username, cloudname, serverip, vip } = req.body;
   if (!user_id || !username || !cloudname || !serverip) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -304,15 +368,29 @@ app.post('/api/deployment-activity-log', (req, res) => {
   const serverid = nanoid();
   const sql = `
     INSERT INTO deployment_activity_log
-      (serverid, user_id, username, cloudname, serverip, status, type)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+      (serverid, user_id, username, cloudname, serverip, status, type, vip)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `;
-  db.query(sql, [serverid, user_id, username, cloudname, serverip, status, type], (err, result) => {
+  db.query(sql, [serverid, user_id, username, cloudname, serverip, status, type, vip], (err, result) => {
     if (err) {
       console.error('Error inserting deployment activity log:', err);
       return res.status(500).json({ error: 'Failed to insert deployment activity log' });
     }
-    res.status(200).json({ message: 'Deployment activity log created', serverid });
+    // Insert license details if provided
+    const { license_code, license_type, license_period } = req.body;
+    if (license_code) {
+      const licenseInsertSQL = `INSERT INTO License (license_code, license_type, license_period, license_status, server_id) VALUES (?, ?, ?, 'pending', ?)
+        ON DUPLICATE KEY UPDATE license_type=VALUES(license_type), license_period=VALUES(license_period), server_id=VALUES(server_id)`;
+      db.query(licenseInsertSQL, [license_code, license_type, license_period, serverid], (licErr) => {
+        if (licErr) {
+          console.error('Error inserting/updating license:', licErr);
+          // Continue anyway, but log error
+        }
+        res.status(200).json({ message: 'Deployment activity log and license created', serverid });
+      });
+    } else {
+      res.status(200).json({ message: 'Deployment activity log created', serverid });
+    }
   });
 });
 
@@ -331,286 +409,240 @@ app.patch('/api/deployment-activity-log/:serverid', (req, res) => {
   });
 });
 
-// Get latest in-progress deployment activity log for a user
-app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
-  const { user_id } = req.params;
-  const sql = `
+// API to transfer completed deployment to appropriate table
+app.post('/api/finalize-deployment/:serverid', (req, res) => {
+  const { serverid } = req.params;
+  const { server_type, role, host_serverid } = req.body;
+
+  // First get the deployment data
+  const getDeploymentSQL = `SELECT * FROM deployment_activity_log WHERE serverid = ? AND status = 'completed'`;
+
+  db.query(getDeploymentSQL, [serverid], (err, results) => {
+    if (err) {
+      console.error('Error fetching deployment:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'Deployment not found or not completed' });
+    }
+
+    const deployment = results[0];
+
+    // Fetch license_code for the serverid from License table
+    const licenseQuery = 'SELECT license_code FROM License WHERE server_id = ? LIMIT 1';
+    db.query(licenseQuery, [deployment.serverid], (licErr, licResults) => {
+      if (licErr) {
+        console.error('Error fetching license_code:', licErr);
+        return res.status(500).json({ error: 'Failed to fetch license_code' });
+      }
+      const licenseCodeToUse = licResults.length > 0 ? licResults[0].license_code : null;
+
+      // Update license status to 'activated' and timestamp
+      if (licenseCodeToUse) {
+        const updateLicenseSQL = `UPDATE License SET license_status = 'activated', license_period = license_period, server_id = ?, activated_at = NOW() WHERE license_code = ?`;
+        db.query(updateLicenseSQL, [deployment.serverid, licenseCodeToUse], (licUpdateErr) => {
+          if (licUpdateErr) {
+            console.error('Error updating license status:', licUpdateErr);
+          }
+        });
+      }
+
+      if (server_type === 'host') {
+        // Insert into Host table
+        const hostSQL = `
+          INSERT INTO Host (user_id, server_id, cloudname, serverip, servervip, role, license_code)
+          VALUES (?, ?, ?, ?, ?, ?, ?)
+        `;
+        db.query(hostSQL, [
+          deployment.user_id,
+          deployment.serverid,
+          deployment.cloudname,
+          deployment.serverip,
+          deployment.server_vip,
+          role || 'host',
+          licenseCodeToUse
+        ], (err) => {
+          if (err) {
+            console.error('Error creating host record:', err);
+            return res.status(500).json({ error: 'Failed to create host record' });
+          }
+          res.json({ message: 'Host record created successfully' });
+        });
+      } else if (server_type === 'child') {
+        // Insert into child_node table
+        const childSQL = `
+          INSERT INTO child_node (user_id, server_id, host_serverid, serverip, role, license_code)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `;
+        db.query(childSQL, [
+          deployment.user_id,
+          deployment.serverid,
+          host_serverid || '',
+          deployment.serverip,
+          role || 'child',
+          licenseCodeToUse
+        ], (err) => {
+          if (err) {
+            console.error('Error creating child node record:', err);
+            return res.status(500).json({ error: 'Failed to create child node record' });
+          }
+          res.json({ message: 'Child node record created successfully' });
+        });
+      } else {
+        return res.status(400).json({ error: 'Invalid server_type. Must be "host" or "child"' });
+      }
+    });
+  });
+
+
+  // Get latest in-progress deployment activity log for a user
+  app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
+    const { user_id } = req.params;
+    const sql = `
     SELECT * FROM deployment_activity_log
     WHERE user_id = ? AND status = 'progress' AND type = 'host'
     ORDER BY datetime DESC LIMIT 1
   `;
-  db.query(sql, [user_id], (err, results) => {
-    if (err) {
-      console.error('Error fetching deployment activity log:', err);
-      return res.status(500).json({ error: 'Failed to fetch deployment activity log' });
-    }
-    if (results.length > 0) {
-      res.status(200).json({ inProgress: true, log: results[0] });
-    } else {
-      res.status(200).json({ inProgress: false });
-    }
-  });
-});
-
-// Nodemailer setup
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-app.post("/api/saveDeploymentDetails", (req, res) => {
-  const {
-    userId,
-    cloudName,
-    ip,
-    skylineUrl,
-    cephUrl,
-    deploymentTime,
-    bmcDetails,
-  } = req.body;
-
-  console.log("Received deployment details:", req.body);
-
-  // Convert ISO 8601 timestamp to MySQL-compatible format
-  const mysqlTimestamp = new Date(deploymentTime)
-    .toISOString()
-    .slice(0, 19)
-    .replace("T", " ");
-
-  // Handle missing bmcDetails gracefully
-  const bmcIp = bmcDetails ? bmcDetails.ip : null;
-  const bmcUsername = bmcDetails ? bmcDetails.username : null;
-  const bmcPassword = bmcDetails ? bmcDetails.password : null;
-
-  console.log("Prepared SQL parameters:", [
-    userId,
-    cloudName,
-    ip,
-    skylineUrl,
-    cephUrl,
-    mysqlTimestamp,
-    bmcIp,
-    bmcUsername,
-    bmcPassword,
-  ]);
-
-  const sql = `
-    INSERT INTO all_in_one (
-      user_id, 
-      cloudName, 
-      ip, 
-      skylineUrl, 
-      cephUrl, 
-      deployment_time, 
-      bmc_ip, 
-      bmc_username, 
-      bmc_password
-    ) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  db.query(
-    sql,
-    [
-      userId,
-      cloudName,
-      ip,
-      skylineUrl,
-      cephUrl,
-      mysqlTimestamp,
-      bmcIp,
-      bmcUsername,
-      bmcPassword,
-    ],
-    (err, result) => {
+    db.query(sql, [user_id], (err, results) => {
       if (err) {
-        console.error("Error saving deployment details:", err);
-        return res.status(500).json({
-          error: "Failed to save deployment details",
-          details: err.message,
+        console.error('Error fetching deployment activity log:', err);
+        return res.status(500).json({ error: 'Failed to fetch deployment activity log' });
+      }
+      if (results.length > 0) {
+        res.status(200).json({ inProgress: true, log: results[0] });
+      } else {
+        res.status(200).json({ inProgress: false });
+      }
+    });
+  });
+
+  // Nodemailer setup
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  app.post("/check-cloud-name", async (req, res) => {
+    const { cloudName } = req.body;
+
+    try {
+      const existingCloud = await new Promise((resolve, reject) => {
+        const query = "SELECT * FROM deployment_activity_log WHERE cloudname = ?";
+        db.query(query, [cloudName], (err, result) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(result);
+          }
         });
+      });
+
+      if (existingCloud.length > 0) {
+        return res.status(400).json({ message: "Cloud name already exists. Please choose a different name." });
       }
 
-      console.log("Deployment details saved successfully:", result);
-      res.status(200).json({ message: "Deployment details saved successfully" });
+      res.status(200).json({ message: "Cloud name is available." });
+    } catch (error) {
+      console.error("Error checking cloud name:", error);
+      res.status(500).json({ message: "An error occurred while checking the cloud name." });
     }
-  );
-});
+  });
 
-app.post("/api/saveHardwareInfo", (req, res) => {
-  const { userId, serverIp, cpuCores, memory, disk, nic1g, nic10g } = req.body;
+  app.post('/store-user-id', (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ message: 'User ID is required' });
 
-  const sql = `
-    INSERT INTO hardware_info (
-      user_id, 
-      server_ip, 
-      cpu_cores, 
-      memory, 
-      disk, 
-      nic_1g, 
-      nic_10g
-    ) 
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `;
+    const sql = 'INSERT IGNORE INTO users (id) VALUES (?)';
+    db.query(sql, [userId], (err) => {
+      if (err) return res.status(500).json({ message: 'Error storing user ID' });
+      res.status(200).json({ message: 'User ID stored successfully' });
+    });
+  });
 
-  db.query(
-    sql,
-    [userId, serverIp, cpuCores, memory, disk, nic1g, nic10g],
-    (err, result) => {
+
+  // API to fetch bmc data from the `all_in_one` table
+  app.post("/api/get-power-details", (req, res) => {
+    const { userID } = req.body;
+
+    if (!userID) {
+      return res.status(400).json({ error: "Missing userID" });
+    }
+
+    // Query to fetch data
+    const query = "SELECT bmc_ip AS ip, bmc_username AS username, bmc_password AS password, cloudName FROM all_in_one WHERE user_id = ?";
+    db.query(query, [userID], (err, results) => {
       if (err) {
-        console.error("Error saving hardware info:", err);
-        return res.status(500).json({
-          error: "Failed to save hardware info",
-          details: err.message,
-        });
+        console.error("Database query error:", err);
+        return res.status(500).json({ error: "Database query failed" });
       }
 
-      console.log("Hardware info saved successfully:", result);
-      res.status(200).json({ message: "Hardware info saved successfully" });
-    }
-  );
-});
+      if (results.length === 0) {
+        return res.status(404).json({ error: "No data found for the given userID" });
+      }
 
-// API to fetch deployment data from the `all_in_one` table
-app.get('/api/allinone', (req, res) => {
-  const userID = req.query.userID; // Extract userID from query parameters
-
-  if (!userID) {
-    return res.status(400).json({ error: 'User ID is required' });
-  }
-
-  const query = 'SELECT * FROM all_in_one WHERE user_id = ?'; // Adjust your query to filter by userID
-  db.query(query, [userID], (err, results) => {
-    if (err) {
-      console.error('Error fetching All-in-One data:', err);
-      return res.status(500).json({ error: 'Failed to fetch All-in-One data' });
-    }
-
-    console.log('Fetched data:', results); // Log the results for debugging
-    res.json(results);
-  });
-});
-
-app.post("/check-cloud-name", async (req, res) => {
-  const { cloudName } = req.body;
-
-  try {
-    const existingCloud = await new Promise((resolve, reject) => {
-      const query = "SELECT * FROM all_in_one WHERE cloudName = ?";
-      db.query(query, [cloudName], (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
-      });
+      // Return all matching records
+      res.json(results);  // Return the entire results array
     });
-
-    if (existingCloud.length > 0) {
-      return res.status(400).json({ message: "Cloud name already exists. Please choose a different name." });
-    }
-
-    res.status(200).json({ message: "Cloud name is available." });
-  } catch (error) {
-    console.error("Error checking cloud name:", error);
-    res.status(500).json({ message: "An error occurred while checking the cloud name." });
-  }
-});
-
-app.post('/store-user-id', (req, res) => {
-  const { userId } = req.body;
-  if (!userId) return res.status(400).json({ message: 'User ID is required' });
-
-  const sql = 'INSERT IGNORE INTO users (id) VALUES (?)';
-  db.query(sql, [userId], (err) => {
-    if (err) return res.status(500).json({ message: 'Error storing user ID' });
-    res.status(200).json({ message: 'User ID stored successfully' });
   });
-});
-
-
-// API to fetch bmc data from the `all_in_one` table
-app.post("/api/get-power-details", (req, res) => {
-  const { userID } = req.body;
-
-  if (!userID) {
-    return res.status(400).json({ error: "Missing userID" });
-  }
-
-  // Query to fetch data
-  const query = "SELECT bmc_ip AS ip, bmc_username AS username, bmc_password AS password, cloudName FROM all_in_one WHERE user_id = ?";
-  db.query(query, [userID], (err, results) => {
-    if (err) {
-      console.error("Database query error:", err);
-      return res.status(500).json({ error: "Database query failed" });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ error: "No data found for the given userID" });
-    }
-
-    // Return all matching records
-    res.json(results);  // Return the entire results array
-  });
-});
 
 
 
-app.post("/register", async (req, res) => {
-  const { companyName, email, password } = req.body;
+  app.post("/register", async (req, res) => {
+    const { companyName, email, password } = req.body;
 
-  try {
-    // Check if the email already exists
-    const existingUser = await new Promise((resolve, reject) => {
-      const checkEmailSql = "SELECT * FROM users WHERE email = ?";
-      db.query(checkEmailSql, [email], (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
+    try {
+      // Check if the email already exists
+      const existingUser = await new Promise((resolve, reject) => {
+        const checkEmailSql = "SELECT * FROM users WHERE email = ?";
+        db.query(checkEmailSql, [email], (err, result) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(result);
+          }
+        });
       });
-    });
 
-    if (existingUser.length > 0) {
-      return res.status(400).json({ message: "Email already exists !" });
-    }
+      if (existingUser.length > 0) {
+        return res.status(400).json({ message: "Email already exists !" });
+      }
 
-    // Dynamically import nanoid with custom alphabet
-    const { customAlphabet } = await import("nanoid");
-    const nanoid = customAlphabet("ABCDEVSR0123456789abcdefgzkh", 6);
-    const id = nanoid(); // Generate unique ID with custom alphabet
+      // Dynamically import nanoid with custom alphabet
+      const { customAlphabet } = await import("nanoid");
+      const nanoid = customAlphabet("ABCDEVSR0123456789abcdefgzkh", 6);
+      const id = nanoid(); // Generate unique ID with custom alphabet
 
-    // Hash the password
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+      // Hash the password
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const sql =
-      "INSERT INTO users (id, companyName, email, password) VALUES (?, ?, ?, ?)";
-    await new Promise((resolve, reject) => {
-      db.query(sql, [id, companyName, email, hashedPassword], (err, result) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(result);
-        }
+      const sql =
+        "INSERT INTO users (id, companyName, email, password) VALUES (?, ?, ?, ?)";
+      await new Promise((resolve, reject) => {
+        db.query(sql, [id, companyName, email, hashedPassword], (err, result) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(result);
+          }
+        });
       });
-    });
 
 
-    // Set the user session after registration
-    req.session.userId = id;
+      // Set the user session after registration
+      req.session.userId = id;
 
-    // Send registration email
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      cc: ["support@pinakastra.cloud"],
-      subject: "Welcome to Pinakastra!",
-      html: `
+      // Send registration email
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        cc: ["support@pinakastra.cloud"],
+        subject: "Welcome to Pinakastra!",
+        html: `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
       
       <!-- Banner/Header -->
@@ -660,29 +692,30 @@ app.post("/register", async (req, res) => {
       </div>
     </div>
   `
-    };
+      };
 
-    await new Promise((resolve, reject) => {
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          reject(error);
-        } else {
-          console.log("Email sent:", info.response);
-          resolve(info);
-        }
+      await new Promise((resolve, reject) => {
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            reject(error);
+          } else {
+            console.log("Email sent:", info.response);
+            resolve(info);
+          }
+        });
       });
-    });
 
-    res
-      .status(200)
-      .json({ message: "User registered successfully", userId: id });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Error registering user" });
-  }
-});
+      res
+        .status(200)
+        .json({ message: "User registered successfully", userId: id });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Error registering user" });
+    }
+  });
 
-// Start the server with HTTPS
-https.createServer(options, app).listen(5000, () => {
+  // Start the server with HTTPS
+  https.createServer(options, app).listen(5000, () => {
     console.log('Node.js backend is running on HTTPS at port 5000');
+  });
 });

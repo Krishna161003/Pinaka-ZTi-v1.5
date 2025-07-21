@@ -70,7 +70,11 @@ const Report = () => {
             user_id,
             username,
             cloudname: cloudName,
-            serverip: hostIP
+            serverip: hostIP,
+            license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
+            license_type: JSON.parse(sessionStorage.getItem('licenseStatus'))?.type || null,
+            license_period: JSON.parse(sessionStorage.getItem('licenseStatus'))?.period || null,
+            vip: sessionStorage.getItem('vip') || null
           })
         });
         const data = await res.json();
@@ -98,17 +102,35 @@ const Report = () => {
     const logDeploymentComplete = async () => {
       if (!serveridRef.current) return;
       try {
+        // Mark as completed
         await fetch(`https://${hostIP}:5000/api/deployment-activity-log/${serveridRef.current}`, {
           method: 'PATCH'
         });
+        
+        // Finalize deployment (transfer to appropriate table)
+        // Determine server_type based on deployment type or user selection
+        const server_type = 'host'; // Default to 'host', you can modify this logic
+        
+        await fetch(`https://${hostIP}:5000/api/finalize-deployment/${serveridRef.current}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            server_type,
+            license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
+            role: server_type === 'host' ? 'master' : 'worker',
+            host_serverid: server_type === 'child' ? 'parent-host-id' : null // Only needed for child nodes
+          })
+        });
+        
+        console.log(`Deployment finalized as ${server_type}`);
         sessionStorage.removeItem('currentServerid');
       } catch (e) {
-        // Optionally handle error
+        console.error('Error completing deployment:', e);
       }
     };
 
 
-// Helper to revert status to progress if needed
+    // Helper to revert status to progress if needed
     const revertToProgress = async () => {
       if (!serveridRef.current) return;
       try {
