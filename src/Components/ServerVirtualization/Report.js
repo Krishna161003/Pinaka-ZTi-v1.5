@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Divider, Card, Progress, Row, Col, Flex, Spin } from 'antd';
+import { Divider, Card, Progress, Row, Col, Flex, Spin, Button } from 'antd';
 import { CloudOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
 const getCloudNameFromMetadata = () => {
   let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
@@ -10,6 +11,7 @@ const getCloudNameFromMetadata = () => {
 const hostIP = window.location.hostname;
 
 const Report = ({ ibn, onDeploymentComplete }) => {
+  const navigate = useNavigate();
   const [completionWindowActive, setCompletionWindowActive] = useState(false);
   const completionWindowTimeoutRef = useRef(null);
   const revertedRef = useRef(false);
@@ -20,6 +22,8 @@ const Report = ({ ibn, onDeploymentComplete }) => {
 
   // Track serverid for this deployment
   const serveridRef = React.useRef(sessionStorage.getItem('currentServerid') || null);
+  // Prevent duplicate logDeploymentStart calls
+  const logStartedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -204,11 +208,17 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         if (isMounted) setError('Failed to connect to backend. Please check your network or server.');
       }
     };
+    // Helper to safely call logDeploymentStart only once
+    const safeLogDeploymentStart = async () => {
+      if (logStartedRef.current || serveridRef.current) return;
+      logStartedRef.current = true;
+      await logDeploymentStart();
+    };
+
     // First, check for in-progress deployment, then start polling
-    checkInProgress().then(() => {
-      // If not already in progress, log deployment start
-      if (!serveridRef.current) {
-        logDeploymentStart();
+    checkInProgress().then((inProgress) => {
+      if (!inProgress && !serveridRef.current) {
+        safeLogDeploymentStart();
       }
       fetchProgress();
       interval = setInterval(fetchProgress, 2000);
@@ -218,6 +228,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
       if (interval) clearInterval(interval);
       if (stopTimeout) clearTimeout(stopTimeout);
       if (completionWindowTimeoutRef.current) clearTimeout(completionWindowTimeoutRef.current);
+      logStartedRef.current = false; // Reset on unmount
     };
   }, [cloudName, completionWindowActive, onDeploymentComplete]);
 
@@ -280,6 +291,13 @@ const Report = ({ ibn, onDeploymentComplete }) => {
                 {progressList}
               </ul>
             </div>
+            {percent === 100 && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+                <Button type="primary" onClick={() => navigate('/iaas')}>
+                  Go to IaaS
+                </Button>
+              </div>
+            )}
           </Col>
         </Row>
       </Card>

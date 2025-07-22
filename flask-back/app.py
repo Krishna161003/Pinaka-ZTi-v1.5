@@ -1,15 +1,19 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from datetime import datetime
+from scapy.all import ARP, Ether, srp
 import psutil
 import os
 import json
 import paramiko
 import re
 import subprocess
-import subprocess
 import time
 import ipaddress
+import netifaces
+import logging
+
+
 
 
 app = Flask(__name__)
@@ -898,7 +902,7 @@ def get_disks():
 # ------------------------------------------------GET DISK LIST FROM THE RUNNING SERVER End-----------------------
 
 
-# ------------------- Deployment Progress Endpoint -------------------
+# ------------------- Deployment Progress Endpoint starts-------------------
 
 @app.route("/deployment-progress", methods=["GET"])
 def deployment_progress():
@@ -930,6 +934,84 @@ def deployment_progress():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+# ------------------- Deployment Progress Endpoint ends -------------------
+
+# ------------------- Scan Network Endpoint starts-------------------
+
+# Function to get the local network IP
+def get_local_network_ip():
+    interfaces = netifaces.interfaces()
+    for interface in interfaces:
+        addresses = netifaces.ifaddresses(interface)
+        if netifaces.AF_INET in addresses:  # Check if the interface has an IPv4 address
+            for link in addresses[netifaces.AF_INET]:
+                if 'addr' in link and not link['addr'].startswith('127.'):
+                    return link['addr']
+    return None  # Return None if no suitable IP address is found
+
+# Function to get the network range (CIDR)
+def get_network_range(local_ip):
+    ip_interface = ipaddress.IPv4Interface(local_ip + '/24')  # Assuming /24 subnet
+    network = ip_interface.network
+    return network
+
+# Function to scan the network (ARP scan)
+def scan_network(network):
+    arp_request = ARP(pdst=str(network))
+    broadcast = Ether(dst="ff:ff:ff:ff:ff:ff")
+    arp_request_broadcast = broadcast / arp_request
+    answered_list = srp(arp_request_broadcast, timeout=5, retry=3, verbose=False)[0]  # Increased timeout and retries
+
+    active_nodes = []
+    for sent, received in answered_list:
+        node_info = {
+            'ip': received.psrc,
+            'mac': received.hwsrc,
+            'last_seen': datetime.now().strftime('%Y-%m-%d')
+        }
+        active_nodes.append(node_info)
+
+    return active_nodes
+
+@app.route('/scan', methods=['GET'])
+def scan_network_api():
+    logging.info("Received scan request")
+
+    # Check if a subnet is provided in the query parameters
+    subnet = request.args.get('subnet')
+    local_ip = get_local_network_ip()  # Ensure the local IP is retrieved before using it
+    
+    if not local_ip:
+        logging.error("Failed to retrieve local network IP address.")
+        return jsonify({"error": "Failed to retrieve local network IP address."}), 500
+
+    if subnet:
+        try:
+            # Validate and parse the subnet
+            network = ipaddress.IPv4Network(subnet, strict=False)
+            logging.info(f"Scanning provided subnet: {network}")
+        except ValueError:
+            logging.error("Invalid subnet format provided.")
+            return jsonify({"error": "Invalid subnet format."}), 400
+    else:
+        # Use the local network IP if no subnet is provided
+        network = get_network_range(local_ip)
+        logging.info(f"Scanning local network: {network}")
+    
+    # Perform the scan
+    active_nodes = scan_network(network)
+    logging.info(f"Scan completed. Found {len(active_nodes)} active nodes.")
+
+    # Return the results
+    return jsonify({
+        "active_nodes": active_nodes,
+        "subnet": str(network),
+        "local_ip": local_ip
+    })
+
+# ------------------- Scan Network Endpoint ends -------------------
+
 
 if __name__ == "__main__":
     app.run(

@@ -10,6 +10,15 @@ import ActivateKey from "../Components/ServerVirtualization/ActivateKey";
 import Deployment from "../Components/ServerVirtualization/Deployment";
 
 const App = () => {
+  // ... all your state and logic ...
+
+  useEffect(() => {
+    return () => {
+      // On unmount, reset activeTab to "1" in sessionStorage
+      sessionStorage.setItem("activeTab", "1");
+    };
+  }, []);
+
   const hostIP = window.location.hostname;
   // Auto-redirect to Report tab if deployment in progress
   useEffect(() => {
@@ -120,15 +129,20 @@ const App = () => {
     }));
   };
 
-  const handleNextButtonClick = () => {
-    handleTabChange("4");
-  };
 
+
+  useEffect(() => {
+  return () => {
+    // On unmount, reset activeTab to "1" in sessionStorage
+    sessionStorage.setItem("activeTab", "1");
+  };
+}, []);
 
   return (
     <Zti>
       <h2 style={{ userSelect: "none" }}>Server Virtualization</h2>
       <Tabs
+  destroyInactiveTabPane={true}
         activeKey={activeTab}
         onChange={(key) => {
           setActiveTab(key);
@@ -210,16 +224,11 @@ const App = () => {
           }} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Report" key="6" disabled={disabledTabs["6"]}>
-          <Report ibn={ibn} onDeploymentComplete={() => {
-            setActiveTab("1");
-            setDisabledTabs({ "2": true, "3": true, "4": true, "5": true, "6": true });
-            sessionStorage.setItem("activeTab", "1");
-            sessionStorage.setItem("disabledTabs", JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
-          }} />
+          <Report ibn={ibn} />
         </Tabs.TabPane>
       </Tabs>
     </Zti>
   );
-};
+}
 
 export default App;

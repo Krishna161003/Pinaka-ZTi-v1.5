@@ -381,11 +381,21 @@ const Deployment = ({ next }) => {
       row[field] = value;
 
       // Validation for IP/DNS/Gateway
-      if (['ip', 'dns', 'gateway'].includes(field)) {
+      if (["ip", "dns", "gateway"].includes(field)) {
         if (!ipRegex.test(value)) {
           row.errors[field] = 'Should be a valid address';
         } else {
-          delete row.errors[field];
+          // Duplicate IP check for segregated mode
+          if (field === "ip" && configType === "segregated") {
+            const isDuplicate = updatedData.some((r, i) => i !== index && r.ip === value && value);
+            if (isDuplicate) {
+              row.errors.ip = 'Duplicate IP address in another row';
+            } else {
+              delete row.errors.ip;
+            }
+          } else {
+            delete row.errors[field];
+          }
         }
       }
 
@@ -744,13 +754,14 @@ const Deployment = ({ next }) => {
               </Button>
             </Flex>
 
-            <div style={{ marginTop: 24 }}>
+            <div style={{ marginTop: 24, height: 200, overflowY: 'auto' }}>
               <Table
                 columns={getColumns()}  // ← dynamic columns logic goes here
                 dataSource={tableData}
                 pagination={false}
                 bordered
                 size="small"
+                scroll={{ x: true }}
               />
             </div>
             <Divider />

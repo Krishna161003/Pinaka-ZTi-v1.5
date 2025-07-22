@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Tabs } from 'antd';
 import Zti from "../Components/Zti"
-import DeploymentOptions from '../Components/Cloud/Cloud.jsx';
+import Discovery from '../Components/Cloud/Cloud.jsx';
 
 // Placeholder components for new tabs
 const Validation = () => <div>Validation Content</div>;
@@ -22,10 +22,10 @@ const App = () => {
 
   return (
     <Zti>
-      <h2>Cloud</h2>
+      <h2>Add Node</h2>
       <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key)}>
-        <Tabs.TabPane tab="Deployment Options" key="1" disabled={disabledTabs["1"]}>
-          <DeploymentOptions onStart={() => handleTabStart(1)} />
+        <Tabs.TabPane tab="Discovery" key="1" disabled={disabledTabs["1"]}>
+          <Discovery onStart={() => handleTabStart(1)} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Validation" key="2" disabled={disabledTabs["2"]}>
           <Validation />

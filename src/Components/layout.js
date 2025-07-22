@@ -55,6 +55,9 @@ const AppLayout = ({ children }) => {
   const routeKeyMap = {
     "/": "1",
     "/servervirtualization": "2",
+    "/cloud": "2",
+    "/edgecloud": "2",
+    "/distributedstorage": "2",
     "/iaas": "3",
     "/inventory": "4",
     "/hpc": "5",
@@ -69,6 +72,7 @@ const AppLayout = ({ children }) => {
     "/setting": "14",
     "/administration": "15",
   };
+
 
 
   const toggleSider = () => {

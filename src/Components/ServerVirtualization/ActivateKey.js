@@ -42,6 +42,22 @@ const ActivateKey = ({ next, onValidationResult }) => {
     setErrorMsg("");
 
     try {
+      // Step 1: Check if license exists in DB
+      const checkResponse = await fetch(`https://${hostIP}:5000/api/check-license-exists`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ license_code: licenseCode }),
+      });
+      const checkData = await checkResponse.json();
+      if (checkData.exists) {
+        setErrorMsg("License already used.");
+        setLoading(false);
+        if (onValidationResult) onValidationResult("failed");
+        return;
+      }
+      // Step 2: Proceed to validate license as before
       const response = await fetch(`https://${hostIP}:2020/decrypt-code`, {
         method: "POST",
         headers: {
@@ -72,6 +88,7 @@ const ActivateKey = ({ next, onValidationResult }) => {
       setLoading(false);
     }
   };
+
 
   return (
     <div style={{ padding: "20px" }}>

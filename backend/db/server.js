@@ -165,7 +165,7 @@ app.post("/run-script", (req, res) => {
   });
 });
 
-
+let options = {}
 try {
   options = {
     key: fs.readFileSync('/etc/ssl/keycloak.key'),
@@ -588,6 +588,26 @@ app.post("/api/get-power-details", (req, res) => {
 });
 
 
+
+// API to check if a license code exists in the License table
+app.post('/api/check-license-exists', (req, res) => {
+  const { license_code } = req.body;
+  if (!license_code) {
+    return res.status(400).json({ message: 'license_code is required' });
+  }
+  const sql = 'SELECT 1 FROM License WHERE license_code = ? LIMIT 1';
+  db.query(sql, [license_code], (err, results) => {
+    if (err) {
+      console.error('Error checking license existence:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    if (results.length > 0) {
+      return res.json({ exists: true });
+    } else {
+      return res.json({ exists: false });
+    }
+  });
+});
 
 app.post("/register", async (req, res) => {
   const { companyName, email, password } = req.body;
