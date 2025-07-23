@@ -2,7 +2,6 @@ import React from "react";
 import Layout1 from "./layout";
 import { theme, Layout, Col, Row } from "antd";
 import { useNavigate } from "react-router-dom";
-import { CloudTwoTone } from "@ant-design/icons";
 
 const style = {
   background: '#fff',
@@ -19,20 +18,28 @@ const { Content } = Layout;
 export default function Zti({ children }) {
   const navigate = useNavigate();
 
+
   const handleRedirect = () => {
-    navigate("/servervirtualization"); // replace with your actual path
+    const lastServerVirtualizationPath = sessionStorage.getItem("lastServerVirtualizationPath") || "/servervirtualization";
+    navigate(lastServerVirtualizationPath);
   };
 
+  // For Cloud
   const handleRedirectAddNode = () => {
-    navigate("/cloud"); // replace with your actual path
+    const lastCloudPath = sessionStorage.getItem("lastCloudPath") || "/addnode";
+    navigate(lastCloudPath);
   };
+
 
   const handleRedirectRemoveNode = () => {
-    navigate("/edgecloud"); // replace with your actual path
+    const lastEdgeCloudPath = sessionStorage.getItem("lastEdgeCloudPath") || "/edgecloud";
+    navigate(lastEdgeCloudPath);
   };
   const handleDistributedStorage = () => {
-    navigate("/distributedstorage"); // replace with your actual path
+    const lastDistributedStoragePath = sessionStorage.getItem("lastDistributedStoragePath") || "/distributedstorage";
+    navigate(lastDistributedStoragePath);
   };
+
 
   const {
     token: { colorBgContainer, borderRadiusLG },
@@ -47,7 +54,7 @@ export default function Zti({ children }) {
       >
         <Col
           className="gutter-row"
-          span={5} // Each column takes up 7 spans, so 3 columns will total 21 spans
+          span={7} // Each column takes up 7 spans, so 3 columns will total 21 spans
           onClick={handleRedirect}
           style={style}
         >
@@ -68,7 +75,7 @@ export default function Zti({ children }) {
 
         <Col
           className="gutter-row"
-          span={5} // Each column takes up 7 spans
+          span={7} // Each column takes up 7 spans
           onClick={handleRedirectAddNode}
           style={style}
         >
@@ -83,14 +90,14 @@ export default function Zti({ children }) {
                 userSelect: "none"
               }}
             >
-              Cloud
+              Add Node
             </span>
           </div>
         </Col>
 
         <Col
           className="gutter-row"
-          span={5} // Each column takes up 7 spans
+          span={7} // Each column takes up 7 spans
           onClick={handleRedirectRemoveNode}
           style={style}
         >
@@ -114,7 +121,7 @@ export default function Zti({ children }) {
 
 
 
-        <Col
+        {/* <Col
           className="gutter-row"
           span={5} // Each column takes up 7 spans
           onClick={handleDistributedStorage}
@@ -133,7 +140,7 @@ export default function Zti({ children }) {
               Distributed Storage
             </span>
           </div>
-        </Col>
+        </Col> */}
       </Row>
       <Content style={{ margin: "16px 16px" }}>
         <div

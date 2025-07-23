@@ -73,7 +73,7 @@ const DeploymentOptions = ({ onStart }) => {
   }, [isModalVisible]);
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div>
       <Breadcrumb style={{ margin: '16px 0' }}>
         <Breadcrumb.Item>
           <HomeOutlined />
@@ -84,9 +84,8 @@ const DeploymentOptions = ({ onStart }) => {
         <h4>Deployment Model</h4>
         <div className="options-container">
           <div
-            className={`option-box ${
-              selectedOption === 'Server Virtualization' ? 'selected' : ''
-            }`}
+            className={`option-box ${selectedOption === 'Server Virtualization' ? 'selected' : ''
+              }`}
             onClick={() => handleOptionClick('Server Virtualization')}
           >
             <h5>Server Virtualization</h5>
@@ -113,13 +112,12 @@ const DeploymentOptions = ({ onStart }) => {
               </div>
             </div>
           </div>
-          <div
-            className={`option-box ${
-              selectedOption === 'Server Virtualization with HA' ? 'selected' : ''
-            }`}
+          {/* <div
+            className={`option-box ${selectedOption === 'Server Virtualization with HA' ? 'selected' : ''
+              }`}
             onClick={() => handleOptionClick('Server Virtualization with HA')}
-          >
-            <h5>Server Virtualization with HA</h5>
+          > */}
+            {/* <h5>Server Virtualization with HA</h5>
             <div className="option">
               <div
                 className="option-content front"
@@ -133,24 +131,23 @@ const DeploymentOptions = ({ onStart }) => {
                   className="option-text"
                   style={{ fontSize: '1em', color: '#333', lineHeight: '1.6' }}
                 >
-                            <strong>All-in-One Setup:</strong> A streamlined, self-contained cloud environment
+                  <strong>All-in-One Setup:</strong> A streamlined, self-contained cloud environment
                   where all OpenStack services are deployed on a single server, perfect for
                   development and testing.<b>(need to change def)</b>
                 </div>
-      
-	  <Button className="custom-button" type="primary" disabled>
+
+                <Button className="custom-button" type="primary" disabled>
                   Start
                 </Button>
-              </div>
-            </div>
-          </div>
-	  <div
-            className={`option-box ${
-              selectedOption === 'Server Virtualization Scale' ? 'selected' : ''
-            }`}
+              </div> */}
+            {/* </div> */}
+          {/* </div> */}
+          {/* <div
+            className={`option-box ${selectedOption === 'Server Virtualization Scale' ? 'selected' : ''
+              }`}
             onClick={() => handleOptionClick('Server Virtualization Scale')}
-          >
-            <h5>Server Virtualization Scale</h5>
+          > */}
+            {/* <h5>Server Virtualization Scale</h5>
             <div className="option">
               <div
                 className="option-content front"
@@ -172,8 +169,8 @@ const DeploymentOptions = ({ onStart }) => {
                   Start
                 </Button>
               </div>
-            </div>
-          </div>
+            </div> */}
+          {/* </div> */}
 
         </div>
       </div>

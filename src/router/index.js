@@ -6,7 +6,7 @@ import Siem from "../View/Siem";
 import Iaas from "../View/Iaas";
 import ServerVirtualization from "../View/ServerVirtualization.jsx"
 import Dashboard from "../View/Dashboard";
-import Cloud from "../View/Cloud";
+import Addnode from "../View/Addnode";
 import EdgeCloud from "../View/EdgeCloud";
 import AiWorkbench from "../View/AiWorkbench";
 import Noc from "../View/Noc";
@@ -103,8 +103,8 @@ const authenticatedRoutes = [
         element: <Administration />,
       },
       {
-        path: "/cloud",
-        element: <Cloud />,
+        path: "/addnode",
+        element: <Addnode />,
       },
       {
         path: "/edgecloud",

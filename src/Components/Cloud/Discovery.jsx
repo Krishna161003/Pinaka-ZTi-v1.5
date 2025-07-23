@@ -39,9 +39,9 @@ const Cloud = ({ onNext }) => {
     }
   };
 
-  useEffect(() => {
-    fetchScan(); // Default: scan local network
-  }, []);
+  // useEffect(() => {
+  //   fetchScan(); // Default: scan local network
+  // }, []);
 
   const handleSubnetScan = () => {
     form.validateFields().then(values => {
@@ -49,9 +49,9 @@ const Cloud = ({ onNext }) => {
     });
   };
 
-  const handleRefresh = () => {
-    fetchScan(form.getFieldValue('subnet'), 'refresh');
-  };
+  // const handleRefresh = () => {
+  //   fetchScan(form.getFieldValue('subnet'), 'refresh');
+  // };
 
   const columns = [
     {
@@ -108,7 +108,10 @@ const Cloud = ({ onNext }) => {
         <Button
           type="primary"
           disabled={selectedRowKeys.length === 0}
-          onClick={() => onNext && onNext(selectedRowKeys)}
+          onClick={() => {
+            const selected = data.filter(row => selectedRowKeys.includes(row.ip + (row.mac || '')));
+            onNext && onNext(selected);
+          }}
           style={{ size: "middle", width: "75px" }}
         >
           Next

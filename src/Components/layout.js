@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import img1 from "../Images/ZTi.png";
 import img2 from "../Images/favicon.png";
 import logo from "../Images/logo.png";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   MenuFoldOutlined,
   CheckCircleOutlined,
@@ -28,6 +28,7 @@ import { Button, Layout, Menu, theme, Dropdown } from "antd";
 const { Header, Content, Footer, Sider } = Layout;
 
 const AppLayout = ({ children }) => {
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(
     () => JSON.parse(sessionStorage.getItem("isSiderCollapsed")) || false
   );
@@ -121,9 +122,15 @@ const AppLayout = ({ children }) => {
       key: "2",
       icon: <DeploymentUnitOutlined />,
       label: (
-        <Link to="/servervirtualization" style={{ textDecoration: "none" }}>
+        <span
+          style={{ textDecoration: "none", cursor: "pointer", color: "inherit" }}
+          onClick={() => {
+            const lastZtiPath = sessionStorage.getItem("lastZtiPath");
+            navigate(lastZtiPath || "/servervirtualization");
+          }}
+        >
           Zti Wizard
-        </Link>
+        </span>
       ),
     },
     {

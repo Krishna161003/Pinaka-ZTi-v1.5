@@ -10,14 +10,19 @@ import ActivateKey from "../Components/ServerVirtualization/ActivateKey";
 import Deployment from "../Components/ServerVirtualization/Deployment";
 
 const App = () => {
-  // ... all your state and logic ...
-
-  useEffect(() => {
-    return () => {
-      // On unmount, reset activeTab to "1" in sessionStorage
-      sessionStorage.setItem("activeTab", "1");
-    };
-  }, []);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam) return tabParam;
+    const savedTab = sessionStorage.getItem("serverVirtualization_activeTab");
+    return savedTab || "1";
+  });
+  const [disabledTabs, setDisabledTabs] = useState(() => {
+    const saved = sessionStorage.getItem("serverVirtualization_disabledTabs");
+    return saved ? JSON.parse(saved) : { "2": true, "3": true, "4": true, "5": true, "6": true };
+  });
 
   const hostIP = window.location.hostname;
   // Auto-redirect to Report tab if deployment in progress
@@ -43,40 +48,76 @@ const App = () => {
           navigate("?tab=6", { replace: true });
         }
       })
-      .catch(err => {
-        // Optionally handle error
-        console.error("Error checking deployment progress", err);
-      });
-  }, []);
+    }, []);
 
-  const location = useLocation();
-  const navigate = useNavigate();
+  // ... rest of your code ...
 
-  const [activeTab, setActiveTab] = useState(() => {
-    // Initialize activeTab from sessionStorage or default to "1"
-    const savedTab = sessionStorage.getItem("activeTab");
-    return savedTab || "1";
-  });
-
-  const [disabledTabs, setDisabledTabs] = useState(() => {
-    // By default, only Deployment Options is enabled; all others disabled
-    return { "2": true, "3": true, "4": true, "5": true, "6": true };
-  });
-
-  // On initial mount, force disabledTabs to default (only Deployment Options enabled)
+  // Update URL and sessionStorage when activeTab changes
   useEffect(() => {
-    setDisabledTabs({ "2": true, "3": true, "4": true, "5": true, "6": true });
-    sessionStorage.setItem("disabledTabs", JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
+    sessionStorage.setItem("serverVirtualization_activeTab", activeTab);
+    const pathWithTab = `/servervirtualization?tab=${activeTab}`;
+    sessionStorage.setItem("lastServerVirtualizationPath", pathWithTab);
+    sessionStorage.setItem("lastMenuPath", pathWithTab);
+    sessionStorage.setItem("lastZtiPath", pathWithTab);
+    // Only update if URL doesn't match
+    const params = new URLSearchParams(location.search);
+    if (params.get("tab") !== activeTab) {
+      params.set("tab", activeTab);
+      navigate({ search: params.toString() }, { replace: true });
+    }
+  }, [activeTab, location.search, navigate]);
+
+  // Persist disabledTabs to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem("serverVirtualization_disabledTabs", JSON.stringify(disabledTabs));
+  }, [disabledTabs]);
+
+  // Restore state on mount & on location.search change
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    const pathWithTab = `/servervirtualization?tab=${tabParam || activeTab}`;
+    sessionStorage.setItem("lastZtiPath", pathWithTab);
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+    const savedDisabled = sessionStorage.getItem("serverVirtualization_disabledTabs");
+    if (savedDisabled) setDisabledTabs(JSON.parse(savedDisabled));
+    return () => {
+      // On unmount, save current path (with tab param) for menu memory
+      const params = new URLSearchParams(location.search);
+      const tabParam = params.get("tab") || activeTab;
+      const pathWithTab = `/servervirtualization?tab=${tabParam}`;
+      sessionStorage.setItem("lastServerVirtualizationPath", pathWithTab);
+      sessionStorage.setItem("lastMenuPath", pathWithTab);
+      sessionStorage.setItem("lastZtiPath", pathWithTab);
+      // DO NOT reset serverVirtualization_activeTab to '1'
+    };
+  }, [location.search]);
+
+
+
+  // Only set defaults if not present in sessionStorage
+  useEffect(() => {
+    const saved = sessionStorage.getItem("disabledTabs");
+    if (saved) {
+      setDisabledTabs(JSON.parse(saved));
+    } else {
+      const defaults = { "2": true, "3": true, "4": true, "5": true, "6": true };
+      setDisabledTabs(defaults);
+      sessionStorage.setItem("disabledTabs", JSON.stringify(defaults));
+    }
   }, []);
 
   const [selectedNodes, setSelectedNodes] = useState([]);
   const [ibn, setIbn] = useState("");
 
-  // On component mount, restore state and query params
+  // On component mount, restore disabledTabs and other state, but NOT activeTab!
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const tabKey = params.get("tab") || activeTab; // Default to saved tab
-    setActiveTab(tabKey);
+    const tabKey = params.get("tab") || activeTab;
+    const pathWithTab = `/servervirtualization?tab=${tabKey}`;
+    sessionStorage.setItem("lastZtiPath", pathWithTab);
 
     // Restore disabledTabs from sessionStorage if present
     const savedDisabledTabs = sessionStorage.getItem("disabledTabs");
@@ -92,12 +133,8 @@ const App = () => {
 
     if (savedNodes) setSelectedNodes(JSON.parse(savedNodes));
     if (savedIbn) setIbn(savedIbn);
-  }, [location.search]);
-
-  useEffect(() => {
-    sessionStorage.setItem("activeTab", activeTab);
-    navigate(`?tab=${activeTab}`); // Update query params in URL
-  }, [activeTab, navigate]);
+    // DO NOT setActiveTab here!
+  }, [location.search, activeTab]);
 
   useEffect(() => {
     sessionStorage.setItem("disabledTabs", JSON.stringify(disabledTabs));
@@ -105,6 +142,7 @@ const App = () => {
 
   const handleTabChange = (key) => {
     setActiveTab(key);
+    // All session/URL sync is handled by the effect above
   };
 
   // Handler to enable only Validation tab after Deployment Option modal is confirmed
@@ -129,34 +167,13 @@ const App = () => {
     }));
   };
 
-
-
-  useEffect(() => {
-  return () => {
-    // On unmount, reset activeTab to "1" in sessionStorage
-    sessionStorage.setItem("activeTab", "1");
-  };
-}, []);
-
   return (
     <Zti>
       <h2 style={{ userSelect: "none" }}>Server Virtualization</h2>
       <Tabs
-  destroyInactiveTabPane={true}
+        destroyInactiveTabPane={true}
         activeKey={activeTab}
-        onChange={(key) => {
-          setActiveTab(key);
-          if (key === "6") {
-            setDisabledTabs({
-              "1": true,
-              "2": true,
-              "3": true,
-              "4": true,
-              "5": true,
-              "6": false
-            });
-          }
-        }}
+        onChange={handleTabChange}
       >
         <Tabs.TabPane tab="Deployment Options" key="1" disabled={disabledTabs["1"]}>
           <DeploymentOptions onStart={handleDeploymentStart} />
@@ -184,9 +201,9 @@ const App = () => {
           <Discovery next={() => {
             setDisabledTabs(prev => ({
               ...prev,
-              "2": false, // Validation enabled
-              "3": false, // System Interface enabled
-              "4": false  // Activate Key enabled
+              "2": false,
+              "3": false,
+              "4": false
             }));
             setActiveTab("4");
           }} />
@@ -196,7 +213,7 @@ const App = () => {
             next={() => {
               setDisabledTabs(prev => ({
                 ...prev,
-                "5": false, // Enable Deployment tab
+                "5": false
               }));
               setActiveTab("5");
             }}
@@ -204,7 +221,7 @@ const App = () => {
               if (result === "failed") {
                 setDisabledTabs(prev => ({
                   ...prev,
-                  "5": true // Disable Deployment tab if validation fails
+                  "5": true
                 }));
               }
             }}
@@ -229,6 +246,6 @@ const App = () => {
       </Tabs>
     </Zti>
   );
-}
+};
 
 export default App;
