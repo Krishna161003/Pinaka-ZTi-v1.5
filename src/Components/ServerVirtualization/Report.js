@@ -25,11 +25,11 @@ const Report = ({ ibn, onDeploymentComplete }) => {
   // Prevent duplicate logDeploymentStart calls
   const logStartedRef = useRef(false);
 
+  const intervalRef = useRef(null);
   useEffect(() => {
     let isMounted = true;
     let completedTime = null;
     let stopTimeout = null;
-    let interval = null;
 
     // --- Prevent duplicate DB logs on reload/login ---
     const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
@@ -110,11 +110,11 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         await fetch(`https://${hostIP}:5000/api/deployment-activity-log/${serveridRef.current}`, {
           method: 'PATCH'
         });
-        
+
         // Finalize deployment (transfer to appropriate table)
         // Determine server_type based on deployment type or user selection
         const server_type = 'host'; // Default to 'host', you can modify this logic
-        
+
         await fetch(`https://${hostIP}:5000/api/finalize-deployment/${serveridRef.current}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -125,7 +125,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
             host_serverid: server_type === 'child' ? 'parent-host-id' : null // Only needed for child nodes
           })
         });
-        
+
         console.log(`Deployment finalized as ${server_type}`);
         sessionStorage.removeItem('currentServerid');
         serveridRef.current = null;
@@ -167,6 +167,13 @@ const Report = ({ ibn, onDeploymentComplete }) => {
 
             debugFetchProgress(data);
 
+            // Stop polling IMMEDIATELY if deployment is complete
+            if ((data.percent || 0) === 100) {
+              if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+              }
+            }
 
             // Log deployment completion in DB if just completed
             if ((data.percent || 0) === 100 && serveridRef.current) {
@@ -185,7 +192,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
               }, 180000); // 3 minutes
               // Set a timeout to stop polling after 5 minutes (as before)
               stopTimeout = setTimeout(() => {
-                if (interval) clearInterval(interval);
+                if (intervalRef.current) clearInterval(intervalRef.current);
               }, 300000); // 5 minutes
             }
 
@@ -221,11 +228,11 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         safeLogDeploymentStart();
       }
       fetchProgress();
-      interval = setInterval(fetchProgress, 2000);
+      intervalRef.current = setInterval(fetchProgress, 2000);
     });
     return () => {
       isMounted = false;
-      if (interval) clearInterval(interval);
+      if (intervalRef.current) clearInterval(intervalRef.current);
       if (stopTimeout) clearTimeout(stopTimeout);
       if (completionWindowTimeoutRef.current) clearTimeout(completionWindowTimeoutRef.current);
       logStartedRef.current = false; // Reset on unmount
@@ -264,13 +271,40 @@ const Report = ({ ibn, onDeploymentComplete }) => {
     }
   }
 
+  // Set reset flag if deployment is complete and user leaves Report tab (SPA navigation or browser unload)
+  useEffect(() => {
+    if (percent === 100) {
+      const handleBeforeUnload = () => {
+        sessionStorage.setItem('serverVirtualization_shouldResetOnNextMount', 'true');
+        sessionStorage.setItem('lastMenuPath', '/servervirtualization?tab=1');
+        sessionStorage.setItem('lastServerVirtualizationPath', '/servervirtualization?tab=1');
+        sessionStorage.setItem('lastZtiPath', '/servervirtualization?tab=1');
+        sessionStorage.setItem('serverVirtualization_activeTab', '1');
+        sessionStorage.setItem('disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
+        sessionStorage.setItem('serverVirtualization_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
+        
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        sessionStorage.setItem('serverVirtualization_shouldResetOnNextMount', 'true');
+        sessionStorage.setItem('lastMenuPath', '/servervirtualization?tab=1');
+        sessionStorage.setItem('lastServerVirtualizationPath', '/servervirtualization?tab=1');
+        sessionStorage.setItem('lastZtiPath', '/servervirtualization?tab=1');
+        sessionStorage.setItem('serverVirtualization_activeTab', '1');
+        sessionStorage.setItem('disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
+        sessionStorage.setItem('serverVirtualization_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true })); 
+      };
+    }
+  }, [percent]);
+  
   return (
     <div style={{ padding: '20px' }}>
       <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%", marginBottom: "1.25%" }}>
         <CloudOutlined />
         &nbsp;&nbsp;{cloudName} Cloud
       </h5>
-      <Divider/>
+      <Divider />
       <Card title={`Progress Report for ${cloudName} Cloud (${hostIP})`}>
         <Row gutter={24}>
           <Col span={24}>
@@ -293,7 +327,14 @@ const Report = ({ ibn, onDeploymentComplete }) => {
             </div>
             {percent === 100 && (
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-                <Button type="primary" onClick={() => navigate('/iaas')}>
+                <Button type="primary" onClick={() => {
+                  sessionStorage.setItem('serverVirtualization_shouldResetOnNextMount', 'true');
+                  sessionStorage.setItem('lastMenuPath', '/iaas');
+                  sessionStorage.setItem('lastServerVirtualizationPath', '/iaas');
+                  sessionStorage.setItem('lastZtiPath', '/iaas');
+                  sessionStorage.setItem('serverVirtualization_activeTab', '1');
+                  navigate('/iaas');
+                }}>
                   Go to IaaS
                 </Button>
               </div>

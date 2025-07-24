@@ -2,6 +2,8 @@ import React from "react";
 import Layout1 from "./layout";
 import { theme, Layout, Col, Row } from "antd";
 import { useNavigate } from "react-router-dom";
+import addnode from "../Images/database_666401.png";
+import node from "../Images/database_666406.png";
 
 const style = {
   background: '#fff',
@@ -59,7 +61,7 @@ export default function Zti({ children }) {
           style={style}
         >
           <div style={{ display: "flex", alignItems: "center" }}>
-            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAAAsTAAALEwEAmpwYAAACnElEQVR4nO1azWoUQRBuMIgeNGaz3V4igj8IvoBexKfYY6JvIIJTteBhbm68iw8RFm8q6EVZfYcknjYkgkpAk4u3T2rsLKuuYWa2ZzM9Wx/UpZfurqqvf+arXmMUCoVCocgNR7htCW8d4dAxUAsjHFrGm4td3DJVop3grmX8PPGA/2PiWzvBnWqi7+CUI2z5jD9bfIALpiYQXxzjufdtS3wNPollrI0mSLFg6oYUC46x7VfCWnj22Q+eYFWaHOPjDPf4hyNXJs7rfx+RxNgOugrsOPt+YJl0hvt7MErA5HkH1a2CTsb+5jj7dYYl3PNkfQqyVW3oAavGOGFTr4JOXOwHJ83Gxn7QVdCJk/1g5NkEq5VcKbPChKu7EBzhvV9C902kEN89ie8Kd3aMA+m8xFg0kUJ89wk4KNzZ1UDchDRNQFG4spmrGaZeASZyNDYBN1OcdoynjvDZMfYcYV3aKk+AEzk6Jk+raMvlH2HdX9NfxLy/vbxxTJMA/N0esu3YOsOfdYE9CXw5wTkxS/gqbfEngI6tMwwmJaCV4nyWAMJu9QmgzMFBlW05/euNtsBv9sXfJ3njaMoh2PMH4K4EH/YQJPyQji3CiokUS49xySfge+HOjtD3nV/JQCbG4Amv/eG5UXgA28U1y/h20t/w01oWQxdXCiegneB6UxJgH+Fq+S1AeBnjOSA+y/YtvQXc3B+CHMU1qFrAqhaAaoGWagGoFnCqBf6FagFSLQDVAqxaAKoFuExBhFULIJJ3gaHYvL4LDC+nOCNmCTvz+C4wlOBXHuJsloC5fBcg7Hj2xV99FzA5icz9F5lWhPXAIFrAEl406F2gX3iA5QQ3LGO/AWXxfSnxly8tEzaOKsRRmfhM6JcOXqFQKBSm+fgF8tw4l4opeaIAAAAASUVORK5CYII=" alt="server" style={{ width: "60px", height: "60px", marginLeft: "30px", userSelect: "none" }}></img>
+            <img src={node} alt="server" style={{ width: "60px", height: "60px", marginLeft: "30px", userSelect: "none" }}></img>
             <span
               style={{
                 fontSize: "18px",
@@ -80,7 +82,7 @@ export default function Zti({ children }) {
           style={style}
         >
           <div style={{ display: "flex", alignItems: "center" }}>
-            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAADmElEQVR4nO2Y32tcVRDHj01/2J9Js3fOzYa2alsKBgspCiJVtEJLqy99CYrYPhYf+stsduZufbiiIBUUlP4BUSkKQqNgf1JUfGgLYvGhP6S2VBCkEam2TdOakvYr5+7sukl2k7i7afbK/cB9uPeeM2fmnJk5c44xCQkJCQkJjU6ImV6Ax63gVY+xkxjbbRabU1k8YbrQZBodP8CTVvCRZQxYAco9JPjDMnptgKdMo+HtQdoyPreCe0WlGT8R41Mr+NAK9hGjjxjnRhjF6KMerDCNgC94jhj9qvyfJHhr8RtYWqk9BVhJgjct47oa9BcF2Hh/tR6r1AZi3FaX+czPwE62b1sOpCvmjBkmwdap1bayIh0kuKkukqtOCh5wfZ1LEmOIBE+bqSAdYp7LNL7geecSxR/bMIsEZ9WIt2sdxwreUVn9zbvQUqu8fwUHWE6C/SS4NSrjnKcAXZaxW2PiOxNiRs0DhphBjK9V5t66GOECryQQh63gRxJ8Q4xfSoy6Zxl32xiP1mVQYwz1oNPJjCYvB79mYcQY1JnpdWm19L/L/c4wdYMva1V+NCT4Iho7wGumFqzghM74u5Xa+BnMJ8a3nuBFU2coiy06iUeqFuIJ1qiQiy6Yxx0wxIKJ2lSDn4HVWLxatZBCANcjC9UCaYJZ8jrm/ufOXhbPWMYPOhvTszEpJLjs9PAzeMRMFpcdigGWd6sBj7HJTCNW8JtO6PsuDjtCzB63gxdgVSGlullwgVbVctaTEDOt4M6ovet3CiBlY7I9QMoKLmnjA1HwNtA5hnJYawWvRJsyY0hj9/sxtZwVfKKudGwqsk89sfkq41ShsmgNsahY7OnOfD2VRbuJAQ+FeNCVQ2rM/ugjMd7TpfrAxAjqQZsV3Igq5R50Orc67QzxsnjWxAzL2FtcBHci0w2n1cQMP38n4Aw54zacv93Lyh2YY2JG8y60aKa95mLkV/cy3rm6UfEzmK8Bf9MZcjwqAQK8ZGKGn8NjuiI/O9faoVZ9ZWIGBZDCWcmku+EVToDuKsfEhHSIeYU6zAvwQvSRBIEu0RVf8LCJAZbxsWask+72Jf+1C01WcLhoTBbrTCOvBOeNcJ7kKpMRDVJZLLSMQyWV5kGf8XJasGzC0vn+uNFqjYnInaJdnbG+fI8uNGnja5UunRvhIcbJMStRdga64UVX/4Kjbp8plM7TqPigZVyIbnKiwC7EREJCQkJCQsL/k38AUuNHv8Cc+hoAAAAASUVORK5CYII=" alt="cloud--v1" style={{ width: "60px", height: "60px", marginLeft: "30px", userSelect: "none" }}></img>
+            <img src={addnode} alt="cloud--v1" style={{ width: "60px", height: "60px", marginLeft: "30px", userSelect: "none" }}></img>
 
             <span
               style={{

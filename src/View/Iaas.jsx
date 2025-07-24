@@ -9,24 +9,9 @@ const Iaas = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
-  const [activeTab, setActiveTab] = useState("1");
-  const [disabledTabs] = useState({ "1": false });
-  const [serverInfoAllInOne, setServerInfoAllInOne] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const hostIP = process.env.REACT_APP_HOST_IP || "localhost";  //retrive host ip
-
 
   useEffect(() => {
-    const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
-    const userID = loginDetails ? loginDetails.data.id : null;
 
-    if (!userID) {
-      console.error("User ID not found in local storage");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
 
   }, []);
 

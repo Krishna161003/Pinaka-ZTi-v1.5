@@ -99,6 +99,15 @@ const LicenseActivationTable = ({ nodes = [] }) => {
 
     return (
         <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 16 }}>
+                            <Button
+                                size="middle"
+                                style={{ width: "75px" }}
+                                type="primary"
+                            >
+                                Next
+                            </Button>
+                        </div>
             <Table
                 columns={columns}
                 dataSource={data}

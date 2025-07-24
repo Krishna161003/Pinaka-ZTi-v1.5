@@ -37,7 +37,6 @@ const Deployment = ({ next }) => {
   const cloudName = getCloudNameFromMetadata();
   const [configType, setConfigType] = useState('default');
   const [tableData, setTableData] = useState([]);
-  const [useVLAN, setUseVLAN] = useState(false);
   const [useBond, setUseBond] = useState(false);
   const [Providerform] = Form.useForm();
   const [Tenantform] = Form.useForm();
@@ -131,17 +130,11 @@ const Deployment = ({ next }) => {
           return;
         }
 
-        // If VLAN is enabled, VLAN ID is required
-        if (useVLAN && !row.vlanId?.trim()) {
-          setLoading(false);
-          message.error(`Row ${i + 1}: Please enter a VLAN ID.`);
-          return;
-        }
 
         // Skip field validation for 'secondary' in default mode
         const isSecondaryInDefault = configType === 'default' && row.type === 'secondary';
         if (!isSecondaryInDefault) {
-          const requiredFields = ['ip', 'subnet', 'dns', 'gateway'];
+          const requiredFields = ['ip', 'subnet', 'dns']; // gateway removed
           for (const field of requiredFields) {
             if (!row[field]) {
               setLoading(false);
@@ -209,7 +202,7 @@ const Deployment = ({ next }) => {
         tableData,
         configType,
         useBond,
-        useVLAN,
+  
         vip: vipform.getFieldValue("vip"),
         disk: vipform.getFieldValue("disk"),
         defaultGateway: configType === "segregated" ? vipform.getFieldValue("defaultGateway") : "",
@@ -339,19 +332,19 @@ const Deployment = ({ next }) => {
 
 
   // Update table rows when config type changes
-  const getRowCount = () => {
+  const getRowCount = React.useCallback(() => {
     if (configType === 'default') {
       return useBond ? 2 : 2;
     } else if (configType === 'segregated') {
       return useBond ? 4 : 4;
     }
     return 2;
-  };
+  }, [configType, useBond]);
 
   useEffect(() => {
     const rows = generateRows(getRowCount());
     setTableData(rows);
-  }, [configType, useBond, useVLAN]);
+  }, [configType, useBond, getRowCount]);
 
 
   const handleReset = () => {
@@ -464,10 +457,10 @@ const Deployment = ({ next }) => {
       title: 'VLAN ID',
       dataIndex: 'vlanId',
       render: (_, record, index) => (
-        <Tooltip placement='right' title="VLAN ID(1-4094)">
+        <Tooltip placement='right' title="VLAN ID (1-4094, optional)">
           <Input
             value={record.vlanId ?? ''}
-            placeholder="Enter VLAN ID"
+            placeholder="Enter VLAN ID (optional)"
             onChange={(e) => {
               const value = e.target.value;
               // 1) Allow only digits
@@ -636,30 +629,13 @@ const Deployment = ({ next }) => {
           </Form.Item>
         ),
       },
-      {
-        title: 'Gateway',
-        dataIndex: 'gateway',
-        render: (_, record, index) => (
-          <Form.Item
-            validateStatus={record.errors?.gateway ? 'error' : ''}
-            help={record.errors?.gateway}
-            style={{ marginBottom: 0 }}
-          >
-            <Input
-              value={record.gateway}
-              placeholder="Enter Gateway"
-              disabled={shouldDisableFields(record)}
-              onChange={(e) => handleCellChange(index, 'gateway', e.target.value)}
-            />
-          </Form.Item>
-        ),
-      },
+
     ];
     return [
       ...baseColumns,
       ...(useBond ? [bondColumn] : []),
       ...mainColumns,
-      ...(useVLAN ? [vlanColumn] : []),
+      ...[vlanColumn],
     ];
   };
 
@@ -735,7 +711,7 @@ const Deployment = ({ next }) => {
                     Advanced Networking Options
                   </Typography.Title>
                   <Flex vertical gap="small">
-                    <Checkbox checked={useVLAN} onChange={(e) => setUseVLAN(e.target.checked)}>VLAN</Checkbox>
+
                     <Checkbox checked={useBond} onChange={(e) => setUseBond(e.target.checked)}>BOND</Checkbox>
                   </Flex>
                 </div>
@@ -829,35 +805,33 @@ const Deployment = ({ next }) => {
                     ))}
                   </Select>
                 </Form.Item>
-                {configType === 'segregated' && (
-                  <Form.Item
-                    name="defaultGateway"
-                    label={
-                      <span>
-                        Enter Default Gateway&nbsp;
-                        <Tooltip placement="right" title="Default Gateway">
-                          <InfoCircleOutlined
-                            style={{
-                              color: "#1890ff",
-                              fontSize: "14px",
-                              height: "12px",
-                              width: "12px"
-                            }}
-                          />
-                        </Tooltip>
-                      </span>
-                    }
-                    rules={[
-                      { required: true, message: 'Gateway is required' },
-                      {
-                        pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
-                        message: 'Invalid IP format (e.g. 192.168.1.1)',
-                      },
-                    ]}
-                  >
-                    <Input maxLength={18} placeholder="Enter Gateway" style={{ width: 200 }} />
-                  </Form.Item>
-                )}
+                <Form.Item
+                  name="defaultGateway"
+                  label={
+                    <span>
+                      Enter Default Gateway&nbsp;
+                      <Tooltip placement="right" title="Default Gateway">
+                        <InfoCircleOutlined
+                          style={{
+                            color: "#1890ff",
+                            fontSize: "14px",
+                            height: "12px",
+                            width: "12px"
+                          }}
+                        />
+                      </Tooltip>
+                    </span>
+                  }
+                  rules={[
+                    { required: true, message: 'Gateway is required' },
+                    {
+                      pattern: /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/,
+                      message: 'Invalid IP format (e.g. 192.168.1.1)',
+                    },
+                  ]}
+                >
+                  <Input maxLength={18} placeholder="Enter Gateway" style={{ width: 200 }} />
+                </Form.Item>
               </div>
             </Form>
             <Divider />

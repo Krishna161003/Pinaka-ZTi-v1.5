@@ -92,7 +92,16 @@ const ValidateTable = ({ nodes = [], onNext }) => {
                     style={{ width: "75px" }}
                     type="primary"
                     onClick={() => {
+                        const anyValidated = data.some(row => row.result !== null);
+                        if (!anyValidated) {
+                            message.warning("Please validate at least one node before proceeding.");
+                            return;
+                        }
                         const passed = data.filter(row => row.result === "Pass");
+                        if (passed.length === 0) {
+                            message.error("All nodes failed validation. Please ensure at least one node passes before proceeding.");
+                            return;
+                        }
                         onNext && onNext(passed);
                     }}
                 >

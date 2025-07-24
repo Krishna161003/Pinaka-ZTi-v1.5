@@ -454,7 +454,6 @@ def submit_network_config():
         table_data = data.get("tableData", [])
         config_type = data.get("configType", "default")
         use_bond = data.get("useBond", False)
-        use_vlan = data.get("useVLAN", False)
 
         provider = data.get("providerNetwork", {})
         tenant = data.get("tenantNetwork", {})
@@ -533,8 +532,8 @@ def submit_network_config():
                         400,
                     )
 
-            # Only check VLAN ID if VLAN is used and provided
-            if use_vlan and "vlanId" in row and row["vlanId"] != "":
+            # Only check VLAN ID if provided (optional, not required)
+            if "vlanId" in row and row["vlanId"] != "":
                 try:
                     int(row["vlanId"])
                 except ValueError:
@@ -548,7 +547,6 @@ def submit_network_config():
                         ),
                         400,
                     )
-                    # Check if interface IP is on a reachable network
             if row.get("ip") and not is_network_available(row["ip"]):
                 app.logger.error(f"Unreachable interface IP in row {i+1}: {row['ip']}")
                 return (
@@ -561,17 +559,6 @@ def submit_network_config():
                     400,
                 )
 
-            if row.get("gateway") and not is_network_available(row["gateway"]):
-                app.logger.error(f"Unreachable gateway in row {i+1}: {row['gateway']}")
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": f"Gateway {row['gateway']} in row {i+1} is unreachable. Please check the network.",
-                        }
-                    ),
-                    400,
-                )
 
             if row.get("dns") and not is_ip_reachable(row["dns"]):
                 app.logger.error(f"Unreachable DNS in row {i+1}: {row['dns']}")
@@ -653,7 +640,7 @@ def submit_network_config():
                 response_json["using_interfaces"][bond_key] = {
                     "interface_name": row["bondName"],
                     "type": row_type,
-                    "vlan_id": row.get("vlanId", "NULL") if use_vlan else "NULL",
+                    "vlan_id": row.get("vlanId", "NULL") if row.get("vlanId") else "NULL",
                 }
 
                 if not is_secondary:
@@ -661,7 +648,7 @@ def submit_network_config():
                         "IP_ADDRESS": row.get("ip", ""),
                         "Netmask": row.get("subnet", ""),
                         "DNS": row.get("dns", ""),
-                        "gateway": row.get("gateway", ""),
+                        # No gateway field in table rows anymore
                     }
 
                 for iface in row.get("interface", []):
@@ -685,7 +672,7 @@ def submit_network_config():
                 interface_entry = {
                     "interface_name": interface_name,
                     "type": row_type,
-                    "vlan_id": row.get("vlanId", "NULL") if use_vlan else "NULL",
+                    "vlan_id": row.get("vlanId", "NULL") if row.get("vlanId") else "NULL",
                     "Bond_Slave": "NO",
                 }
 
@@ -694,7 +681,7 @@ def submit_network_config():
                         "IP_ADDRESS": row.get("ip", ""),
                         "Netmask": row.get("subnet", ""),
                         "DNS": row.get("dns", ""),
-                        "gateway": row.get("gateway", ""),
+                        # No gateway field in table rows anymore
                     }
 
                 response_json["using_interfaces"][iface_key] = interface_entry

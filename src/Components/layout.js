@@ -58,6 +58,7 @@ const AppLayout = ({ children }) => {
     "/servervirtualization": "2",
     "/cloud": "2",
     "/edgecloud": "2",
+    "/addnode": "2",
     "/distributedstorage": "2",
     "/iaas": "3",
     "/inventory": "4",
@@ -122,15 +123,12 @@ const AppLayout = ({ children }) => {
       key: "2",
       icon: <DeploymentUnitOutlined />,
       label: (
-        <span
-          style={{ textDecoration: "none", cursor: "pointer", color: "inherit" }}
-          onClick={() => {
-            const lastZtiPath = sessionStorage.getItem("lastZtiPath");
-            navigate(lastZtiPath || "/servervirtualization");
-          }}
+        <Link
+          to={sessionStorage.getItem("lastZtiPath") || "/servervirtualization"}
+          style={{ textDecoration: "none", color: "inherit" }}
         >
           Zti Wizard
-        </span>
+        </Link>
       ),
     },
     {

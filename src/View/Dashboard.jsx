@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from "react";
 import Layout1 from "../Components/layout";
-import { theme, Layout, Card, Spin } from "antd";
+import { theme, Layout, Spin, Row, Col } from "antd";
 import PasswordUpdateForm from "../Components/PasswordUpdateForm";
+import node from "../Images/database_666406.png";
+import cloud from "../Images/cloud-computing_660475.png";
+import squad from "../Images/database_2231963.png";
+const style = {
+  background: '#fff',
+  padding: '16px 20px', // Reduced vertical padding for shorter Col height
+  marginTop: '19px',
+  marginRight: '25px',
+  borderRadius: '10px',
+  cursor: 'pointer',
+  boxShadow: '10px',
+};
 
 const { Content } = Layout;
 
@@ -65,54 +77,131 @@ const Dashboard = () => {
   return (
     <Layout1>
       <Layout>
-        <Content style={{ margin: "16px 16px" }}>
-          <div
-            style={{
-              padding: 30,
-              minHeight: "auto",
-              background: colorBgContainer,
-              borderRadius: borderRadiusLG,
-              userSelect: "none",
-            }}
-          >
-            <h2>Dashboard</h2>
-          </div>
-
-          <div
-            style={{
-              padding: 30,
-              minHeight: "auto",
-              background: colorBgContainer,
-              borderRadius: borderRadiusLG,
-              marginTop: "10px",
-              display: "flex",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-            }}
-          >
-            <Card
-              title="User Stats"
-              style={{
-                width: "30%",
-                marginBottom: "20px",
-              }}
+        <Content>
+          <div>
+            <Row
+              gutter={16} // Added gutter for spacing
+              justify="space-between" // Ensures equal spacing between the columns
+              style={{ marginLeft: "20px" }} // Added marginLeft to shift everything a bit to the right
             >
-              <p>Card content: User Data</p>
-              <p>Card content: User Activity</p>
-              <p>Card content: Other Stats</p>
-            </Card>
+              <Col
+                className="gutter-row"
+                span={7}
+                style={style}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                  {/* Left: Image + Label (vertical) */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center",marginLeft:"20px" }}>
+                    <img src={cloud} alt="cloud--v1" style={{ width: "64px", height: "64px", userSelect: "none" }} />
+                    <span
+                      style={{
+                        fontSize: "15px",
+                        fontWeight: "500",
+                        marginTop: "4px",
+                        userSelect: "none",
+                        textAlign: "center"
+                      }}
+                    >
+                      Cloud
+                    </span>
+                  </div>
+                  {/* Right: Count */}
+                  <span
+                    style={{
+                      fontSize: "32px",
+                      fontWeight: "bold",
+                      color: "#1890ff",
+                      marginRight: "50px",
+                      userSelect: "none",
+                    }}
+                  >
+                    12
+                  </span>
+                </div>
+              </Col>
+
+              <Col
+                className="gutter-row"
+                span={7}
+                style={style}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                  {/* Left: Image + Label (vertical) */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center",marginLeft:"20px" }}>
+                    <img src={node} alt="server" style={{ width: "64px", height: "64px", userSelect: "none" }} />
+                    <span
+                      style={{
+                        fontSize: "15px",
+                        fontWeight: "500",
+                        marginTop: "4px",
+                        userSelect: "none",
+                        textAlign: "center"
+                      }}
+                    >
+                      Flight Deck
+                    </span>
+                  </div>
+                  {/* Right: Count */}
+                  <span
+                    style={{
+                      fontSize: "32px",
+                      fontWeight: "bold",
+                      color: "#1890ff",
+                      marginRight: "50px",
+                      userSelect: "none",
+                    }}
+                  >
+                    7
+                  </span>
+                </div>
+              </Col>
+
+              <Col
+                className="gutter-row"
+                span={7}
+                style={style}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+                  {/* Left: Image + Label (vertical) */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center",marginLeft:"20px" }}>
+                    <img src={squad} alt="cloud-development--v3" style={{ width: "64px", height: "64px", userSelect: "none" }} />
+                    <span
+                      style={{
+                        fontSize: "15px",
+                        fontWeight: "500",
+                        marginTop: "4px",
+                        userSelect: "none",
+                        textAlign: "center"
+                      }}
+                    >
+                      Squadron
+                    </span>
+                  </div>
+                  {/* Right: Count */}
+                  <span
+                    style={{
+                      fontSize: "32px",
+                      fontWeight: "bold",
+                      color: "#1890ff",
+                      marginRight: "50px",
+                      userSelect: "none",
+                    }}
+                  >
+                    9
+                  </span>
+                </div>
+              </Col>
+            </Row>
           </div>
+          {/* Password Update Modal Form */}
+          <PasswordUpdateForm
+            isModalVisible={isModalVisible}
+            setIsModalVisible={setIsModalVisible}
+          />
         </Content>
       </Layout>
-
-      {/* Password Update Modal Form */}
-      <PasswordUpdateForm
-        isModalVisible={isModalVisible}
-        setIsModalVisible={setIsModalVisible}
-      />
     </Layout1>
   );
 };
 
 export default Dashboard;
-
