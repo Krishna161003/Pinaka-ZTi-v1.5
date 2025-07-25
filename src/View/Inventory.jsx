@@ -46,8 +46,8 @@ const Inventory = () => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                   {/* Left: Image + Label (vertical) */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center", marginLeft: "20px" }}>
-                  <img src={node} alt="server" style={{ width: "64px", height: "64px", userSelect: "none" }} />
-                  <span
+                    <img src={node} alt="server" style={{ width: "64px", height: "64px", userSelect: "none" }} />
+                    <span
                       style={{
                         fontSize: "15px",
                         fontWeight: "500",
@@ -168,37 +168,37 @@ const Inventory = () => {
                       label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Flight Deck</span>,
                       key: '1',
                       children: (
-  <Table
-    columns={[
-      { title: 'ID', dataIndex: 'id', key: 'id' },
-      { title: 'Cloud Name', dataIndex: 'cloudname', key: 'cloudname' },
-      { title: 'Status', dataIndex: 'status', key: 'status' }
-    ]}
-    dataSource={[
-      { key: '1', id: 'FD-001', cloudname: 'Alpha', status: 'Active' },
-      { key: '2', id: 'FD-002', cloudname: 'Bravo', status: 'Inactive' }
-    ]}
-    pagination={false}
-  />
-)
+                        <Table
+                          columns={[
+                            { title: 'ID', dataIndex: 'id', key: 'id' },
+                            { title: 'Cloud Name', dataIndex: 'cloudname', key: 'cloudname' },
+                            { title: 'Status', dataIndex: 'status', key: 'status' }
+                          ]}
+                          dataSource={[
+                            { key: '1', id: 'FD-001', cloudname: 'Alpha', status: 'Active' },
+                            { key: '2', id: 'FD-002', cloudname: 'Bravo', status: 'Inactive' }
+                          ]}
+                          pagination={false}
+                        />
+                      )
                     },
                     {
                       label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Squadron</span>,
                       key: '2',
                       children: (
-  <Table
-    columns={[
-      { title: 'ID', dataIndex: 'id', key: 'id' },
-      { title: 'Cloud Name', dataIndex: 'cloudname', key: 'cloudname' },
-      { title: 'Status', dataIndex: 'status', key: 'status' }
-    ]}
-    dataSource={[
-      { key: '1', id: 'SQ-101', cloudname: 'Eagle', status: 'Ready' },
-      { key: '2', id: 'SQ-102', cloudname: 'Falcon', status: 'Standby' }
-    ]}
-    pagination={false}
-  />
-)
+                        <Table
+                          columns={[
+                            { title: 'ID', dataIndex: 'id', key: 'id' },
+                            { title: 'Cloud Name', dataIndex: 'cloudname', key: 'cloudname' },
+                            { title: 'Status', dataIndex: 'status', key: 'status' }
+                          ]}
+                          dataSource={[
+                            { key: '1', id: 'SQ-101', cloudname: 'Eagle', status: 'Ready' },
+                            { key: '2', id: 'SQ-102', cloudname: 'Falcon', status: 'Standby' }
+                          ]}
+                          pagination={false}
+                        />
+                      )
                     }
                   ]}
                 />

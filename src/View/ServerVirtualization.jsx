@@ -10,10 +10,8 @@ import ActivateKey from "../Components/ServerVirtualization/ActivateKey";
 import Deployment from "../Components/ServerVirtualization/Deployment";
 
 const App = () => {
-  const resetDone = React.useRef(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const [deploymentComplete, setDeploymentComplete] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get("tab");
@@ -119,47 +117,32 @@ const App = () => {
     const shouldReset = sessionStorage.getItem('serverVirtualization_shouldResetOnNextMount') === 'true';
     const lastMenuPath = sessionStorage.getItem('lastMenuPath') || '';
     if (shouldReset && !lastMenuPath.includes('/servervirtualization')) {
-      resetDone.current = true;
       setActiveTab('1');
-      setDeploymentComplete(false); // Reset deploymentComplete on tab reset
       const defaults = { "2": true, "3": true, "4": true, "5": true, "6": true };
       setDisabledTabs(defaults);
-      // Remove any old session state that could re-enable report
-      sessionStorage.removeItem("serverVirtualization_disabledTabs");
-      sessionStorage.removeItem("disabledTabs");
       sessionStorage.setItem("serverVirtualization_activeTab", '1');
+      sessionStorage.setItem("serverVirtualization_disabledTabs", JSON.stringify(defaults));
+      sessionStorage.setItem("disabledTabs", JSON.stringify(defaults));
       sessionStorage.removeItem('serverVirtualization_shouldResetOnNextMount');
-      // Force URL to tab=1 so restoration effects don't re-enable tab 6
-      const params = new URLSearchParams(location.search);
-      if (params.get("tab") !== "1") {
-        params.set("tab", "1");
-        navigate({ search: params.toString() }, { replace: true });
-      }
       return; // Do not restore state if reset
     }
-  }, [location.search, navigate]);
+  }, [location.search]);
 
   // On component mount, restore disabledTabs and other state, but NOT activeTab!
   useEffect(() => {
-    if (resetDone.current) return;
     const params = new URLSearchParams(location.search);
     const tabKey = params.get("tab") || activeTab;
     const pathWithTab = `/servervirtualization?tab=${tabKey}`;
     sessionStorage.setItem("lastZtiPath", pathWithTab);
 
-    // Restore disabledTabs from sessionStorage if present, else use defaults
-    let parsedDisabledTabs = null;
+    // Restore disabledTabs from sessionStorage if present
     const savedDisabledTabs = sessionStorage.getItem("disabledTabs");
-    if (savedDisabledTabs) {
-      parsedDisabledTabs = JSON.parse(savedDisabledTabs);
-    } else {
-      parsedDisabledTabs = { "2": true, "3": true, "4": true, "5": true, "6": true };
-    }
+    let parsedDisabledTabs = savedDisabledTabs ? JSON.parse(savedDisabledTabs) : null;
     // If last active tab was Report, ensure tab 1 stays disabled
     if (tabKey === "6") {
       parsedDisabledTabs = { ...(parsedDisabledTabs || {}), "1": true, "6": false };
     }
-    setDisabledTabs(parsedDisabledTabs);
+    if (parsedDisabledTabs) setDisabledTabs(parsedDisabledTabs);
 
     const savedNodes = sessionStorage.getItem("selectedNodes");
     const savedIbn = sessionStorage.getItem("ibn");
@@ -167,7 +150,7 @@ const App = () => {
     if (savedNodes) setSelectedNodes(JSON.parse(savedNodes));
     if (savedIbn) setIbn(savedIbn);
     // DO NOT setActiveTab here!
-  }, [location.search]);
+  }, [location.search, activeTab]);
 
   useEffect(() => {
     sessionStorage.setItem("disabledTabs", JSON.stringify(disabledTabs));
@@ -273,11 +256,9 @@ const App = () => {
             setActiveTab("6");
           }} />
         </Tabs.TabPane>
-        {!deploymentComplete && (
-          <Tabs.TabPane tab="Report" key="6" disabled={disabledTabs["6"]}>
-            <Report ibn={ibn} onDeploymentComplete={() => setDeploymentComplete(true)} />
-          </Tabs.TabPane>
-        )}
+        <Tabs.TabPane tab="Report" key="6" disabled={disabledTabs["6"]}>
+          <Report ibn={ibn} />
+        </Tabs.TabPane>
       </Tabs>
     </Zti>
   );

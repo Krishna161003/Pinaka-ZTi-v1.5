@@ -1,8 +1,497 @@
 import React, { useState, useEffect } from 'react';
 import Layout1 from '../Components/layout';
-import { theme, Layout } from 'antd';
+import { theme, Layout, Tabs, Table, Button, Modal, Spin, Alert, Input } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 
 const { Content } = Layout;
+const hostIP=window.location.hostname;
+
+// Helper for column search (AntD Table)
+function getColumnSearchProps(dataIndex, placeholder) {
+  return {
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+      <div style={{ padding: 8 }}>
+        <Input
+          placeholder={`Search ${placeholder || dataIndex}`}
+          value={selectedKeys[0]}
+          onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          onPressEnter={confirm}
+          style={{ marginBottom: 8, display: 'block' }}
+        />
+        <Button
+          type="primary"
+          onClick={confirm}
+          icon={<SearchOutlined />}
+          size="small"
+          style={{ width: 90, marginRight: 8 }}
+        >
+          Search
+        </Button>
+        <Button onClick={clearFilters} size="small" style={{ width: 90 }}>
+          Reset
+        </Button>
+      </div>
+    ),
+    filterIcon: filtered => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
+    onFilter: (value, record) =>
+      record[dataIndex]
+        ? record[dataIndex].toString().toLowerCase().includes(value.toLowerCase())
+        : false,
+  };
+}
+
+const FlightDeckHostsTable = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalRecord, setModalRecord] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const userId = JSON.parse(sessionStorage.getItem('loginDetails'))?.data?.id;
+    fetch(`https://${hostIP}:5000/api/flight-deck-hosts?userId=${userId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then(setData)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const columns = [
+    {
+      title: 'S.NO',
+      dataIndex: 'sno',
+      key: 'sno',
+      width: 60,
+      align: 'center',
+      sorter: (a, b) => a.sno - b.sno,
+    },
+    {
+      title: 'Serverid',
+      dataIndex: 'serverid',
+      key: 'serverid',
+      width: 210,
+      ellipsis: true,
+      align: 'center',
+      ...getColumnSearchProps('serverid', 'Server ID'),
+      sorter: (a, b) => a.serverid.localeCompare(b.serverid),
+    },
+    {
+      title: 'Serverip',
+      dataIndex: 'serverip',
+      key: 'serverip',
+      width: 120,
+      align: 'center',
+      ...getColumnSearchProps('serverip', 'Server IP'),
+      sorter: (a, b) => a.serverip.localeCompare(b.serverip),
+    },
+    {
+      title: 'VIP',
+      dataIndex: 'vip',
+      key: 'vip',
+      width: 120,
+      align: 'center',
+      ...getColumnSearchProps('vip', 'VIP'),
+      sorter: (a, b) => (a.vip || '').localeCompare(b.vip || ''),
+    },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      key: 'role',
+      width: 100,
+      align: 'center',
+      ...getColumnSearchProps('role', 'Role'),
+      sorter: (a, b) => (a.role || '').localeCompare(b.role || ''),
+    },
+    {
+      title: 'License Code',
+      dataIndex: 'licensecode',
+      key: 'licensecode',
+      width: 140,
+      align: 'center',
+      ...getColumnSearchProps('licensecode', 'License Code'),
+      sorter: (a, b) => (a.licensecode || '').localeCompare(b.licensecode || ''),
+      render: val => val ? val : <span style={{ color: '#aaa' }}>-</span>
+    },
+    {
+      title: 'Squadron Node',
+      dataIndex: 'squadronNode',
+      key: 'squadronNode',
+      width: 100,
+      align: 'center',
+      sorter: (a, b) => a.squadronNode - b.squadronNode,
+    },
+    {
+      title: 'Credential',
+      key: 'credential',
+      align: 'center',
+      width: 110,
+      render: (_, record) => (
+        <Button size="small" onClick={() => {
+          setModalRecord(record);
+          setModalVisible(true);
+        }} type='primary' style={{ width: '95px' }}>
+          View
+        </Button>
+      )
+    },
+    {
+      title: 'Created At',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: val => val ? new Date(val).toISOString().slice(0,10) : '',
+      width: 120,
+      align: 'center',
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+    }
+  ];
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />}
+      <Spin spinning={loading} tip="Loading Flight Deck Hosts...">
+        <Table
+          columns={columns}
+          dataSource={data}
+          rowKey={row => row.sno + '-' + row.serverid}
+          pagination={false}
+          bordered
+          size="middle"
+        />
+      </Spin>
+      <Modal
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        title="Host Credentials"
+        footer={<Button onClick={() => setModalVisible(false)}>Close</Button>}
+      >
+        <div>
+          <b>1. Flight Deck</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>{modalRecord?.credentialsUrl ? (
+              <a href={modalRecord.credentialsUrl} target="_blank" rel="noopener noreferrer">
+                {modalRecord.credentialsUrl}
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+          <b>2. Storage</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>{modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:8443/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:8443/
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+          <b>3. Monitoring</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>{modalRecord?.vip ? (
+              <a href={`https://${modalRecord.vip}:7000/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.vip}:7000/
+              </a>
+            ) : modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:7000/
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+          <b>4. Diagnosis Dashboard</b>
+          <ul style={{ marginBottom: 0 }}>
+            <li>{modalRecord?.vip ? (
+              <a href={`https://${modalRecord.vip}:5601/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.vip}:5601/
+              </a>
+            ) : modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:5601/
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+const SquadronNodesTable = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalRecord, setModalRecord] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const userId = JSON.parse(sessionStorage.getItem('loginDetails'))?.data?.id;
+    fetch(`https://${hostIP}:5000/api/squadron-nodes?userId=${userId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then(setData)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const columns = [
+    {
+      title: 'S.NO',
+      dataIndex: 'sno',
+      key: 'sno',
+      width: 60,
+      align: 'center',
+      sorter: (a, b) => a.sno - b.sno,
+    },
+    {
+      title: 'Server ID',
+      dataIndex: 'serverid',
+      key: 'serverid',
+      width: 210,
+      ellipsis: true,
+      align: 'center',
+      ...getColumnSearchProps('serverid', 'Server ID'),
+      sorter: (a, b) => a.serverid.localeCompare(b.serverid),
+    },
+    {
+      title: 'Server IP',
+      dataIndex: 'serverip',
+      key: 'serverip',
+      width: 120,
+      align: 'center',
+      ...getColumnSearchProps('serverip', 'Server IP'),
+      sorter: (a, b) => a.serverip.localeCompare(b.serverip),
+    },
+    {
+      title: 'Role',
+      dataIndex: 'role',
+      key: 'role',
+      width: 100,
+      align: 'center',
+      ...getColumnSearchProps('role', 'Role'),
+      sorter: (a, b) => (a.role || '').localeCompare(b.role || ''),
+    },
+    {
+      title: 'License Code',
+      dataIndex: 'licensecode',
+      key: 'licensecode',
+      width: 140,
+      align: 'center',
+      ...getColumnSearchProps('licensecode', 'License Code'),
+      sorter: (a, b) => (a.licensecode || '').localeCompare(b.licensecode || ''),
+      render: val => val ? val : <span style={{ color: '#aaa' }}>-</span>
+    },
+    {
+      title: 'Credential',
+      key: 'credential',
+      align: 'center',
+      width: 110,
+      render: (_, record) => (
+        <Button size="small" onClick={() => {
+          setModalRecord(record);
+          setModalVisible(true);
+        }} type='primary' style={{ width: '95px' }}>
+          View
+        </Button>
+      )
+    },
+    {
+      title: 'Created At',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: val => val ? new Date(val).toISOString().slice(0,10) : '',
+      width: 120,
+      align: 'center',
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+    }
+  ];
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />}
+      <Spin spinning={loading} tip="Loading Squadron Nodes...">
+        <Table
+          columns={columns}
+          dataSource={data}
+          rowKey={row => row.sno + '-' + row.serverid}
+          pagination={false}
+          bordered
+          size="middle"
+        />
+      </Spin>
+      <Modal
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        title="Squadron Node Credentials"
+        footer={<Button onClick={() => setModalVisible(false)}>Close</Button>}
+      >
+        <div>
+          <b>1. Squadron</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>{modalRecord?.credentialUrl ? (
+              <a href={modalRecord.credentialUrl} target="_blank" rel="noopener noreferrer">
+                {modalRecord.credentialUrl}
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+          <b>2. Monitoring</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>{modalRecord?.vip ? (
+              <a href={`https://${modalRecord.vip}:7000/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.vip}:7000/
+              </a>
+            ) : modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:7000/
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+          <b>3. Diagnosis Dashboard</b>
+          <ul style={{ marginBottom: 0 }}>
+            <li>{modalRecord?.vip ? (
+              <a href={`https://${modalRecord.vip}:5601/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.vip}:5601/
+              </a>
+            ) : modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:5601/
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+const CloudDeploymentsTable = () => {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalCredentials, setModalCredentials] = useState({});
+
+  useEffect(() => {
+    setLoading(true);
+    const userId = JSON.parse(sessionStorage.getItem('loginDetails'))?.data?.id;
+    fetch(`https://${hostIP}:5000/api/cloud-deployments-summary?userId=${userId}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch');
+        return res.json();
+      })
+      .then(setData)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const columns = [
+    {
+      title: 'S.NO',
+      dataIndex: 'sno',
+      key: 'sno',
+      width: 60,
+      align: 'center',
+      sorter: (a, b) => a.sno - b.sno,
+    },
+    {
+      title: 'Cloud Name',
+      dataIndex: 'cloudName',
+      key: 'cloudName',
+      ...getColumnSearchProps('cloudName', 'Cloud Name'),
+      sorter: (a, b) => a.cloudName.localeCompare(b.cloudName),
+    },
+    {
+      title: 'Number of Nodes',
+      dataIndex: 'numberOfNodes',
+      key: 'numberOfNodes',
+      align: 'center',
+      sorter: (a, b) => a.numberOfNodes - b.numberOfNodes,
+    },
+    {
+      title: 'Credentials',
+      key: 'credentials',
+      align: 'center',
+      render: (_, record) => (
+        <Button size="small" onClick={() => {
+          setModalCredentials(record.credentials);
+          setModalVisible(true);
+        }} type='primary' style={{ width: '95px' }}>
+          View
+        </Button>
+      )
+    },
+    {
+      title: 'Created At',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: val => val ? new Date(val).toISOString().slice(0,10) : '',
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+    }
+  ];
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      {error && <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} />}
+      <Spin spinning={loading} tip="Loading Cloud Deployments...">
+        <Table
+          columns={columns}
+          dataSource={data}
+          rowKey={row => row.sno + '-' + row.cloudName}
+          pagination={false}
+          bordered
+          size="middle"
+        />
+      </Spin>
+      <Modal
+        open={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        title="Cloud Credentials"
+        footer={<Button onClick={() => setModalVisible(false)}>Close</Button>}
+      >
+
+        <div>
+          <b>1. Cloud</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>Flight Deck - {modalCredentials.hostservervip && (
+              <a href={`https://${modalCredentials.hostservervip}/`} target="_blank" rel="noopener noreferrer">
+                https://{modalCredentials.hostservervip}/
+              </a>
+            )}
+            </li>
+          </ul>
+          <b>2. Storage</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>Ceph - {modalCredentials.hostserverip && (
+              <a href={`https://${modalCredentials.hostserverip}:8443/`} target="_blank" rel="noopener noreferrer">
+                https://{modalCredentials.hostserverip}:8443/
+              </a>
+            )}
+            </li>
+          </ul>
+          <b>3. Monitoring</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>Grafana - {modalCredentials.hostservervip && (
+              <a href={`https://${modalCredentials.hostservervip}:7000/`} target="_blank" rel="noopener noreferrer">
+                https://{modalCredentials.hostservervip}:7000/
+              </a>
+            )}
+            </li>
+          </ul>
+          <b>4. Diagnosis Dashboard</b>
+          <ul style={{ marginBottom: 0 }}>
+            <li>Opensearch - {modalCredentials.hostservervip && (
+              <a href={`https://${modalCredentials.hostservervip}:5601/`} target="_blank" rel="noopener noreferrer">
+                https://{modalCredentials.hostservervip}:5601/
+              </a>
+            )}
+            </li>
+          </ul>
+        </div>
+      </Modal>
+    </div>
+  );
+};
 
 const Iaas = () => {
   const {
@@ -39,7 +528,51 @@ const Iaas = () => {
               borderRadius: borderRadiusLG,
             }}
           >
-
+            <div style={{ width: '100%' }}>
+              <Tabs
+                defaultActiveKey="1"
+                style={{ width: '100%' }}
+                tabBarStyle={{ width: '100%' }}
+                moreIcon={null}
+                items={[
+                  {
+                    label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Cloud</span>,
+                    key: '1',
+                    children: (<CloudDeploymentsTable />)
+                  },
+                  {
+                    label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Flight Deck</span>,
+                    key: '2',
+                    children: (<FlightDeckHostsTable />)
+                  },
+                  {
+                    label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Squadron</span>,
+                    key: '3',
+                    children: (<SquadronNodesTable />)
+                  }
+                ]}
+              />
+              {/* Custom style for AntD tabs to make tabs fill and center */}
+              <style>{`
+                .ant-tabs-nav {
+                  width: 100%;
+                }
+                .ant-tabs-nav-list {
+                  width: 100%;
+                  display: flex !important;
+                }
+                .ant-tabs-tab {
+                  flex: 1 1 0;
+                  justify-content: center;
+                  text-align: center;
+                  margin: 0 !important;
+                }
+                /* Fix: Make the highlight/ink bar always full width */
+                .ant-tabs-ink-bar {
+                  display: none !important;
+                }
+              `}</style>
+            </div>
           </div>
         </Content>
       </Layout>

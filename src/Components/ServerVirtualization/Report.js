@@ -19,6 +19,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
   const [percent, setPercent] = useState(0);
   const [completedLogs, setCompletedLogs] = useState([]);
   const [error, setError] = useState(null);
+  const [deploymentPollingStopped, setDeploymentPollingStopped] = useState(false);
 
   // Track serverid for this deployment
   const serveridRef = React.useRef(sessionStorage.getItem('currentServerid') || null);
@@ -105,9 +106,11 @@ const Report = ({ ibn, onDeploymentComplete }) => {
     // Helper to mark deployment as completed
     const logDeploymentComplete = async () => {
       if (!serveridRef.current) return;
+      const currentServerid = serveridRef.current;
+      serveridRef.current = null; // Prevent duplicate calls immediately
       try {
         // Mark as completed
-        await fetch(`https://${hostIP}:5000/api/deployment-activity-log/${serveridRef.current}`, {
+        await fetch(`https://${hostIP}:5000/api/deployment-activity-log/${currentServerid}`, {
           method: 'PATCH'
         });
 
@@ -115,7 +118,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         // Determine server_type based on deployment type or user selection
         const server_type = 'host'; // Default to 'host', you can modify this logic
 
-        await fetch(`https://${hostIP}:5000/api/finalize-deployment/${serveridRef.current}`, {
+        await fetch(`https://${hostIP}:5000/api/finalize-deployment/${currentServerid}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -128,7 +131,6 @@ const Report = ({ ibn, onDeploymentComplete }) => {
 
         console.log(`Deployment finalized as ${server_type}`);
         sessionStorage.removeItem('currentServerid');
-        serveridRef.current = null;
         if (typeof onDeploymentComplete === 'function') {
           onDeploymentComplete();
         }
@@ -136,7 +138,6 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         console.error('Error completing deployment:', e);
       }
     };
-
 
     // Helper to revert status to progress if needed
     const revertToProgress = async () => {
@@ -167,12 +168,19 @@ const Report = ({ ibn, onDeploymentComplete }) => {
 
             debugFetchProgress(data);
 
+            // --- NEW: Log deployment start ONLY after first progress received (percent > 0) ---
+            if ((data.percent || 0) > 0 && !logStartedRef.current && !serveridRef.current) {
+              logStartedRef.current = true;
+              await logDeploymentStart();
+            }
+
             // Stop polling IMMEDIATELY if deployment is complete
             if ((data.percent || 0) === 100) {
               if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
               }
+              setDeploymentPollingStopped(true);
             }
 
             // Log deployment completion in DB if just completed
@@ -215,18 +223,11 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         if (isMounted) setError('Failed to connect to backend. Please check your network or server.');
       }
     };
-    // Helper to safely call logDeploymentStart only once
-    const safeLogDeploymentStart = async () => {
-      if (logStartedRef.current || serveridRef.current) return;
-      logStartedRef.current = true;
-      await logDeploymentStart();
-    };
+
+
 
     // First, check for in-progress deployment, then start polling
     checkInProgress().then((inProgress) => {
-      if (!inProgress && !serveridRef.current) {
-        safeLogDeploymentStart();
-      }
       fetchProgress();
       intervalRef.current = setInterval(fetchProgress, 2000);
     });
@@ -237,7 +238,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
       if (completionWindowTimeoutRef.current) clearTimeout(completionWindowTimeoutRef.current);
       logStartedRef.current = false; // Reset on unmount
     };
-  }, [cloudName, completionWindowActive, onDeploymentComplete]);
+  }, [cloudName, completionWindowActive, onDeploymentComplete, deploymentPollingStopped]);
 
   // Define all possible steps as in backend
   const allSteps = [
@@ -326,7 +327,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
               </ul>
             </div>
             {percent === 100 && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20, width: '75px' }}>
                 <Button type="primary" onClick={() => {
                   sessionStorage.setItem('serverVirtualization_shouldResetOnNextMount', 'true');
                   sessionStorage.setItem('lastMenuPath', '/iaas');

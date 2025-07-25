@@ -325,6 +325,15 @@ db.connect((err) => {
   db.query(hostTableSQL, (err, result) => {
     if (err) throw err;
     console.log("Host table checked/created...");
+    // Ensure unique constraint on server_id
+    db.query('ALTER TABLE Host ADD UNIQUE KEY unique_server_id (server_id)', (err) => {
+      if (err && err.code !== 'ER_DUP_KEYNAME' && err.code !== 'ER_DUP_ENTRY' && err.code !== 'ER_ALREADY_EXISTS') {
+        // Ignore if already exists, else log
+        console.error('Error adding unique constraint to Host.server_id:', err.message);
+      } else if (!err) {
+        console.log('Unique constraint on Host.server_id ensured.');
+      }
+    });
   });
 
   // Create Child Node table
@@ -732,6 +741,159 @@ app.post("/register", async (req, res) => {
   }
 });
 
+
+// API: Get cloud deployments summary
+app.get('/api/cloud-deployments-summary', (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.json([]);
+  // Query distinct cloud names from Host table for this user
+  const cloudQuery = `SELECT cloudname, MIN(timestamp) as createdAt FROM Host WHERE user_id = ? GROUP BY cloudname ORDER BY createdAt DESC`;
+  db.query(cloudQuery, [userId], async (err, clouds) => {
+    if (err) {
+      console.error('Error fetching clouds:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    // For each cloud, get number of hosts and children
+    const results = await Promise.all(clouds.map(async (cloud, idx) => {
+      // Get all hosts for this cloud
+      const hostQuery = `SELECT server_id, serverip, servervip, timestamp FROM Host WHERE cloudname = ? AND user_id = ?`;
+      const hosts = await new Promise((resolve, reject) => {
+        db.query(hostQuery, [cloud.cloudname, userId], (err, hostRows) => {
+          if (err) return reject(err);
+          resolve(hostRows);
+        });
+      });
+      const hostCount = hosts.length;
+      let childCount = 0;
+      let hostserverip = null;
+      let hostservervip = null;
+      let createdAt = cloud.createdAt;
+      if (hostCount > 0) {
+        const serverIds = hosts.map(h => h.server_id);
+        // Use the first host's serverip and servervip for the cloud
+        hostserverip = hosts[0]?.serverip || null;
+        hostservervip = hosts[0]?.servervip || null;
+        createdAt = hosts[0]?.timestamp || cloud.createdAt;
+        // Count all child nodes for these hosts
+        const childQuery = `SELECT COUNT(*) AS cnt FROM child_node WHERE host_serverid IN (${serverIds.map(() => '?').join(',')})`;
+        if (serverIds.length > 0) {
+          const childRows = await new Promise((resolve, reject) => {
+            db.query(childQuery, serverIds, (err, rows) => {
+              if (err) return reject(err);
+              resolve(rows);
+            });
+          });
+          childCount = (childRows && childRows[0] && typeof childRows[0].cnt === 'number') ? childRows[0].cnt : 0;
+        }
+      }
+      return {
+        sno: idx + 1,
+        cloudName: cloud.cloudname,
+        numberOfNodes: hostCount + childCount,
+        credentials: {
+          hostserverip,
+          hostservervip
+        },
+        createdAt: createdAt
+      };
+    }));
+    res.json(results);
+  });
+});
+
+// API: Get all hosts for Flight Deck tab
+app.get('/api/flight-deck-hosts', async (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.json([]);
+  // Get all hosts for this user
+  const hostQuery = `SELECT id, server_id, serverip, servervip, role, license_code, timestamp FROM Host WHERE user_id = ? ORDER BY timestamp DESC`;
+  db.query(hostQuery, [userId], async (err, hosts) => {
+    if (err) {
+      console.error('Error fetching hosts:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    // For each host, get license status and squadron node count
+    const results = await Promise.all(hosts.map(async (host, idx) => {
+      // Get license status if license_code exists
+      let licenseCode = null;
+      if (host.license_code) {
+        const licStatus = await new Promise((resolve) => {
+          db.query('SELECT license_status FROM License WHERE license_code = ? LIMIT 1', [host.license_code], (err, rows) => {
+            if (err || !rows.length) return resolve(null);
+            resolve(rows[0].license_status === 'activated' ? host.license_code : null);
+          });
+        });
+        licenseCode = licStatus;
+      }
+      // Get squadron node count
+      const squadronNodeCount = await new Promise((resolve) => {
+        db.query('SELECT COUNT(*) AS cnt FROM child_node WHERE host_serverid = ?', [host.server_id], (err, rows) => {
+          if (err || !rows.length) return resolve(0);
+          resolve(rows[0].cnt);
+        });
+      });
+      return {
+        sno: idx + 1,
+        serverid: host.server_id,
+        serverip: host.serverip,
+        vip: host.servervip,
+        role: host.role,
+        licensecode: licenseCode,
+        squadronNode: squadronNodeCount,
+        credentialsUrl: host.serverip ? `https://${host.serverip}/` : null,
+        createdAt: host.timestamp
+      };
+    }));
+    res.json(results);
+  });
+});
+
+// API: Get all squadron nodes for Squadron tab
+app.get('/api/squadron-nodes', async (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.json([]);
+  const nodeQuery = `SELECT id, server_id, serverip, role, license_code, host_serverid, timestamp FROM child_node WHERE user_id = ? ORDER BY timestamp DESC`;
+  db.query(nodeQuery, [userId], async (err, nodes) => {
+    if (err) {
+      console.error('Error fetching squadron nodes:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    const results = await Promise.all(nodes.map(async (node, idx) => {
+      // Get license status if license_code exists
+      let licenseCode = null;
+      if (node.license_code) {
+        const licStatus = await new Promise((resolve) => {
+          db.query('SELECT license_status FROM License WHERE license_code = ? LIMIT 1', [node.license_code], (err, rows) => {
+            if (err || !rows.length) return resolve(null);
+            resolve(rows[0].license_status === 'activated' ? node.license_code : null);
+          });
+        });
+        licenseCode = licStatus;
+      }
+      // Get VIP from Host table for host_serverid
+      let vip = null;
+      if (node.host_serverid) {
+        vip = await new Promise((resolve) => {
+          db.query('SELECT servervip FROM Host WHERE server_id = ? LIMIT 1', [node.host_serverid], (err, rows) => {
+            if (err || !rows.length) return resolve(null);
+            resolve(rows[0].servervip);
+          });
+        });
+      }
+      return {
+        sno: idx + 1,
+        serverid: node.server_id,
+        serverip: node.serverip,
+        role: node.role,
+        licensecode: licenseCode,
+        credentialUrl: node.serverip ? `https://${node.serverip}/` : null,
+        vip: vip,
+        createdAt: node.timestamp
+      };
+    }));
+    res.json(results);
+  });
+});
 
 https.createServer(options, app).listen(5000, () => {
   console.log('Node.js backend is running on HTTPS at port 5000');
