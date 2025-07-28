@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Layout1 from '../Components/layout';
-import { Layout, Row, Col, Tabs, Table, theme } from 'antd';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Layout, Row, Col, Tabs, Table, theme, Button, Tag, message, Popconfirm } from 'antd';
 import upImage from '../Images/up_15362984.png';
 import downImage from '../Images/down_15362973.png';
 import node from '../Images/database_666406.png';
+import axios from 'axios';
+
+const hostIP=window.location.hostname;
 
 const { Content } = Layout;
 const style = {
@@ -16,16 +20,172 @@ const style = {
   boxShadow: '10px',
 };
 
-
-
-
 const Inventory = () => {
-
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
-  useEffect(() => {
+  
+  // React Router hooks
+  const location = useLocation();
+  const navigate = useNavigate();
 
+  // State for server data
+  const [flightDeckServers, setFlightDeckServers] = useState([]);
+  const [squadronServers, setSquadronServers] = useState([]);
+  const [serverCounts, setServerCounts] = useState({ total: 0, online: 0, offline: 0 });
+  const [loading, setLoading] = useState(true);
+
+  // Initialize from sessionStorage or URL query param if available
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam) return tabParam;
+    const savedTab = sessionStorage.getItem("inventory_activeTab");
+    return savedTab || "1";
+  });
+  
+  // Function to control server (status check, shutdown, reboot)
+  const controlServer = async (serverIp, action) => {
+    try {
+      setLoading(action !== 'status');
+      const response = await axios.post(`https://${hostIP}:2020/server-control`, {
+        server_ip: serverIp,
+        action: action
+      }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (action === 'status') {
+        return response.data.status === 'online';
+      } else if (response.data.success) {
+        message.success(`${action.charAt(0).toUpperCase() + action.slice(1)} command sent successfully`);
+        // Refresh data after a short delay
+        setTimeout(() => {
+          fetchServerData();
+        }, 2000);
+      } else {
+        message.error(`Failed to ${action} server: ${response.data.error}`);
+      }
+    } catch (error) {
+      console.error(`Error executing ${action}:`, error);
+      if (action !== 'status') {
+        message.error(`Error executing ${action}`);
+      }
+      return false;
+    } finally {
+      if (action !== 'status') {
+        setLoading(false);
+      }
+    }
+  };
+  
+  // Function to check server status
+  const checkServerStatus = async (serverIp) => {
+    return await controlServer(serverIp, 'status');
+  };
+  
+  // Function to shutdown server
+  const shutdownServer = async (serverIp) => {
+    await controlServer(serverIp, 'shutdown');
+  };
+  
+  // Function to reboot server
+  const rebootServer = async (serverIp) => {
+    await controlServer(serverIp, 'reboot');
+  };
+  
+  // Function to fetch server data
+  const fetchServerData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch server counts from Node.js backend instead of Flask
+      const countsResponse = await axios.get(`https://${hostIP}:5000/api/server-counts`);
+      setServerCounts({
+        total: countsResponse.data.total_count,
+        online: countsResponse.data.online_count,
+        offline: countsResponse.data.offline_count
+      });
+      
+      // Fetch Flight Deck servers
+      const flightDeckResponse = await axios.get('https://localhost:5000/api/flight-deck-hosts');
+      const flightDeckData = await Promise.all(flightDeckResponse.data.map(async (server, index) => {
+        const isOnline = await checkServerStatus(server.serverip);
+        return {
+          key: index.toString(),
+          sno: index + 1,
+          serverid: server.serverid,
+          serverip: server.serverip,
+          cloudname: server.vip || 'N/A',
+          status: isOnline ? 'online' : 'offline',
+          isOnline
+        };
+      }));
+      setFlightDeckServers(flightDeckData);
+      
+      // Fetch Squadron servers
+      const squadronResponse = await axios.get('https://localhost:5000/api/squadron-nodes');
+      const squadronData = await Promise.all(squadronResponse.data.map(async (server, index) => {
+        const isOnline = await checkServerStatus(server.serverip);
+        return {
+          key: index.toString(),
+          sno: index + 1,
+          serverid: server.serverid,
+          serverip: server.serverip,
+          host_serverid: server.host_serverid || 'N/A',
+          status: isOnline ? 'online' : 'offline',
+          isOnline
+        };
+      }));
+      setSquadronServers(squadronData);
+      
+    } catch (error) {
+      console.error('Error fetching server data:', error);
+      message.error('Failed to fetch server data');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Fetch server data on component mount
+  useEffect(() => {
+    fetchServerData();
+    // Set up interval to refresh data every 30 seconds
+    const interval = setInterval(fetchServerData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update URL when activeTab changes
+  useEffect(() => {
+    sessionStorage.setItem("inventory_activeTab", activeTab);
+    // Only update if URL doesn't match
+    const params = new URLSearchParams(location.search);
+    if (params.get("tab") !== activeTab) {
+      params.set("tab", activeTab);
+      navigate({ search: params.toString() }, { replace: true });
+    }
+  }, [activeTab, location.search, navigate]);
+
+  // Restore state on mount & on location.search change
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+    return () => {
+      // On unmount, save current path (with tab param) for menu memory
+      const params = new URLSearchParams(location.search);
+      const tabParam = params.get("tab") || activeTab;
+      const pathWithTab = `/inventory?tab=${tabParam}`;
+      sessionStorage.setItem("lastInventoryPath", pathWithTab);
+      sessionStorage.setItem("lastMenuPath", pathWithTab); // For sidebar restore
+    };
+  }, [location.search, activeTab]);
+
+  // On mount, save last visited menu path
+  useEffect(() => {
+    sessionStorage.setItem("lastMenuPath", window.location.pathname + window.location.search);
   }, []);
 
   return (
@@ -69,7 +229,7 @@ const Inventory = () => {
                       userSelect: "none",
                     }}
                   >
-                    12
+                    {serverCounts.total || 0}
                   </span>
                 </div>
               </Col>
@@ -105,7 +265,7 @@ const Inventory = () => {
                       userSelect: "none",
                     }}
                   >
-                    7
+                    {serverCounts.online || 0}
                   </span>
                 </div>
               </Col>
@@ -141,7 +301,7 @@ const Inventory = () => {
                       userSelect: "none",
                     }}
                   >
-                    9
+                    {serverCounts.offline || 0}
                   </span>
                 </div>
               </Col>
@@ -159,7 +319,8 @@ const Inventory = () => {
             >
               <div style={{ width: '100%' }}>
                 <Tabs
-                  defaultActiveKey="1"
+                  activeKey={activeTab}
+                  onChange={(key) => setActiveTab(key)}
                   style={{ width: '100%' }}
                   tabBarStyle={{ width: '100%' }}
                   moreIcon={null}
@@ -169,15 +330,64 @@ const Inventory = () => {
                       key: '1',
                       children: (
                         <Table
+                          loading={loading}
                           columns={[
-                            { title: 'ID', dataIndex: 'id', key: 'id' },
-                            { title: 'Cloud Name', dataIndex: 'cloudname', key: 'cloudname' },
-                            { title: 'Status', dataIndex: 'status', key: 'status' }
+                            { title: 'S.No', dataIndex: 'sno', key: 'sno', width: '5%' },
+                            { title: 'Server ID', dataIndex: 'serverid', key: 'serverid', width: '15%' },
+                            { title: 'Server IP', dataIndex: 'serverip', key: 'serverip', width: '15%' },
+                            { title: 'Cloud Name', dataIndex: 'cloudname', key: 'cloudname', width: '15%' },
+                            { 
+                              title: 'Status', 
+                              dataIndex: 'status', 
+                              key: 'status',
+                              width: '10%',
+                              render: (status) => (
+                                <Tag color={status === 'online' ? 'green' : 'red'}>
+                                  {status === 'online' ? 'Online' : 'Offline'}
+                                </Tag>
+                              )
+                            },
+                            {
+                              title: 'Power Controls',
+                              key: 'actions',
+                              width: '20%',
+                              render: (_, record) => (
+                                <div>
+                                  <Popconfirm
+                                    title="Are you sure you want to shutdown this server?"
+                                    onConfirm={() => shutdownServer(record.serverip)}
+                                    okText="Yes"
+                                    cancelText="No"
+                                    disabled={!record.isOnline}
+                                  >
+                                    <Button 
+                                      type="primary" 
+                                      danger 
+                                      style={{ marginRight: '8px' }}
+                                      disabled={!record.isOnline}
+                                    >
+                                      Shutdown
+                                    </Button>
+                                  </Popconfirm>
+                                  <Popconfirm
+                                    title="Are you sure you want to reboot this server?"
+                                    onConfirm={() => rebootServer(record.serverip)}
+                                    okText="Yes"
+                                    cancelText="No"
+                                    disabled={!record.isOnline}
+                                  >
+                                    <Button 
+                                      type="primary"
+                                      disabled={!record.isOnline}
+                                    >
+                                      Reboot
+                                    </Button>
+                                  </Popconfirm>
+                                </div>
+                              )
+                            }
                           ]}
-                          dataSource={[
-                            { key: '1', id: 'FD-001', cloudname: 'Alpha', status: 'Active' },
-                            { key: '2', id: 'FD-002', cloudname: 'Bravo', status: 'Inactive' }
-                          ]}
+                          dataSource={flightDeckServers}
                           pagination={false}
                         />
                       )
@@ -187,15 +397,64 @@ const Inventory = () => {
                       key: '2',
                       children: (
                         <Table
+                          loading={loading}
                           columns={[
-                            { title: 'ID', dataIndex: 'id', key: 'id' },
-                            { title: 'Cloud Name', dataIndex: 'cloudname', key: 'cloudname' },
-                            { title: 'Status', dataIndex: 'status', key: 'status' }
+                            { title: 'S.No', dataIndex: 'sno', key: 'sno', width: '5%' },
+                            { title: 'Server ID', dataIndex: 'serverid', key: 'serverid', width: '15%' },
+                            { title: 'Server IP', dataIndex: 'serverip', key: 'serverip', width: '15%' },
+                            { title: 'Host Server ID', dataIndex: 'host_serverid', key: 'host_serverid', width: '15%' },
+                            { 
+                              title: 'Status', 
+                              dataIndex: 'status', 
+                              key: 'status',
+                              width: '10%',
+                              render: (status) => (
+                                <Tag color={status === 'online' ? 'green' : 'red'}>
+                                  {status === 'online' ? 'Online' : 'Offline'}
+                                </Tag>
+                              )
+                            },
+                            {
+                              title: 'Power Controls',
+                              key: 'actions',
+                              width: '20%',
+                              render: (_, record) => (
+                                <div>
+                                  <Popconfirm
+                                    title="Are you sure you want to shutdown this server?"
+                                    onConfirm={() => shutdownServer(record.serverip)}
+                                    okText="Yes"
+                                    cancelText="No"
+                                    disabled={!record.isOnline}
+                                  >
+                                    <Button 
+                                      type="primary" 
+                                      danger 
+                                      style={{ marginRight: '8px' }}
+                                      disabled={!record.isOnline}
+                                    >
+                                      Shutdown
+                                    </Button>
+                                  </Popconfirm>
+                                  <Popconfirm
+                                    title="Are you sure you want to reboot this server?"
+                                    onConfirm={() => rebootServer(record.serverip)}
+                                    okText="Yes"
+                                    cancelText="No"
+                                    disabled={!record.isOnline}
+                                  >
+                                    <Button 
+                                      type="primary"
+                                      disabled={!record.isOnline}
+                                    >
+                                      Reboot
+                                    </Button>
+                                  </Popconfirm>
+                                </div>
+                              )
+                            }
                           ]}
-                          dataSource={[
-                            { key: '1', id: 'SQ-101', cloudname: 'Eagle', status: 'Ready' },
-                            { key: '2', id: 'SQ-102', cloudname: 'Falcon', status: 'Standby' }
-                          ]}
+                          dataSource={squadronServers}
                           pagination={false}
                         />
                       )

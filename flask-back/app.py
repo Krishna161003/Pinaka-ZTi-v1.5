@@ -1000,6 +1000,85 @@ def scan_network_api():
 # ------------------- Scan Network Endpoint ends -------------------
 
 
+# ------------------- Server Control Endpoint starts -------------------
+
+@app.route('/server-control', methods=['POST'])
+def server_control():
+    data = request.get_json()
+    server_ip = data.get('server_ip')
+    action = data.get('action')  # 'status', 'shutdown', or 'reboot'
+    
+    if not server_ip:
+        return jsonify({'error': 'Server IP is required'}), 400
+    
+    if not action:
+        return jsonify({'error': 'Action is required'}), 400
+    
+    if action not in ['status', 'shutdown', 'reboot']:
+        return jsonify({'error': 'Invalid action. Must be one of: status, shutdown, reboot'}), 400
+    
+    try:
+        # Setup SSH client
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        
+        # Load the private key
+        key_path = 'ps_key.pem'
+        if not os.path.exists(key_path):
+            return jsonify({'error': f'Key file {key_path} not found'}), 500
+            
+        key = paramiko.RSAKey.from_private_key_file(key_path)
+        
+        # Try to connect with timeout
+        try:
+            ssh.connect(hostname=server_ip, username='pinaka', pkey=key, timeout=5)
+            
+            # Handle different actions
+            if action == 'status':
+                ssh.close()
+                return jsonify({'status': 'online'})
+            elif action == 'shutdown':
+                stdin, stdout, stderr = ssh.exec_command('sudo shutdown -h now')
+                ssh.close()
+                return jsonify({'success': True, 'message': 'Shutdown command sent successfully'})
+            elif action == 'reboot':
+                stdin, stdout, stderr = ssh.exec_command('sudo reboot')
+                ssh.close()
+                return jsonify({'success': True, 'message': 'Reboot command sent successfully'})
+        except Exception as e:
+            # If connection fails, handle based on action
+            if action == 'status':
+                return jsonify({'status': 'offline', 'error': str(e)})
+            else:
+                return jsonify({'success': False, 'error': str(e)})
+    
+    except Exception as e:
+        error_message = f'Error executing {action}: {str(e)}'
+        return jsonify({'error': error_message}), 500
+
+# ------------------- Server Control Endpoint ends -------------------
+
+# Keep these routes for backward compatibility
+@app.route('/check-server-status', methods=['POST'])
+def check_server_status():
+    data = request.get_json()
+    data['action'] = 'status'
+    return server_control()
+
+@app.route('/server-shutdown', methods=['POST'])
+def server_shutdown():
+    data = request.get_json()
+    data['action'] = 'shutdown'
+    return server_control()
+
+@app.route('/server-reboot', methods=['POST'])
+def server_reboot():
+    data = request.get_json()
+    data['action'] = 'reboot'
+    return server_control()
+
+# ------------------- Server Power Control Endpoints end -------------------
+
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",

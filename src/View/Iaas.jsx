@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout1 from '../Components/layout';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { theme, Layout, Tabs, Table, Button, Modal, Spin, Alert, Input } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 
@@ -497,11 +498,51 @@ const Iaas = () => {
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
+  
+  // React Router hooks
+  const location = useLocation();
+  const navigate = useNavigate();
 
+  // Initialize from sessionStorage or URL query param if available
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    if (tabParam) return tabParam;
+    const savedTab = sessionStorage.getItem("iaas_activeTab");
+    return savedTab || "1";
+  });
 
+  // Update URL when activeTab changes
   useEffect(() => {
+    sessionStorage.setItem("iaas_activeTab", activeTab);
+    // Only update if URL doesn't match
+    const params = new URLSearchParams(location.search);
+    if (params.get("tab") !== activeTab) {
+      params.set("tab", activeTab);
+      navigate({ search: params.toString() }, { replace: true });
+    }
+  }, [activeTab, location.search, navigate]);
 
+  // Restore state on mount & on location.search change
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (tabParam && tabParam !== activeTab) {
+      setActiveTab(tabParam);
+    }
+    return () => {
+      // On unmount, save current path (with tab param) for menu memory
+      const params = new URLSearchParams(location.search);
+      const tabParam = params.get("tab") || activeTab;
+      const pathWithTab = `/iaas?tab=${tabParam}`;
+      sessionStorage.setItem("lastIaasPath", pathWithTab);
+      sessionStorage.setItem("lastMenuPath", pathWithTab); // For sidebar restore
+    };
+  }, [location.search, activeTab]);
 
+  // On mount, save last visited menu path
+  useEffect(() => {
+    sessionStorage.setItem("lastMenuPath", window.location.pathname + window.location.search);
   }, []);
 
   return (
@@ -530,7 +571,8 @@ const Iaas = () => {
           >
             <div style={{ width: '100%' }}>
               <Tabs
-                defaultActiveKey="1"
+                activeKey={activeTab}
+                onChange={(key) => setActiveTab(key)}
                 style={{ width: '100%' }}
                 tabBarStyle={{ width: '100%' }}
                 moreIcon={null}

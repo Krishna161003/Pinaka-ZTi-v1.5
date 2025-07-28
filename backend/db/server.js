@@ -895,6 +895,144 @@ app.get('/api/squadron-nodes', async (req, res) => {
   });
 });
 
+// API: Get dashboard counts for Cloud, Flight Deck, and Squadron
+app.get('/api/dashboard-counts/:userId', async (req, res) => {
+  const { userId } = req.params;
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
+  try {
+    // Get unique cloud count from Host table
+    const cloudCountQuery = `SELECT COUNT(DISTINCT cloudname) AS cloudCount FROM Host WHERE user_id = ?`;
+    
+    // Get flight deck count from Host table
+    const flightDeckCountQuery = `SELECT COUNT(*) AS flightDeckCount FROM Host WHERE user_id = ?`;
+    
+    // Get squadron count from child_node table
+    const squadronCountQuery = `SELECT COUNT(*) AS squadronCount FROM child_node WHERE user_id = ?`;
+    
+    // Execute all queries in parallel
+    const [cloudResult, flightDeckResult, squadronResult] = await Promise.all([
+      new Promise((resolve, reject) => {
+        db.query(cloudCountQuery, [userId], (err, result) => {
+          if (err) reject(err);
+          else resolve(result[0].cloudCount);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        db.query(flightDeckCountQuery, [userId], (err, result) => {
+          if (err) reject(err);
+          else resolve(result[0].flightDeckCount);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        db.query(squadronCountQuery, [userId], (err, result) => {
+          if (err) reject(err);
+          else resolve(result[0].squadronCount);
+        });
+      })
+    ]);
+    
+    // Return the counts
+    res.status(200).json({
+      cloudCount: cloudResult,
+      flightDeckCount: flightDeckResult,
+      squadronCount: squadronResult
+    });
+  } catch (error) {
+    console.error('Error fetching dashboard counts:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard counts' });
+  }
+});
+
+// API: Get server counts (total, online, offline)
+app.get('/api/server-counts', async (req, res) => {
+  try {
+    // Get count of servers from Host table
+    const hostCountQuery = `SELECT COUNT(*) as host_count FROM Host`;
+    
+    // Get count of servers from child_node table
+    const childCountQuery = `SELECT COUNT(*) as child_count FROM child_node`;
+    
+    // Get all server IPs for status check
+    const serverIpsQuery = `SELECT serverip FROM Host UNION SELECT serverip FROM child_node`;
+    
+    // Execute all queries in parallel
+    const [hostResult, childResult, serversResult] = await Promise.all([
+      new Promise((resolve, reject) => {
+        db.query(hostCountQuery, (err, result) => {
+          if (err) reject(err);
+          else resolve(result[0].host_count);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        db.query(childCountQuery, (err, result) => {
+          if (err) reject(err);
+          else resolve(result[0].child_count);
+        });
+      }),
+      new Promise((resolve, reject) => {
+        db.query(serverIpsQuery, (err, result) => {
+          if (err) reject(err);
+          else resolve(result);
+        });
+      })
+    ]);
+    
+    // Calculate total count
+    const total_count = hostResult + childResult;
+    
+    // For the Node.js implementation, we'll call the Flask endpoint to check server status
+    // This is a temporary solution until we implement SSH functionality directly in Node.js
+    const axios = require('axios');
+    const https = require('https');
+    
+    // Create an HTTPS agent that doesn't validate certificates (for local development)
+    const agent = new https.Agent({ rejectUnauthorized: false });
+    
+    // Check status of each server
+    let online_count = 0;
+    let offline_count = 0;
+    
+    // Process servers in batches to avoid too many concurrent connections
+    const batchSize = 5;
+    const servers = serversResult;
+    
+    for (let i = 0; i < servers.length; i += batchSize) {
+      const batch = servers.slice(i, i + batchSize);
+      const statusChecks = batch.map(async (server) => {
+        try {
+          const response = await axios.post('https://localhost:2020/check-server-status', {
+            server_ip: server.serverip
+          }, {
+            headers: { 'Content-Type': 'application/json' },
+            httpsAgent: agent
+          });
+          
+          return response.data.status === 'online';
+        } catch (error) {
+          return false;
+        }
+      });
+      
+      const results = await Promise.all(statusChecks);
+      online_count += results.filter(status => status).length;
+      offline_count += results.filter(status => !status).length;
+    }
+    
+    return res.status(200).json({
+      total_count,
+      online_count,
+      offline_count
+    });
+  } catch (error) {
+    console.error('Error getting server counts:', error);
+    return res.status(500).json({ error: 'Failed to get server counts' });
+  }
+});
+
 https.createServer(options, app).listen(5000, () => {
   console.log('Node.js backend is running on HTTPS at port 5000');
 });

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Layout1 from "../Components/layout";
 import { theme, Layout, Spin, Row, Col } from "antd";
+import { useNavigate } from "react-router-dom";
 import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
 import cloud from "../Images/cloud-computing_660475.png";
@@ -12,7 +13,14 @@ const style = {
   marginRight: '25px',
   borderRadius: '10px',
   cursor: 'pointer',
-  boxShadow: '10px',
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.09)',
+  transition: 'all 0.3s ease',
+};
+
+const hoverStyle = {
+  ...style,
+  transform: 'translateY(-3px)',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
 };
 
 const { Content } = Layout;
@@ -20,30 +28,57 @@ const { Content } = Layout;
 const Dashboard = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // For loading state
+  const [counts, setCounts] = useState({
+    cloudCount: 0,
+    flightDeckCount: 0,
+    squadronCount: 0
+  });
+  // State for hover effects
+  const [hoveredCard, setHoveredCard] = useState(null);
+  
+  const navigate = useNavigate();
   const storedData = JSON.parse(sessionStorage.getItem("loginDetails")) || {};
   const userId = storedData?.data?.id || "";
   const hostIP = process.env.REACT_APP_HOST_IP;
+  
+  // Function to navigate to Iaas page with specific tab
+  const navigateToIaasTab = (tabKey) => {
+    navigate(`/iaas?tab=${tabKey}`);
+    // Also save the active tab in session storage for persistence
+    sessionStorage.setItem("iaas_activeTab", tabKey);
+  };
 
   useEffect(() => {
-    const checkPasswordStatus = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`https://${hostIP}:5000/api/check-password-status/${userId}`);
-        const data = await response.json();
+        // Check password status
+        const passwordResponse = await fetch(`https://${hostIP}:5000/api/check-password-status/${userId}`);
+        const passwordData = await passwordResponse.json();
 
-        if (data.updatePwdStatus === 1) {
+        if (passwordData.updatePwdStatus === 1) {
           setIsModalVisible(false); // Don't show modal if password updated
         } else {
           setIsModalVisible(true); // Show modal if password not updated
         }
+
+        // Fetch dashboard counts
+        const countsResponse = await fetch(`https://${hostIP}:5000/api/dashboard-counts/${userId}`);
+        const countsData = await countsResponse.json();
+        
+        setCounts({
+          cloudCount: countsData.cloudCount || 0,
+          flightDeckCount: countsData.flightDeckCount || 0,
+          squadronCount: countsData.squadronCount || 0
+        });
       } catch (error) {
-        console.error("Error checking password status:", error);
+        console.error("Error fetching data:", error);
       } finally {
-        setIsLoading(false); // Hide loading after check
+        setIsLoading(false); // Hide loading after all fetches
       }
     };
 
     if (userId) {
-      checkPasswordStatus();
+      fetchData();
     } else {
       setIsLoading(false); // Hide loading if no userId
     }
@@ -87,7 +122,10 @@ const Dashboard = () => {
               <Col
                 className="gutter-row"
                 span={7}
-                style={style}
+                style={hoveredCard === 'cloud' ? hoverStyle : style}
+                onClick={() => navigateToIaasTab("1")}
+                onMouseEnter={() => setHoveredCard('cloud')}
+                onMouseLeave={() => setHoveredCard(null)}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                   {/* Left: Image + Label (vertical) */}
@@ -115,7 +153,7 @@ const Dashboard = () => {
                       userSelect: "none",
                     }}
                   >
-                    12
+                    {counts.cloudCount}
                   </span>
                 </div>
               </Col>
@@ -123,7 +161,10 @@ const Dashboard = () => {
               <Col
                 className="gutter-row"
                 span={7}
-                style={style}
+                style={hoveredCard === 'flightDeck' ? hoverStyle : style}
+                onClick={() => navigateToIaasTab("2")}
+                onMouseEnter={() => setHoveredCard('flightDeck')}
+                onMouseLeave={() => setHoveredCard(null)}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                   {/* Left: Image + Label (vertical) */}
@@ -151,7 +192,7 @@ const Dashboard = () => {
                       userSelect: "none",
                     }}
                   >
-                    7
+                    {counts.flightDeckCount}
                   </span>
                 </div>
               </Col>
@@ -159,7 +200,10 @@ const Dashboard = () => {
               <Col
                 className="gutter-row"
                 span={7}
-                style={style}
+                style={hoveredCard === 'squadron' ? hoverStyle : style}
+                onClick={() => navigateToIaasTab("3")}
+                onMouseEnter={() => setHoveredCard('squadron')}
+                onMouseLeave={() => setHoveredCard(null)}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                   {/* Left: Image + Label (vertical) */}
@@ -187,7 +231,7 @@ const Dashboard = () => {
                       userSelect: "none",
                     }}
                   >
-                    9
+                    {counts.squadronCount}
                   </span>
                 </div>
               </Col>
