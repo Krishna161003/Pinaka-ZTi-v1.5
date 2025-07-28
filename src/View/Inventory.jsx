@@ -35,14 +35,12 @@ const Inventory = () => {
   const [serverCounts, setServerCounts] = useState({ total: 0, online: 0, offline: 0 });
   const [loading, setLoading] = useState(true);
 
-  // Initialize from sessionStorage or URL query param if available
-  const [activeTab, setActiveTab] = useState(() => {
+  // Always use tab from URL as the single source of truth
+  const getTabFromURL = () => {
     const params = new URLSearchParams(window.location.search);
-    const tabParam = params.get("tab");
-    if (tabParam) return tabParam;
-    const savedTab = sessionStorage.getItem("inventory_activeTab");
-    return savedTab || "1";
-  });
+    return params.get('tab') || '1';
+  };
+  const [activeTab, setActiveTab] = useState(getTabFromURL);
   
   // Function to control server (status check, shutdown, reboot)
   const controlServer = async (serverIp, action) => {
@@ -108,7 +106,7 @@ const Inventory = () => {
       });
       
       // Fetch Flight Deck servers
-      const flightDeckResponse = await axios.get('https://localhost:5000/api/flight-deck-hosts');
+      const flightDeckResponse = await axios.get(`https://${hostIP}:5000/api/flight-deck-hosts`);
       const flightDeckData = await Promise.all(flightDeckResponse.data.map(async (server, index) => {
         const isOnline = await checkServerStatus(server.serverip);
         return {
@@ -124,7 +122,7 @@ const Inventory = () => {
       setFlightDeckServers(flightDeckData);
       
       // Fetch Squadron servers
-      const squadronResponse = await axios.get('https://localhost:5000/api/squadron-nodes');
+      const squadronResponse = await axios.get(`https://${hostIP}:5000/api/squadron-nodes`);
       const squadronData = await Promise.all(squadronResponse.data.map(async (server, index) => {
         const isOnline = await checkServerStatus(server.serverip);
         return {
@@ -155,33 +153,32 @@ const Inventory = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Update URL when activeTab changes
+  // Sync state from URL
   useEffect(() => {
-    sessionStorage.setItem("inventory_activeTab", activeTab);
-    // Only update if URL doesn't match
-    const params = new URLSearchParams(location.search);
-    if (params.get("tab") !== activeTab) {
-      params.set("tab", activeTab);
-      navigate({ search: params.toString() }, { replace: true });
-    }
-  }, [activeTab, location.search, navigate]);
-
-  // Restore state on mount & on location.search change
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tabParam = params.get("tab");
-    if (tabParam && tabParam !== activeTab) {
+    const tabParam = getTabFromURL();
+    if (tabParam !== activeTab) {
       setActiveTab(tabParam);
     }
+    // Save menu memory on unmount
     return () => {
-      // On unmount, save current path (with tab param) for menu memory
-      const params = new URLSearchParams(location.search);
-      const tabParam = params.get("tab") || activeTab;
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab') || activeTab;
       const pathWithTab = `/inventory?tab=${tabParam}`;
-      sessionStorage.setItem("lastInventoryPath", pathWithTab);
-      sessionStorage.setItem("lastMenuPath", pathWithTab); // For sidebar restore
+      sessionStorage.setItem('lastInventoryPath', pathWithTab);
+      sessionStorage.setItem('lastMenuPath', pathWithTab);
     };
   }, [location.search, activeTab]);
+
+  // Sync URL and sessionStorage from state (only on tab change)
+  const onTabChange = (key) => {
+    if (key !== activeTab) {
+      setActiveTab(key);
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', key);
+      navigate({ search: params.toString() }, { replace: true });
+      sessionStorage.setItem('inventory_activeTab', key);
+    }
+  };
 
   // On mount, save last visited menu path
   useEffect(() => {
@@ -320,7 +317,7 @@ const Inventory = () => {
               <div style={{ width: '100%' }}>
                 <Tabs
                   activeKey={activeTab}
-                  onChange={(key) => setActiveTab(key)}
+                  onChange={onTabChange}
                   style={{ width: '100%' }}
                   tabBarStyle={{ width: '100%' }}
                   moreIcon={null}

@@ -4,11 +4,12 @@ import { motion } from "framer-motion";
 
 const PasswordUpdateForm = ({ isModalVisible, setIsModalVisible }) => {
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
   const storedData = JSON.parse(sessionStorage.getItem("loginDetails")) || {};
   const userId = storedData?.data?.id || "";
   const userUsername = storedData?.data?.companyName || "";
 
-  const hostIP = process.env.REACT_APP_HOST_IP;
+  const hostIP = window.location.hostname;
 
   const executeScript = async (newPassword) => {
     try {
@@ -44,8 +45,10 @@ const PasswordUpdateForm = ({ isModalVisible, setIsModalVisible }) => {
       notification.error({ message: "Passwords do not match!" });
       return;
     }
+    setLoading(true); // <-- start loading
 
     const scriptExecuted = await executeScript(newPassword);
+    setLoading(false); // <-- stop loading
     if (!scriptExecuted) {
       return;
     }
@@ -64,6 +67,7 @@ const PasswordUpdateForm = ({ isModalVisible, setIsModalVisible }) => {
       open={isModalVisible}
       footer={null}
       maskClosable={false}
+      closable={false}
       centered
       style={{ borderRadius: "12px", overflow: "hidden" }}
     >
@@ -107,7 +111,7 @@ const PasswordUpdateForm = ({ isModalVisible, setIsModalVisible }) => {
           </Form.Item>
 
           <Form.Item>
-            <Button type="primary" htmlType="submit" style={{ width: "100%", borderRadius: "8px", fontSize: "16px" }}>
+            <Button type="primary" htmlType="submit" loading={loading} style={{ width: "100%", borderRadius: "8px", fontSize: "16px" }}>
               Update Password
             </Button>
           </Form.Item>

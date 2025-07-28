@@ -949,6 +949,7 @@ app.get('/api/dashboard-counts/:userId', async (req, res) => {
 
 // API: Get server counts (total, online, offline)
 app.get('/api/server-counts', async (req, res) => {
+  const hostIP = window.location.hostname;
   try {
     // Get count of servers from Host table
     const hostCountQuery = `SELECT COUNT(*) as host_count FROM Host`;
@@ -1004,7 +1005,7 @@ app.get('/api/server-counts', async (req, res) => {
       const batch = servers.slice(i, i + batchSize);
       const statusChecks = batch.map(async (server) => {
         try {
-          const response = await axios.post('https://localhost:2020/check-server-status', {
+          const response = await axios.post(`https://${hostIP}:2020/check-server-status`, {
             server_ip: server.serverip
           }, {
             headers: { 'Content-Type': 'application/json' },

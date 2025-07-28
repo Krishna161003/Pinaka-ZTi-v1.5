@@ -45,7 +45,7 @@ const AppLayout = ({ children }) => {
   const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
-    window.location.reload();
+    window.location.href = '/';
   };
 
   const handleMenuClick = (e) => {
@@ -91,16 +91,16 @@ const AppLayout = ({ children }) => {
     {
       type: "divider",
     },
-    {
-      key: "2",
-      label: "Profile",
-      icon: <UserOutlined />,
-    },
-    {
-      key: "3",
-      label: "Settings",
-      icon: <SettingOutlined />,
-    },
+    // {
+    //   key: "2",
+    //   label: "Profile",
+    //   icon: <UserOutlined />,
+    // },
+    // {
+    //   key: "3",
+    //   label: "Settings",
+    //   icon: <SettingOutlined />,
+    // },
     {
       key: "4",
       label: "Logout",

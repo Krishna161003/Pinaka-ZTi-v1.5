@@ -208,7 +208,9 @@ const Deployment = ({ next }) => {
         defaultGateway: configType === "segregated" ? vipform.getFieldValue("defaultGateway") : "",
         providerNetwork: providerValues,
         tenantNetwork: tenantValues,
+        hostname: vipform.getFieldValue("hostname") || "pinakasv",
       };
+
 
       await submitToBackend(rawData);
 
@@ -831,6 +833,29 @@ const Deployment = ({ next }) => {
                   ]}
                 >
                   <Input maxLength={18} placeholder="Enter Gateway" style={{ width: 200 }} />
+                </Form.Item>
+
+                <Form.Item
+                  name="hostname"
+                  label={
+                    <span>
+                      Enter Hostname&nbsp;
+                      <Tooltip placement="right" title="This is the hostname for the deployed host. Optional; defaults to 'pinakasv'.">
+                        <InfoCircleOutlined
+                          style={{
+                            color: "#1890ff",
+                            fontSize: "14px",
+                            height: "12px",
+                            width: "12px"
+                          }}
+                        />
+                      </Tooltip>
+                    </span>
+                  }
+                  initialValue="pinakasv"
+                  rules={[]}
+                >
+                  <Input maxLength={32} placeholder="Enter Hostname (optional)" style={{ width: 200 }} />
                 </Form.Item>
               </div>
             </Form>
