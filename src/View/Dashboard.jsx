@@ -6,6 +6,7 @@ import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
 import cloud from "../Images/cloud-computing_660475.png";
 import squad from "../Images/database_2231963.png";
+import { Gauge } from '@ant-design/plots';
 const style = {
   background: '#fff',
   padding: '16px 20px', // Reduced vertical padding for shorter Col height
@@ -26,6 +27,50 @@ const hoverStyle = {
 const { Content } = Layout;
 
 const Dashboard = () => {
+  // --- CPU & Memory Utilization State ---
+  const [cpuData, setCpuData] = useState(0);
+  const [memoryData, setMemoryData] = useState(0);
+  const [totalMemory, setTotalMemory] = useState(0);
+  const [usedMemory, setUsedMemory] = useState(0);
+
+  useEffect(() => {
+    async function fetchUtilization() {
+      try {
+        const hostIP = process.env.REACT_APP_HOST_IP;
+        const res = await fetch(`https://${hostIP}:2020/system-utilization`);
+        const data = await res.json();
+        // Defensive: Check for error key or invalid values
+        if (
+          data.error ||
+          typeof data.cpu !== 'number' || isNaN(data.cpu) ||
+          typeof data.memory !== 'number' || isNaN(data.memory) ||
+          typeof data.total_memory !== 'number' || isNaN(data.total_memory) ||
+          typeof data.used_memory !== 'number' || isNaN(data.used_memory)
+        ) {
+          setCpuData(0);
+          setMemoryData(0);
+          setTotalMemory(0);
+          setUsedMemory(0);
+        } else {
+          setCpuData(data.cpu);
+          setMemoryData(data.memory);
+          setTotalMemory(data.total_memory);
+          setUsedMemory(data.used_memory);
+        }
+      } catch (err) {
+        setCpuData(0);
+        setMemoryData(0);
+        setTotalMemory(0);
+        setUsedMemory(0);
+      }
+    }
+    fetchUtilization();
+    const interval = setInterval(fetchUtilization, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // For loading state
   const [counts, setCounts] = useState({
@@ -35,12 +80,12 @@ const Dashboard = () => {
   });
   // State for hover effects
   const [hoveredCard, setHoveredCard] = useState(null);
-  
+
   const navigate = useNavigate();
   const storedData = JSON.parse(sessionStorage.getItem("loginDetails")) || {};
   const userId = storedData?.data?.id || "";
   const hostIP = process.env.REACT_APP_HOST_IP;
-  
+
   // Function to navigate to Iaas page with specific tab
   const navigateToIaasTab = (tabKey) => {
     navigate(`/iaas?tab=${tabKey}`);
@@ -64,7 +109,7 @@ const Dashboard = () => {
         // Fetch dashboard counts
         const countsResponse = await fetch(`https://${hostIP}:5000/api/dashboard-counts/${userId}`);
         const countsData = await countsResponse.json();
-        
+
         setCounts({
           cloudCount: countsData.cloudCount || 0,
           flightDeckCount: countsData.flightDeckCount || 0,
@@ -129,7 +174,7 @@ const Dashboard = () => {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                   {/* Left: Image + Label (vertical) */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center",marginLeft:"20px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center", marginLeft: "20px" }}>
                     <img src={cloud} alt="cloud--v1" style={{ width: "64px", height: "64px", userSelect: "none" }} />
                     <span
                       style={{
@@ -168,7 +213,7 @@ const Dashboard = () => {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                   {/* Left: Image + Label (vertical) */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center",marginLeft:"20px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center", marginLeft: "20px" }}>
                     <img src={node} alt="server" style={{ width: "64px", height: "64px", userSelect: "none" }} />
                     <span
                       style={{
@@ -207,7 +252,7 @@ const Dashboard = () => {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
                   {/* Left: Image + Label (vertical) */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center",marginLeft:"20px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center", marginLeft: "20px" }}>
                     <img src={squad} alt="cloud-development--v3" style={{ width: "64px", height: "64px", userSelect: "none" }} />
                     <span
                       style={{
@@ -237,6 +282,62 @@ const Dashboard = () => {
               </Col>
             </Row>
           </div>
+          <Row gutter={24} justify="center" style={{ marginTop: 32, marginBottom: 16 }}>
+            <Col span={9}>
+            <div style={{ background: '#fff', borderRadius: 10, padding: 8, minHeight: 100, width: 240, margin: '0 auto' }}>
+            <h4 style={{ textAlign: 'center', marginBottom: 12 }}>CPU Utilization</h4>
+                <Gauge
+                  autoFit={false}
+                  width={220}
+                  height={260} // Set a smaller height here (adjust as needed)
+                  data={{
+                    target: cpuData ?? 0,
+                    total: 100,
+                    name: 'CPU',
+                    thresholds: [50, 75, 100],
+                  }}
+                  scale={{
+                    color: {
+                      range: ['green', '#FAAD14', '#F4664A'],
+                    },
+                  }}
+                  style={{
+                    textContent: (target, total) =>
+                      `CPU: ${target}%\nUsage: ${(target / total * 100).toFixed(1)}%`,
+                  }}
+                />
+
+              </div>
+            </Col>
+            <Col span={2} /> {/* Spacer column for separation */}
+            <Col span={9}>
+            <div style={{ background: '#fff', borderRadius: 10, padding: 8, minHeight: 100, width: 260, margin: '0 auto' }}>
+            <h4 style={{ textAlign: 'center', marginBottom: 12 }}>Memory Utilization</h4>
+                <Gauge
+                  autoFit={false}
+                  width={220}
+                  height={260} // Match the height here as well
+                  data={{
+                    target: memoryData ?? 0,
+                    total: 100,
+                    name: 'Memory',
+                    thresholds: [50, 75, 100],
+                  }}
+                  scale={{
+                    color: {
+                      range: ['green', '#FAAD14', '#F4664A'],
+                    },
+                  }}
+                  style={{
+                    textContent: () =>
+                      `Used: ${usedMemory} MB / ${totalMemory} MB\nUsage: ${memoryData.toFixed(1)}%`,
+                  }}
+                />
+
+              </div>
+            </Col>
+          </Row>
+
           {/* Password Update Modal Form */}
           <PasswordUpdateForm
             isModalVisible={isModalVisible}

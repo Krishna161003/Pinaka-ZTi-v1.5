@@ -370,7 +370,15 @@ app.post('/api/deployment-activity-log', (req, res) => {
   }
   const status = 'progress';
   const type = 'host';
-  const serverid = nanoid();
+  // For host type, use 'FD-' + 6-char nanoid; for others, use regular nanoid
+  let serverid;
+  if (type === 'host') {
+    const { customAlphabet } = require('nanoid');
+    const nanoid6 = customAlphabet('ABCDEVSR0123456789abcdefgzkh', 6);
+    serverid = 'FD-' + nanoid6();
+  } else {
+    serverid = nanoid();
+  }
   const sql = `
     INSERT INTO deployment_activity_log
       (serverid, user_id, username, cloudname, serverip, status, type, server_vip)
@@ -947,9 +955,45 @@ app.get('/api/dashboard-counts/:userId', async (req, res) => {
   }
 });
 
+// API: Get all hosts (for Inventory tab 1)
+app.get('/api/hosts', (req, res) => {
+  const userId = req.query.userId;
+  let sql = 'SELECT * FROM Host';
+  let params = [];
+  if (userId) {
+    sql += ' WHERE user_id = ?';
+    params.push(userId);
+  }
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching hosts:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
+// API: Get all child nodes (for Inventory tab 2)
+app.get('/api/child-nodes', (req, res) => {
+  const userId = req.query.userId;
+  let sql = 'SELECT * FROM child_node';
+  let params = [];
+  if (userId) {
+    sql += ' WHERE user_id = ?';
+    params.push(userId);
+  }
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching child nodes:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(results);
+  });
+});
+
 // API: Get server counts (total, online, offline)
 app.get('/api/server-counts', async (req, res) => {
-  const hostIP = window.location.hostname;
+  const hostIP = req.hostname;
   try {
     // Get count of servers from Host table
     const hostCountQuery = `SELECT COUNT(*) as host_count FROM Host`;

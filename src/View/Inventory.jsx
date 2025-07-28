@@ -42,7 +42,7 @@ const Inventory = () => {
   };
   const [activeTab, setActiveTab] = useState(getTabFromURL);
   
-  // Function to control server (status check, shutdown, reboot)
+  // Function to control server (shutdown, reboot)
   const controlServer = async (serverIp, action) => {
     try {
       setLoading(action !== 'status');
@@ -53,11 +53,8 @@ const Inventory = () => {
         headers: { 'Content-Type': 'application/json' }
       });
       
-      if (action === 'status') {
-        return response.data.status === 'online';
-      } else if (response.data.success) {
+      if (response.data.success) {
         message.success(`${action.charAt(0).toUpperCase() + action.slice(1)} command sent successfully`);
-        // Refresh data after a short delay
         setTimeout(() => {
           fetchServerData();
         }, 2000);
@@ -66,21 +63,28 @@ const Inventory = () => {
       }
     } catch (error) {
       console.error(`Error executing ${action}:`, error);
-      if (action !== 'status') {
-        message.error(`Error executing ${action}`);
-      }
+      message.error(`Error executing ${action}`);
       return false;
     } finally {
-      if (action !== 'status') {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
-  
-  // Function to check server status
+
+  // Function to check server status using Flask endpoint
   const checkServerStatus = async (serverIp) => {
-    return await controlServer(serverIp, 'status');
+    try {
+      const response = await axios.post(`https://${hostIP}:2020/check-server-status`, {
+        server_ip: serverIp
+      }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      return response.data.status === 'online';
+    } catch (error) {
+      console.error('Error checking server status:', error);
+      return false;
+    }
   };
+
   
   // Function to shutdown server
   const shutdownServer = async (serverIp) => {
@@ -105,30 +109,35 @@ const Inventory = () => {
         offline: countsResponse.data.offline_count
       });
       
-      // Fetch Flight Deck servers
-      const flightDeckResponse = await axios.get(`https://${hostIP}:5000/api/flight-deck-hosts`);
+      // Fetch Host table for Flight Deck tab
+      const userId = localStorage.getItem('userId');
+      const flightDeckResponse = await axios.get(`https://${hostIP}:5000/api/hosts`, {
+        params: { userId }
+      });
       const flightDeckData = await Promise.all(flightDeckResponse.data.map(async (server, index) => {
         const isOnline = await checkServerStatus(server.serverip);
         return {
           key: index.toString(),
           sno: index + 1,
-          serverid: server.serverid,
+          serverid: server.server_id,
           serverip: server.serverip,
-          cloudname: server.vip || 'N/A',
+          cloudname: server.cloudname || server.servervip || 'N/A',
           status: isOnline ? 'online' : 'offline',
           isOnline
         };
       }));
       setFlightDeckServers(flightDeckData);
       
-      // Fetch Squadron servers
-      const squadronResponse = await axios.get(`https://${hostIP}:5000/api/squadron-nodes`);
+      // Fetch child_node table for Squadron tab
+      const squadronResponse = await axios.get(`https://${hostIP}:5000/api/child-nodes`, {
+        params: { userId }
+      });
       const squadronData = await Promise.all(squadronResponse.data.map(async (server, index) => {
         const isOnline = await checkServerStatus(server.serverip);
         return {
           key: index.toString(),
           sno: index + 1,
-          serverid: server.serverid,
+          serverid: server.server_id,
           serverip: server.serverip,
           host_serverid: server.host_serverid || 'N/A',
           status: isOnline ? 'online' : 'offline',
@@ -360,7 +369,7 @@ const Inventory = () => {
                                     <Button 
                                       type="primary" 
                                       danger 
-                                      style={{ marginRight: '8px' }}
+                                      style={{ marginRight: '8px' , width: '75px'}}
                                       disabled={!record.isOnline}
                                     >
                                       Shutdown
@@ -376,6 +385,7 @@ const Inventory = () => {
                                     <Button 
                                       type="primary"
                                       disabled={!record.isOnline}
+                                      style={{ width: '75px'}}
                                     >
                                       Reboot
                                     </Button>

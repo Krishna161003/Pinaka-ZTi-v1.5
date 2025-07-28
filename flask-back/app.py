@@ -605,10 +605,9 @@ def submit_network_config():
             "tenant_nameserver": tenant.get("nameserver", "8.8.8.8"),
             "disk": disk,
             "vip": vip,
+            "default_gateway": default_gateway,  # Always include
+            "hostname": data.get("hostname", "pinakasv")  # Always include
         }
-
-        if config_type == "segregated":
-            response_json["default_gateway"] = default_gateway
 
         if default_gateway:
             if not is_network_available(default_gateway):
@@ -923,6 +922,33 @@ def deployment_progress():
         return jsonify({"error": str(e)}), 500
     
 # ------------------- Deployment Progress Endpoint ends -------------------
+
+# ------------------- System Utilization Endpoint -------------------
+import psutil
+@app.route('/system-utilization', methods=['GET'])
+def system_utilization():
+    try:
+        cpu_percent = psutil.cpu_percent(interval=1)
+        mem = psutil.virtual_memory()
+        mem_percent = mem.percent
+        total_mem_mb = int(mem.total / (1024*1024))
+        used_mem_mb = int(mem.used / (1024*1024))
+        return jsonify({
+            "cpu": cpu_percent,
+            "memory": mem_percent,
+            "total_memory": total_mem_mb,
+            "used_memory": used_mem_mb
+        })
+    except Exception as e:
+        # Always return all keys with safe values, plus error for debugging
+        return jsonify({
+            "cpu": 0,
+            "memory": 0,
+            "total_memory": 0,
+            "used_memory": 0,
+            "error": str(e)
+        }), 200
+# ------------------- System Utilization Endpoint ends -------------------
 
 # ------------------- Scan Network Endpoint starts-------------------
 

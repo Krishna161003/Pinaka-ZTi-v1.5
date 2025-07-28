@@ -202,15 +202,14 @@ const Deployment = ({ next }) => {
         tableData,
         configType,
         useBond,
-  
         vip: vipform.getFieldValue("vip"),
         disk: vipform.getFieldValue("disk"),
-        defaultGateway: configType === "segregated" ? vipform.getFieldValue("defaultGateway") : "",
+        // Always send defaultGateway and hostname, regardless of configType
+        defaultGateway: vipform.getFieldValue("defaultGateway") || "",
+        hostname: vipform.getFieldValue("hostname") || "pinakasv",
         providerNetwork: providerValues,
         tenantNetwork: tenantValues,
-        hostname: vipform.getFieldValue("hostname") || "pinakasv",
       };
-
 
       await submitToBackend(rawData);
 
