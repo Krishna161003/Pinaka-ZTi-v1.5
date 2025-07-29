@@ -271,7 +271,15 @@ const Dashboard = () => {
                         title: { text: 'CPU %' }
                       }}
                       tooltip={{
-                        formatter: (datum) => ({ name: 'CPU %', value: datum.value?.toFixed(1) ?? '0.0' })
+                        formatter: (datum) => {
+                          // Defensive: try value, then cpu, then 0
+                          let v = (typeof datum.value === 'number' && !isNaN(datum.value))
+                            ? datum.value
+                            : (typeof datum.cpu === 'number' && !isNaN(datum.cpu))
+                              ? datum.cpu
+                              : 0;
+                          return { name: 'CPU %', value: v.toFixed(1) };
+                        }
                       }}
                       smooth
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
