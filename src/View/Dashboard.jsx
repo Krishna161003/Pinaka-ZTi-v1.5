@@ -189,220 +189,106 @@ const Dashboard = () => {
       <Layout>
         <Content>
           <div>
-            <Row
-              gutter={16} // Added gutter for spacing
-              justify="space-between" // Ensures equal spacing between the columns
-              style={{ marginLeft: "20px" }} // Added marginLeft to shift everything a bit to the right
-            >
-              <Col
-                className="gutter-row"
-                span={7}
-                style={hoveredCard === 'cloud' ? hoverStyle : style}
+            {/* First row: summary cards */}
+            <Row gutter={16} justify="space-between" style={{ marginLeft: "20px" }}>
+              <Col className="gutter-row" span={7} style={hoveredCard === 'cloud' ? hoverStyle : style}
                 onClick={() => navigateToIaasTab("1")}
                 onMouseEnter={() => setHoveredCard('cloud')}
-                onMouseLeave={() => setHoveredCard(null)}
-              >
+                onMouseLeave={() => setHoveredCard(null)}>
+                {/* ...Cloud card content... */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-                  {/* Left: Image + Label (vertical) */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center", marginLeft: "20px" }}>
                     <img src={cloud} alt="cloud--v1" style={{ width: "64px", height: "64px", userSelect: "none" }} />
-                    <span
-                      style={{
-                        fontSize: "15px",
-                        fontWeight: "500",
-                        marginTop: "4px",
-                        userSelect: "none",
-                        textAlign: "center"
-                      }}
-                    >
-                      Cloud
-                    </span>
+                    <span style={{ fontSize: "15px", fontWeight: "500", marginTop: "4px", userSelect: "none", textAlign: "center" }}>Cloud</span>
                   </div>
-                  {/* Right: Count */}
-                  <span
-                    style={{
-                      fontSize: "32px",
-                      fontWeight: "bold",
-                      color: "#1890ff",
-                      marginRight: "50px",
-                      userSelect: "none",
-                    }}
-                  >
-                    {counts.cloudCount}
-                  </span>
+                  <span style={{ fontSize: "32px", fontWeight: "bold", color: "#1890ff", marginRight: "50px", userSelect: "none" }}>{counts.cloudCount}</span>
                 </div>
               </Col>
-
-              <Col
-                className="gutter-row"
-                span={7}
-                style={hoveredCard === 'flightDeck' ? hoverStyle : style}
+              <Col className="gutter-row" span={7} style={hoveredCard === 'flightDeck' ? hoverStyle : style}
                 onClick={() => navigateToIaasTab("2")}
                 onMouseEnter={() => setHoveredCard('flightDeck')}
-                onMouseLeave={() => setHoveredCard(null)}
-              >
+                onMouseLeave={() => setHoveredCard(null)}>
+                {/* ...Flight Deck card content... */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-                  {/* Left: Image + Label (vertical) */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center", marginLeft: "20px" }}>
                     <img src={node} alt="server" style={{ width: "64px", height: "64px", userSelect: "none" }} />
-                    <span
-                      style={{
-                        fontSize: "15px",
-                        fontWeight: "500",
-                        marginTop: "4px",
-                        userSelect: "none",
-                        textAlign: "center"
-                      }}
-                    >
-                      Flight Deck
-                    </span>
+                    <span style={{ fontSize: "15px", fontWeight: "500", marginTop: "4px", userSelect: "none", textAlign: "center" }}>Flight Deck</span>
                   </div>
-                  {/* Right: Count */}
-                  <span
-                    style={{
-                      fontSize: "32px",
-                      fontWeight: "bold",
-                      color: "#1890ff",
-                      marginRight: "50px",
-                      userSelect: "none",
-                    }}
-                  >
-                    {counts.flightDeckCount}
-                  </span>
+                  <span style={{ fontSize: "32px", fontWeight: "bold", color: "#1890ff", marginRight: "50px", userSelect: "none" }}>{counts.flightDeckCount}</span>
                 </div>
               </Col>
-
-              <Col
-                className="gutter-row"
-                span={7}
-                style={hoveredCard === 'squadron' ? hoverStyle : style}
+              <Col className="gutter-row" span={7} style={hoveredCard === 'squadron' ? hoverStyle : style}
                 onClick={() => navigateToIaasTab("3")}
                 onMouseEnter={() => setHoveredCard('squadron')}
-                onMouseLeave={() => setHoveredCard(null)}
-              >
+                onMouseLeave={() => setHoveredCard(null)}>
+                {/* ...Squadron card content... */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
-                  {/* Left: Image + Label (vertical) */}
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minHeight: "80px", justifyContent: "center", marginLeft: "20px" }}>
                     <img src={squad} alt="cloud-development--v3" style={{ width: "64px", height: "64px", userSelect: "none" }} />
-                    <span
-                      style={{
-                        fontSize: "15px",
-                        fontWeight: "500",
-                        marginTop: "4px",
-                        userSelect: "none",
-                        textAlign: "center"
-                      }}
-                    >
-                      Squadron
-                    </span>
+                    <span style={{ fontSize: "15px", fontWeight: "500", marginTop: "4px", userSelect: "none", textAlign: "center" }}>Squadron</span>
                   </div>
-                  {/* Right: Count */}
-                  <span
-                    style={{
-                      fontSize: "32px",
-                      fontWeight: "bold",
-                      color: "#1890ff",
-                      marginRight: "50px",
-                      userSelect: "none",
-                    }}
-                  >
-                    {counts.squadronCount}
-                  </span>
+                  <span style={{ fontSize: "32px", fontWeight: "bold", color: "#1890ff", marginRight: "50px", userSelect: "none" }}>{counts.squadronCount}</span>
                 </div>
               </Col>
             </Row>
-          </div>
-          <Row gutter={32} justify="center" style={{ marginTop: 48, marginBottom: 32 }}>
-            <Col span={10}>
-              <div
-                style={{
-                  background: '#fff',
-                  borderRadius: '20px', // More rounded
-                  padding: '24px 32px',
-                  minHeight: 180,
-                  width: '100%',
-                  margin: '0 auto',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-              >
-                <h4 style={{ textAlign: 'center', marginBottom: 20 }}>CPU Utilization</h4>
-                <Area
-                  data={cpuHistory}
-                  xField="date"
-                  yField="value"
-                  height={160}
-                  width={280}
-                  xAxis={{
-                    type: 'time',
-                    tickCount: 5,
-                    label: { formatter: (date) => date.toLocaleTimeString().slice(0, 8) }
-                  }}
-                  yAxis={{
-                    min: 0,
-                    max: 100,
-                    label: { formatter: (v) => `${v}%` },
-                    title: { text: 'CPU %' }
-                  }}
-                  tooltip={{
-                    formatter: (datum) => ({ name: 'CPU %', value: datum.value.toFixed(1) })
-                  }}
-                  smooth
-                  areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
-                />
-              </div>
-            </Col>
-            <Col span={10}>
-              <div
-                style={{
-                  background: '#fff',
-                  borderRadius: '20px',
-                  padding: '24px 32px',
-                  minHeight: 220,
-                  width: '100%',
-                  margin: '0 auto',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <Gauge
-                    autoFit={false}
-                    width={180}
-                    height={140}
-                    data={{
-                      target: memoryData ?? 0,
-                      total: 100,
-                      name: 'Memory',
-                      thresholds: [50, 75, 100],
+            {/* Second row: CPU and Memory cards side by side */}
+            <Row gutter={32} justify="start" style={{ marginTop: 48, marginBottom: 32 }}>
+              <Col span={11}>
+                <div style={{ background: '#fff', borderRadius: '20px', padding: '24px 32px', minHeight: 220, width: '100%', margin: '0 auto', boxShadow: '0 2px 8px rgba(0,0,0,0.09)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <h4 style={{ textAlign: 'center', marginBottom: 20 }}>CPU Utilization</h4>
+                  <Area
+                    data={cpuHistory}
+                    xField="date"
+                    yField="value"
+                    height={160}
+                    width={380}
+                    xAxis={{
+                      type: 'time',
+                      tickCount: 5,
+                      label: { formatter: (date) => date.toLocaleTimeString().slice(0, 8) }
                     }}
-                    scale={{
-                      color: {
-                        range: ['green', '#FAAD14', '#F4664A'],
-                      },
+                    yAxis={{
+                      min: 0,
+                      max: 100,
+                      label: { formatter: (v) => `${v}%` },
+                      title: { text: 'CPU %' }
                     }}
+                    tooltip={{
+                      formatter: (datum) => ({ name: 'CPU %', value: datum.value.toFixed(1) })
+                    }}
+                    smooth
+                    areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                   />
-                  <div style={{
-                    marginTop: 12,
-                    textAlign: 'center',
-                    fontWeight: 600,
-                    fontSize: 16,
-                    color: '#333',
-                  }}>
-                    Used: {usedMemory} MB / {totalMemory} MB<br />
-                    Usage: {memoryData.toFixed(1)}%
+                </div>
+              </Col>
+              <Col span={11}>
+                <div style={{ background: '#fff', borderRadius: '20px', padding: '24px 32px', minHeight: 220, width: '100%', margin: '0 auto', boxShadow: '0 2px 8px rgba(0,0,0,0.09)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Gauge
+                      autoFit={false}
+                      width={180}
+                      height={140}
+                      data={{
+                        target: memoryData ?? 0,
+                        total: 100,
+                        name: 'Memory',
+                        thresholds: [50, 75, 100],
+                      }}
+                      scale={{
+                        color: {
+                          range: ['green', '#FAAD14', '#F4664A'],
+                        },
+                      }}
+                    />
+                    <div style={{ marginTop: 12, textAlign: 'center', fontWeight: 600, fontSize: 16, color: '#333' }}>
+                      Used: {usedMemory} MB / {totalMemory} MB<br />
+                      Usage: {memoryData.toFixed(1)}%
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Col>
-          </Row>
+              </Col>
+            </Row>
 
           {/* Password Update Modal Form */}
           <PasswordUpdateForm
