@@ -232,16 +232,30 @@ const Dashboard = () => {
               </Col>
             </Row>
             {/* Second row: CPU and Memory cards side by side */}
-            <Row gutter={32} justify="start" style={{ marginTop: 48, marginBottom: 32 }}>
-              <Col span={11}>
-                <div style={{ background: '#fff', borderRadius: '10px', padding: '24px 32px', minHeight: 220, width: '100%', margin: '0 auto', boxShadow: '0 2px 8px rgba(0,0,0,0.09)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <Row gutter={32} justify="center" style={{ marginTop: 48, marginBottom: 32 }}>
+              <Col span={10}>
+                <div
+                  style={{
+                    background: '#fff',
+                    borderRadius: '16px',
+                    padding: '24px 32px',
+                    minHeight: 260,
+                    width: '100%',
+                    margin: '0 auto',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
                   <h4 style={{ textAlign: 'center', marginBottom: 20 }}>CPU Utilization</h4>
                   <Area
                     data={cpuHistory}
                     xField="date"
                     yField="value"
-                    height={160}
-                    width={380}
+                    height={200}
+                    width={320}
                     xAxis={{
                       type: 'time',
                       tickCount: 5,
@@ -254,21 +268,35 @@ const Dashboard = () => {
                       title: { text: 'CPU %' }
                     }}
                     tooltip={{
-                      formatter: (datum) => ({ name: 'CPU %', value: datum.value.toFixed(1) })
+                      formatter: (datum) => ({ name: 'CPU %', value: datum.value?.toFixed(1) ?? '0.0' })
                     }}
                     smooth
                     areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                   />
                 </div>
               </Col>
-              <Col span={11}>
-                <div style={{ background: '#fff', borderRadius: '10px', padding: '24px 32px', minHeight: 220, width: '100%', margin: '0 auto', boxShadow: '0 2px 8px rgba(0,0,0,0.09)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <h4 style={{ textAlign: 'center', marginBottom: 5 }}>Memory Utilization</h4>
+              <Col span={10}>
+                <div
+                  style={{
+                    background: '#fff',
+                    borderRadius: '16px',
+                    padding: '24px 32px',
+                    minHeight: 260,
+                    width: '100%',
+                    margin: '0 auto',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Gauge
                       autoFit={false}
                       width={320}
-                      height={240}
+                      height={200}
                       data={{
                         target: memoryData ?? 0,
                         total: 100,
@@ -280,8 +308,18 @@ const Dashboard = () => {
                           range: ['green', '#FAAD14', '#F4664A'],
                         },
                       }}
+                      statistic={{
+                        title: false,
+                        contentStyle: { fontSize: 32, fontWeight: 600 },
+                      }}
                     />
-                    <div style={{ marginTop: 1, textAlign: 'center', fontWeight: 600, fontSize: 16, color: '#333' }}>
+                    <div style={{
+                      marginTop: 12,
+                      textAlign: 'center',
+                      fontWeight: 600,
+                      fontSize: 16,
+                      color: '#333',
+                    }}>
                       Used: {usedMemory} MB / {totalMemory} MB<br />
                       Usage: {memoryData.toFixed(1)}%
                     </div>
