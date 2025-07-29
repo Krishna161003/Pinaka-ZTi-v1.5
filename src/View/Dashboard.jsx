@@ -234,7 +234,7 @@ const Dashboard = () => {
             {/* Second row: CPU and Memory cards side by side */}
             <Row gutter={32} justify="start" style={{ marginTop: 48, marginBottom: 32 }}>
               <Col span={11}>
-                <div style={{ background: '#fff', borderRadius: '20px', padding: '24px 32px', minHeight: 220, width: '100%', margin: '0 auto', boxShadow: '0 2px 8px rgba(0,0,0,0.09)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: '#fff', borderRadius: '10px', padding: '24px 32px', minHeight: 220, width: '100%', margin: '0 auto', boxShadow: '0 2px 8px rgba(0,0,0,0.09)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <h4 style={{ textAlign: 'center', marginBottom: 20 }}>CPU Utilization</h4>
                   <Area
                     data={cpuHistory}
@@ -262,13 +262,13 @@ const Dashboard = () => {
                 </div>
               </Col>
               <Col span={11}>
-                <div style={{ background: '#fff', borderRadius: '20px', padding: '24px 32px', minHeight: 220, width: '100%', margin: '0 auto', boxShadow: '0 2px 8px rgba(0,0,0,0.09)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
+                <div style={{ background: '#fff', borderRadius: '10px', padding: '24px 32px', minHeight: 220, width: '100%', margin: '0 auto', boxShadow: '0 2px 8px rgba(0,0,0,0.09)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                  <h4 style={{ textAlign: 'center', marginBottom: 5 }}>Memory Utilization</h4>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <Gauge
                       autoFit={false}
-                      width={180}
-                      height={140}
+                      width={320}
+                      height={240}
                       data={{
                         target: memoryData ?? 0,
                         total: 100,
@@ -281,7 +281,7 @@ const Dashboard = () => {
                         },
                       }}
                     />
-                    <div style={{ marginTop: 12, textAlign: 'center', fontWeight: 600, fontSize: 16, color: '#333' }}>
+                    <div style={{ marginTop: 1, textAlign: 'center', fontWeight: 600, fontSize: 16, color: '#333' }}>
                       Used: {usedMemory} MB / {totalMemory} MB<br />
                       Usage: {memoryData.toFixed(1)}%
                     </div>
@@ -295,7 +295,9 @@ const Dashboard = () => {
             isModalVisible={isModalVisible}
             setIsModalVisible={setIsModalVisible}
           />
+          </div>
         </Content>
+        
       </Layout>
     </Layout1>
   );
