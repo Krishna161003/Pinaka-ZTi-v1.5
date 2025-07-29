@@ -272,7 +272,7 @@ const Dashboard = () => {
                       }}
                       tooltip={{
                         formatter: (datum) => {
-                          // Defensive: try value, then cpu, then 0
+                          console.log('Tooltip datum:', datum); // <-- Add this line
                           let v = (typeof datum.value === 'number' && !isNaN(datum.value))
                             ? datum.value
                             : (typeof datum.cpu === 'number' && !isNaN(datum.cpu))
