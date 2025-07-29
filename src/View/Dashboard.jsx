@@ -52,7 +52,6 @@ const Dashboard = () => {
               };
             })
           );
-          console.log('Set CPU history:', cpuHistory);
         } else {
           setCpuHistory([]);
         }
@@ -270,22 +269,24 @@ const Dashboard = () => {
                       yAxis={{
                         min: 0,
                         max: 100,
-                        label: { formatter: (v) => `${v}%` },
+                        label: { formatter: (v) => `${v.toFixed(1)}%` },
                         title: { text: 'CPU %' }
                       }}
                       tooltip={{
-                        formatter: (datum) => {
-                          console.log("Tooltip datum:", datum);
-                          const v = typeof datum.value === 'number' && !isNaN(datum.value)
-                            ? datum.value
-                            : (typeof datum.cpu === 'number' && !isNaN(datum.cpu)
-                              ? datum.cpu
-                              : 0);
-                          return { name: 'CPU %', value: v.toFixed(1) };
+                        customItems: (originalItems) => {
+                          return originalItems.map(item => {
+                            const cpu = item.data?.value ?? item.value ?? 0;
+                            return {
+                              ...item,
+                              name: 'CPU',
+                              value: `${cpu.toFixed(1)}%`,
+                            };
+                          });
                         }
-                      }}                      
+                      }}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                     />
+
                   </div>
                   {/* Memory Utilization */}
                   <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
