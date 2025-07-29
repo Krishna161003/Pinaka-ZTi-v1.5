@@ -257,7 +257,7 @@ const Dashboard = () => {
                       data={cpuHistory}
                       xField="date"
                       yField="value"
-                      height={200}
+                      height={240}
                       width={320}
                       xAxis={{
                         type: 'time',
