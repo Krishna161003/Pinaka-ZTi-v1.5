@@ -12,9 +12,19 @@ import time
 import ipaddress
 import netifaces
 import logging
+from collections import deque
 
+# Store last 60 seconds of CPU usage
+timestamped_cpu_history = deque(maxlen=60)
 
+def add_cpu_history(cpu_percent):
+    timestamped_cpu_history.append({
+        "timestamp": int(time.time()),
+        "cpu": cpu_percent
+    })
 
+def get_cpu_history():
+    return list(timestamped_cpu_history)
 
 app = Flask(__name__)
 CORS(app)
