@@ -41,6 +41,7 @@ const Dashboard = () => {
         const hostIP = process.env.REACT_APP_HOST_IP;
         const res = await fetch(`https://${hostIP}:2020/system-utilization-history`);
         const data = await res.json();
+        console.log('Fetched CPU history:', data);
         if (data && Array.isArray(data.cpu_history)) {
           setCpuHistory(
             data.cpu_history.map(item => ({
@@ -69,6 +70,7 @@ const Dashboard = () => {
         const hostIP = process.env.REACT_APP_HOST_IP;
         const res = await fetch(`https://${hostIP}:2020/system-utilization`);
         const data = await res.json();
+        console.log('Fetched utilization:', data);
         if (
           data.error ||
           typeof data.cpu !== 'number' || isNaN(data.cpu) ||
