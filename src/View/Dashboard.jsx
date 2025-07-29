@@ -44,12 +44,15 @@ const Dashboard = () => {
         console.log('Fetched CPU history:', data);
         if (data && Array.isArray(data.cpu_history)) {
           setCpuHistory(
-            data.cpu_history.map(item => ({
-              ...item,
-              date: new Date(item.timestamp * 1000),
-              value: typeof item.cpu === 'number' && !isNaN(item.cpu) ? item.cpu : 0
-            }))
+            data.cpu_history.map(item => {
+              const cpuVal = typeof item.cpu === 'number' && !isNaN(item.cpu) ? item.cpu : 0;
+              return {
+                date: new Date(item.timestamp * 1000),
+                value: cpuVal
+              };
+            })
           );
+          console.log('Set CPU history:', cpuHistory);
         } else {
           setCpuHistory([]);
         }
@@ -272,16 +275,15 @@ const Dashboard = () => {
                       }}
                       tooltip={{
                         formatter: (datum) => {
-                          console.log('Tooltip datum:', datum); // <-- Add this line
-                          let v = (typeof datum.value === 'number' && !isNaN(datum.value))
+                          console.log("Tooltip datum:", datum);
+                          const v = typeof datum.value === 'number' && !isNaN(datum.value)
                             ? datum.value
-                            : (typeof datum.cpu === 'number' && !isNaN(datum.cpu))
+                            : (typeof datum.cpu === 'number' && !isNaN(datum.cpu)
                               ? datum.cpu
-                              : 0;
+                              : 0);
                           return { name: 'CPU %', value: v.toFixed(1) };
                         }
-                      }}
-                      smooth
+                      }}                      
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                     />
                   </div>
