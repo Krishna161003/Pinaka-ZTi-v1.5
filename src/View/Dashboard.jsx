@@ -6,7 +6,7 @@ import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
 import cloud from "../Images/cloud-computing_660475.png";
 import squad from "../Images/database_2231963.png";
-import { Area, Gauge } from '@ant-design/plots';
+import { Area, Column, Gauge } from '@ant-design/plots';
 const style = {
   background: '#fff',
   padding: '16px 20px', // Reduced vertical padding for shorter Col height
@@ -232,71 +232,59 @@ const Dashboard = () => {
               </Col>
             </Row>
             {/* Second row: CPU and Memory cards side by side */}
-            <Row gutter={32} justify="center" style={{ marginTop: 48, marginBottom: 32 }}>
-              <Col span={10}>
+            <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32 }}>
+              <Col span={23} style={{ display: 'flex', justifyContent: 'center' }}>
                 <div
                   style={{
                     background: '#fff',
-                    borderRadius: '16px',
+                    borderRadius: '10px',
                     padding: '24px 32px',
                     minHeight: 260,
                     width: '100%',
                     margin: '0 auto',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
                     justifyContent: 'center',
+                    gap: 32,
                   }}
                 >
-                  <h4 style={{ textAlign: 'center', marginBottom: 20 }}>CPU Utilization</h4>
-                  <Area
-                    data={cpuHistory}
-                    xField="date"
-                    yField="value"
-                    height={200}
-                    width={320}
-                    xAxis={{
-                      type: 'time',
-                      tickCount: 5,
-                      label: { formatter: (date) => date.toLocaleTimeString().slice(0, 8) }
-                    }}
-                    yAxis={{
-                      min: 0,
-                      max: 100,
-                      label: { formatter: (v) => `${v}%` },
-                      title: { text: 'CPU %' }
-                    }}
-                    tooltip={{
-                      formatter: (datum) => ({ name: 'CPU %', value: datum.value?.toFixed(1) ?? '0.0' })
-                    }}
-                    smooth
-                    areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
-                  />
-                </div>
-              </Col>
-              <Col span={10}>
-                <div
-                  style={{
-                    background: '#fff',
-                    borderRadius: '16px',
-                    padding: '24px 32px',
-                    minHeight: 260,
-                    width: '100%',
-                    margin: '0 auto',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 0 }}>
+                  {/* CPU Utilization */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <h4 style={{ textAlign: 'center', marginBottom: 20 }}>CPU Utilization</h4>
+                    <Area
+                      data={cpuHistory}
+                      xField="date"
+                      yField="value"
+                      height={200}
+                      width={320}
+                      xAxis={{
+                        type: 'time',
+                        tickCount: 5,
+                        label: { formatter: (date) => date.toLocaleTimeString().slice(0, 8) }
+                      }}
+                      yAxis={{
+                        min: 0,
+                        max: 100,
+                        label: { formatter: (v) => `${v}%` },
+                        title: { text: 'CPU %' }
+                      }}
+                      tooltip={{
+                        formatter: (datum) => ({ name: 'CPU %', value: datum.value?.toFixed(1) ?? '0.0' })
+                      }}
+                      smooth
+                      areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
+                    />
+                  </div>
+                  {/* Memory Utilization */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
                     <Gauge
+                      style={{ marginBottom: -50 }}
                       autoFit={false}
                       width={320}
-                      height={200}
+                      height={260}
                       data={{
                         target: memoryData ?? 0,
                         total: 100,
@@ -309,12 +297,12 @@ const Dashboard = () => {
                         },
                       }}
                       statistic={{
-                        title: false,
-                        contentStyle: { fontSize: 32, fontWeight: 600 },
+                        title: true,
+                        contentStyle: { fontSize: 15, fontWeight: 400 },
                       }}
                     />
                     <div style={{
-                      marginTop: 4,
+                      marginTop: -70,
                       textAlign: 'center',
                       fontWeight: 600,
                       fontSize: 16,
@@ -327,15 +315,14 @@ const Dashboard = () => {
                 </div>
               </Col>
             </Row>
-
-          {/* Password Update Modal Form */}
-          <PasswordUpdateForm
-            isModalVisible={isModalVisible}
-            setIsModalVisible={setIsModalVisible}
-          />
+            {/* Password Update Modal Form */}
+            <PasswordUpdateForm
+              isModalVisible={isModalVisible}
+              setIsModalVisible={setIsModalVisible}
+            />
           </div>
         </Content>
-        
+
       </Layout>
     </Layout1>
   );
