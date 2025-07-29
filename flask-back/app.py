@@ -933,6 +933,8 @@ def system_utilization():
         mem_percent = mem.percent
         total_mem_mb = int(mem.total / (1024*1024))
         used_mem_mb = int(mem.used / (1024*1024))
+        # Add to history buffer
+        add_cpu_history(cpu_percent)
         return jsonify({
             "cpu": cpu_percent,
             "memory": mem_percent,
@@ -948,6 +950,17 @@ def system_utilization():
             "used_memory": 0,
             "error": str(e)
         }), 200
+
+@app.route('/system-utilization-history', methods=['GET'])
+def system_utilization_history():
+    try:
+        # Return the last 60 seconds of CPU usage
+        history = get_cpu_history()
+        return jsonify({"cpu_history": history})
+    except Exception as e:
+        return jsonify({"cpu_history": [], "error": str(e)})
+
+        
 # ------------------- System Utilization Endpoint ends -------------------
 
 # ------------------- Scan Network Endpoint starts-------------------

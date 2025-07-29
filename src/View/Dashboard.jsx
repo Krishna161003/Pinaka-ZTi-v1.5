@@ -6,7 +6,7 @@ import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
 import cloud from "../Images/cloud-computing_660475.png";
 import squad from "../Images/database_2231963.png";
-import { Gauge } from '@ant-design/plots';
+import { Area, Gauge } from '@ant-design/plots';
 const style = {
   background: '#fff',
   padding: '16px 20px', // Reduced vertical padding for shorter Col height
@@ -29,17 +29,46 @@ const { Content } = Layout;
 const Dashboard = () => {
   // --- CPU & Memory Utilization State ---
   const [cpuData, setCpuData] = useState(0);
+  const [cpuHistory, setCpuHistory] = useState([]);
   const [memoryData, setMemoryData] = useState(0);
   const [totalMemory, setTotalMemory] = useState(0);
   const [usedMemory, setUsedMemory] = useState(0);
 
+  // Fetch CPU time series for Area chart
+  useEffect(() => {
+    async function fetchCpuHistory() {
+      try {
+        const hostIP = process.env.REACT_APP_HOST_IP;
+        const res = await fetch(`https://${hostIP}:2020/system-utilization-history`);
+        const data = await res.json();
+        if (data && Array.isArray(data.cpu_history)) {
+          setCpuHistory(
+            data.cpu_history.map(item => ({
+              ...item,
+              // Convert timestamp (seconds) to JS Date for Area chart
+              date: new Date(item.timestamp * 1000),
+              value: item.cpu
+            }))
+          );
+        } else {
+          setCpuHistory([]);
+        }
+      } catch (err) {
+        setCpuHistory([]);
+      }
+    }
+    fetchCpuHistory();
+    const interval = setInterval(fetchCpuHistory, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Still fetch memory and single CPU value for other UI
   useEffect(() => {
     async function fetchUtilization() {
       try {
         const hostIP = process.env.REACT_APP_HOST_IP;
         const res = await fetch(`https://${hostIP}:2020/system-utilization`);
         const data = await res.json();
-        // Defensive: Check for error key or invalid values
         if (
           data.error ||
           typeof data.cpu !== 'number' || isNaN(data.cpu) ||
@@ -282,41 +311,70 @@ const Dashboard = () => {
               </Col>
             </Row>
           </div>
-          <Row gutter={24} justify="center" style={{ marginTop: 32, marginBottom: 16 }}>
-            <Col span={9}>
-            <div style={{ background: '#fff', borderRadius: 10, padding: 8, minHeight: 100, width: 240, margin: '0 auto' }}>
-            <h4 style={{ textAlign: 'center', marginBottom: 12 }}>CPU Utilization</h4>
-                <Gauge
-                  autoFit={false}
-                  width={220}
-                  height={260} // Set a smaller height here (adjust as needed)
-                  data={{
-                    target: cpuData ?? 0,
-                    total: 100,
-                    name: 'CPU',
-                    thresholds: [50, 75, 100],
+          <Row gutter={32} justify="center" style={{ marginTop: 48, marginBottom: 32 }}>
+            <Col span={10}>
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: '20px', // More rounded
+                  padding: '24px 32px',
+                  minHeight: 180,
+                  width: '100%',
+                  margin: '0 auto',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <h4 style={{ textAlign: 'center', marginBottom: 20 }}>CPU Utilization</h4>
+                <Area
+                  data={cpuHistory}
+                  xField="date"
+                  yField="value"
+                  height={160}
+                  width={280}
+                  xAxis={{
+                    type: 'time',
+                    tickCount: 5,
+                    label: { formatter: (date) => date.toLocaleTimeString().slice(0, 8) }
                   }}
-                  scale={{
-                    color: {
-                      range: ['green', '#FAAD14', '#F4664A'],
-                    },
+                  yAxis={{
+                    min: 0,
+                    max: 100,
+                    label: { formatter: (v) => `${v}%` },
+                    title: { text: 'CPU %' }
                   }}
-                  style={{
-                    textContent: (target, total) =>
-                      `CPU: ${target}%\nUsage: ${(target / total * 100).toFixed(1)}%`,
+                  tooltip={{
+                    formatter: (datum) => ({ name: 'CPU %', value: datum.value.toFixed(1) })
                   }}
+                  smooth
+                  areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                 />
-
               </div>
             </Col>
-            <Col span={2} /> {/* Spacer column for separation */}
-            <Col span={9}>
-            <div style={{ background: '#fff', borderRadius: 10, padding: 8, minHeight: 100, width: 260, margin: '0 auto' }}>
-            <h4 style={{ textAlign: 'center', marginBottom: 12 }}>Memory Utilization</h4>
+            <Col span={10}>
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: '20px', // More rounded
+                  padding: '24px 32px',
+                  minHeight: 180,
+                  width: '100%',
+                  margin: '0 auto',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
                 <Gauge
                   autoFit={false}
                   width={220}
-                  height={260} // Match the height here as well
+                  height={160}
                   data={{
                     target: memoryData ?? 0,
                     total: 100,
@@ -333,7 +391,6 @@ const Dashboard = () => {
                       `Used: ${usedMemory} MB / ${totalMemory} MB\nUsage: ${memoryData.toFixed(1)}%`,
                   }}
                 />
-
               </div>
             </Col>
           </Row>
