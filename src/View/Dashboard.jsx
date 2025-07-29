@@ -46,9 +46,8 @@ const Dashboard = () => {
           setCpuHistory(
             data.cpu_history.map(item => ({
               ...item,
-              // Convert timestamp (seconds) to JS Date for Area chart
               date: new Date(item.timestamp * 1000),
-              value: item.cpu
+              value: typeof item.cpu === 'number' && !isNaN(item.cpu) ? item.cpu : 0
             }))
           );
         } else {
@@ -360,39 +359,47 @@ const Dashboard = () => {
               <div
                 style={{
                   background: '#fff',
-                  borderRadius: '20px', // More rounded
+                  borderRadius: '20px',
                   padding: '24px 32px',
-                  minHeight: 180,
+                  minHeight: 220,
                   width: '100%',
                   margin: '0 auto',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
                 }}
               >
                 <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
-                <Gauge
-                  autoFit={false}
-                  width={220}
-                  height={160}
-                  data={{
-                    target: memoryData ?? 0,
-                    total: 100,
-                    name: 'Memory',
-                    thresholds: [50, 75, 100],
-                  }}
-                  scale={{
-                    color: {
-                      range: ['green', '#FAAD14', '#F4664A'],
-                    },
-                  }}
-                  style={{
-                    textContent: () =>
-                      `Used: ${usedMemory} MB / ${totalMemory} MB\nUsage: ${memoryData.toFixed(1)}%`,
-                  }}
-                />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <Gauge
+                    autoFit={false}
+                    width={180}
+                    height={140}
+                    data={{
+                      target: memoryData ?? 0,
+                      total: 100,
+                      name: 'Memory',
+                      thresholds: [50, 75, 100],
+                    }}
+                    scale={{
+                      color: {
+                        range: ['green', '#FAAD14', '#F4664A'],
+                      },
+                    }}
+                  />
+                  <div style={{
+                    marginTop: 12,
+                    textAlign: 'center',
+                    fontWeight: 600,
+                    fontSize: 16,
+                    color: '#333',
+                  }}>
+                    Used: {usedMemory} MB / {totalMemory} MB<br />
+                    Usage: {memoryData.toFixed(1)}%
+                  </div>
+                </div>
               </div>
             </Col>
           </Row>
