@@ -292,7 +292,7 @@ const Dashboard = () => {
                   }}
                 >
                   <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 0 }}>
                     <Gauge
                       autoFit={false}
                       width={320}
@@ -314,7 +314,7 @@ const Dashboard = () => {
                       }}
                     />
                     <div style={{
-                      marginTop: 12,
+                      marginTop: 4,
                       textAlign: 'center',
                       fontWeight: 600,
                       fontSize: 16,
