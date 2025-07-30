@@ -73,7 +73,7 @@ const NetworkApply = () => {
     }
   }, [licenseNodes]);
 
-  // Loader recovery: ensure loader is cleared or timer set after remount or cardStatus change
+  // Loader recovery: robustly clear stuck loaders and expired timers
   useEffect(() => {
     const restartEndTimesRaw = sessionStorage.getItem(RESTART_ENDTIME_KEY);
     const bootEndTimesRaw = sessionStorage.getItem(BOOT_ENDTIME_KEY);
@@ -83,17 +83,18 @@ const NetworkApply = () => {
     let changed = false;
     let newCardStatus = null;
     cardStatus.forEach((status, idx) => {
-      if (status.loading && bootEndTimes[idx]) {
-        const remaining = bootEndTimes[idx] - now;
-        if (remaining <= 0) {
-          // Should already be applied
+      // Loader should only be up if bootEndTime exists and is in the future
+      const bootTime = bootEndTimes[idx];
+      if (status.loading) {
+        if (!bootTime || isNaN(bootTime) || bootTime <= now) {
+          // No boot time or boot time expired/corrupted: clear loader
           newCardStatus = (newCardStatus || [...cardStatus]);
           newCardStatus[idx] = { loading: false, applied: true };
           delete restartEndTimes[idx];
           delete bootEndTimes[idx];
           changed = true;
         } else {
-          // Set a timer to apply when time is up
+          // Set a timer to clear loader at bootEndTime
           if (!timerRefs.current[idx]) {
             timerRefs.current[idx] = setTimeout(() => {
               setCardStatus(prev => prev.map((s, i) => i === idx ? { loading: false, applied: true } : s));
@@ -106,8 +107,14 @@ const NetworkApply = () => {
               delete objB[idx];
               sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(objR));
               sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(objB));
-            }, remaining);
+            }, bootTime - now);
           }
+        }
+      } else {
+        // If not loading, ensure timer is cleared
+        if (timerRefs.current[idx]) {
+          clearTimeout(timerRefs.current[idx]);
+          timerRefs.current[idx] = null;
         }
       }
     });
@@ -116,14 +123,13 @@ const NetworkApply = () => {
       sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(restartEndTimes));
       sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(bootEndTimes));
     }
-    // Clean up timers if loading is false
+    // Also, on every render, clean up any timers for cards that are no longer loading
     cardStatus.forEach((status, idx) => {
       if (!status.loading && timerRefs.current[idx]) {
         clearTimeout(timerRefs.current[idx]);
         timerRefs.current[idx] = null;
       }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cardStatus]);
 
   // Persist forms and cardStatus to sessionStorage on change
