@@ -26,9 +26,15 @@ const App = () => {
   });
 
   // Selected nodes for validation
-  const [selectedNodes, setSelectedNodes] = useState([]);
+  const [selectedNodes, setSelectedNodes] = useState(() => {
+    const saved = sessionStorage.getItem("cloud_selectedNodes");
+    return saved ? JSON.parse(saved) : [];
+  });
   // Nodes that passed validation for license activation
-  const [licenseNodes, setLicenseNodes] = useState([]);
+  const [licenseNodes, setLicenseNodes] = useState(() => {
+    const saved = sessionStorage.getItem("cloud_licenseNodes");
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Update URL when activeTab changes
   useEffect(() => {
@@ -67,12 +73,16 @@ const App = () => {
       sessionStorage.setItem("lastMenuPath", pathWithTab); // For sidebar restore
       sessionStorage.setItem("addnode_activeTab", "1");
       sessionStorage.setItem("lastZtiPath", pathWithTab);
+      // Optionally clear tab data if needed
+      // sessionStorage.removeItem("cloud_selectedNodes");
+      // sessionStorage.removeItem("cloud_licenseNodes");
     };
   }, [location.search]);
 
   // When Discovery Next is clicked, enable Validation tab and switch to it
   const handleDiscoveryNext = (nodes) => {
     setSelectedNodes(nodes);
+    sessionStorage.setItem("cloud_selectedNodes", JSON.stringify(nodes));
     setDisabledTabs((prev) => ({ ...prev, "2": false }));
     setActiveTab("2");
   };
@@ -80,6 +90,7 @@ const App = () => {
   // When Validation Next is clicked, enable License tab and switch to it
   const handleValidationNext = (passedNodes) => {
     setLicenseNodes(passedNodes);
+    sessionStorage.setItem("cloud_licenseNodes", JSON.stringify(passedNodes));
     setDisabledTabs((prev) => ({ ...prev, "3": false }));
     setActiveTab("3");
   };
