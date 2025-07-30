@@ -82,6 +82,16 @@ const NetworkApply = () => {
     const now = Date.now();
     let changed = false;
     let newCardStatus = null;
+    // For storing results
+    let networkApplyResult = {};
+    const resultRaw = sessionStorage.getItem('cloud_networkApplyResult');
+    if (resultRaw) {
+      try {
+        networkApplyResult = JSON.parse(resultRaw);
+      } catch (e) {
+        networkApplyResult = {};
+      }
+    }
     cardStatus.forEach((status, idx) => {
       // Loader should only be up if bootEndTime exists and is in the future
       const bootTime = bootEndTimes[idx];
@@ -93,6 +103,12 @@ const NetworkApply = () => {
           delete restartEndTimes[idx];
           delete bootEndTimes[idx];
           changed = true;
+          // Store the form data for this node in sessionStorage under its IP
+          const nodeIp = forms[idx]?.ip || `node${idx+1}`;
+          networkApplyResult[nodeIp] = {
+            ...forms[idx],
+            tableData: forms[idx]?.tableData || [],
+          };
         } else {
           // Set a timer to clear loader at bootEndTime
           if (!timerRefs.current[idx]) {
@@ -107,6 +123,22 @@ const NetworkApply = () => {
               delete objB[idx];
               sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(objR));
               sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(objB));
+              // Store the form data for this node in sessionStorage under its IP
+              const nodeIp = forms[idx]?.ip || `node${idx+1}`;
+              let networkApplyResultInner = {};
+              const resultRawInner = sessionStorage.getItem('cloud_networkApplyResult');
+              if (resultRawInner) {
+                try {
+                  networkApplyResultInner = JSON.parse(resultRawInner);
+                } catch (e) {
+                  networkApplyResultInner = {};
+                }
+              }
+              networkApplyResultInner[nodeIp] = {
+                ...forms[idx],
+                tableData: forms[idx]?.tableData || [],
+              };
+              sessionStorage.setItem('cloud_networkApplyResult', JSON.stringify(networkApplyResultInner));
             }, bootTime - now);
           }
         }
@@ -115,6 +147,16 @@ const NetworkApply = () => {
         if (timerRefs.current[idx]) {
           clearTimeout(timerRefs.current[idx]);
           timerRefs.current[idx] = null;
+        }
+        // If applied and not yet stored, store the result (for robustness)
+        if (status.applied) {
+          const nodeIp = forms[idx]?.ip || `node${idx+1}`;
+          if (!networkApplyResult[nodeIp]) {
+            networkApplyResult[nodeIp] = {
+              ...forms[idx],
+              tableData: forms[idx]?.tableData || [],
+            };
+          }
         }
       }
     });
@@ -130,7 +172,9 @@ const NetworkApply = () => {
         timerRefs.current[idx] = null;
       }
     });
-  }, [cardStatus]);
+    // Persist the result object
+    sessionStorage.setItem('cloud_networkApplyResult', JSON.stringify(networkApplyResult));
+  }, [cardStatus, forms]);
 
   // Persist forms and cardStatus to sessionStorage on change
   useEffect(() => {

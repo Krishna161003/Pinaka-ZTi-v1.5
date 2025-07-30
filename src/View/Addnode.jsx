@@ -6,6 +6,7 @@ import Discovery from '../Components/Cloud/Discovery.jsx';
 import NodeValidation from '../Components/Cloud/validate.jsx';
 import LicenseActivation from '../Components/Cloud/licenseactivation.jsx';
 import NetworkApply from '../Components/Cloud/networkapply.jsx';
+import Report from '../Components/Cloud/report.jsx';
 // Placeholder components for new tabs
 
 const App = () => {
@@ -191,6 +192,9 @@ const App = () => {
         </Tabs.TabPane>
         <Tabs.TabPane tab="Network Apply" key="4" disabled={!licenseNodes || licenseNodes.length === 0}>
           <NetworkApply />
+        </Tabs.TabPane>
+        <Tabs.TabPane tab="Report" key="5" disabled={!licenseNodes || licenseNodes.length === 0}>
+          <Report />
         </Tabs.TabPane>
       </Tabs>
     </Zti>
