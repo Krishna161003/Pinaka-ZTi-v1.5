@@ -32,6 +32,8 @@ const NetworkApply = () => {
       configType: 'default',
       useBond: false,
       tableData: generateRows('default', false),
+      defaultGateway: '',
+      defaultGatewayError: '',
     }));
   };
   const [forms, setForms] = useState(getInitialForms);
@@ -44,6 +46,8 @@ const NetworkApply = () => {
         configType: 'default',
         useBond: false,
         tableData: generateRows('default', false),
+        defaultGateway: '',
+        defaultGatewayError: '',
       }))
     );
   }, [licenseNodes]);
@@ -101,6 +105,15 @@ const NetworkApply = () => {
           otherRow.type = 'primary';
         }
         updated[otherIndex] = otherRow;
+      } else if (field === 'defaultGateway') {
+        // Handle default gateway separately
+        const newForm = { ...f, defaultGateway: value };
+        if (!ipRegex.test(value)) {
+          newForm.defaultGatewayError = 'Should be a valid address';
+        } else {
+          newForm.defaultGatewayError = '';
+        }
+        return newForm;
       } else {
         row[field] = value;
         // Validation for IP/DNS/Gateway
@@ -326,6 +339,7 @@ const NetworkApply = () => {
               value={record.ip}
               placeholder="Enter IP Address"
               onChange={e => handleCellChange(nodeIdx, rowIdx, 'ip', e.target.value)}
+              disabled={form.configType === 'default' && record.type === 'secondary'}
             />
           </Form.Item>
         ),
@@ -343,6 +357,7 @@ const NetworkApply = () => {
               value={record.subnet}
               placeholder="Enter Subnet"
               onChange={e => handleCellChange(nodeIdx, rowIdx, 'subnet', e.target.value)}
+              disabled={form.configType === 'default' && record.type === 'secondary'}
             />
           </Form.Item>
         ),
@@ -360,6 +375,7 @@ const NetworkApply = () => {
               value={record.dns}
               placeholder="Enter Nameserver"
               onChange={e => handleCellChange(nodeIdx, rowIdx, 'dns', e.target.value)}
+              disabled={form.configType === 'default' && record.type === 'secondary'}
             />
           </Form.Item>
         ),
@@ -387,17 +403,28 @@ const NetworkApply = () => {
         message.error(`Row ${i + 1}: Please select a Type.`);
         return;
       }
-      // Validate required fields
-      for (const field of ['ip', 'subnet', 'dns']) {
-        if (!row[field]) {
-          message.error(`Row ${i + 1}: Please enter ${field.toUpperCase()}.`);
-          return;
+      // Validate required fields (skip for secondary in default mode)
+      if (!(form.configType === 'default' && row.type === 'secondary')) {
+        for (const field of ['ip', 'subnet', 'dns']) {
+          if (!row[field]) {
+            message.error(`Row ${i + 1}: Please enter ${field.toUpperCase()}.`);
+            return;
+          }
         }
       }
       if (Object.keys(row.errors || {}).length > 0) {
         message.error(`Row ${i + 1} contains invalid entries. Please fix them.`);
         return;
       }
+    }
+    // Validate default gateway
+    if (!form.defaultGateway) {
+      message.error('Please enter Default Gateway.');
+      return;
+    }
+    if (!ipRegex.test(form.defaultGateway)) {
+      message.error('Default Gateway must be a valid IP address.');
+      return;
     }
     // Submit logic here (API call or sessionStorage)
     message.success(`Network config for node ${form.ip} submitted!`);
@@ -434,6 +461,21 @@ const NetworkApply = () => {
               size="small"
               scroll={{ x: true }}
             />
+            {/* Default Gateway Field */}
+            <div style={{ margin: '16px 0 0 0', width: '300px' }}>
+              <Form.Item
+                label="Default Gateway"
+                validateStatus={form.defaultGatewayError ? 'error' : ''}
+                help={form.defaultGatewayError}
+                required
+              >
+                <Input
+                  value={form.defaultGateway}
+                  placeholder="Enter Default Gateway"
+                  onChange={e => handleCellChange(idx, 0, 'defaultGateway', e.target.value)}
+                />
+              </Form.Item>
+            </div>
             <Divider />
             <Button type="primary" onClick={() => handleSubmit(idx)} style={{ width: '110px', display: 'flex', marginLeft: '88%' }} >
               Apply Change
