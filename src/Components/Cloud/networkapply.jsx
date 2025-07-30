@@ -473,13 +473,19 @@ const NetworkApply = () => {
                   value={form.defaultGateway}
                   placeholder="Enter Default Gateway"
                   onChange={e => handleCellChange(idx, 0, 'defaultGateway', e.target.value)}
+                  style={{ width: 200 }}
                 />
               </Form.Item>
             </div>
             <Divider />
-            <Button type="primary" onClick={() => handleSubmit(idx)} style={{ width: '110px', display: 'flex', marginLeft: '88%' }} >
-              Apply Change
-            </Button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginRight: '5%' }}>
+              <Button danger onClick={() => handleReset(idx)} style={{ width: '110px', display: 'flex' }}>
+                Reset Value
+              </Button>
+              <Button type="primary" onClick={() => handleSubmit(idx)} style={{ width: '110px', display: 'flex' }} >
+                Apply Change
+              </Button>
+            </div>
           </Card>
         ))}
       </Space>
