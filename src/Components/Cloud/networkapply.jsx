@@ -87,6 +87,18 @@ const NetworkApply = () => {
       tableData: generateRows(f.configType, checked)
     } : f));
   };
+  // Reset handler for a specific node
+  const handleReset = (idx) => {
+    setForms(prev => prev.map((f, i) => i === idx ? {
+      ...f,
+      configType: 'default',
+      useBond: false,
+      tableData: generateRows('default', false),
+      defaultGateway: '',
+      defaultGatewayError: '',
+    } : f));
+  };
+
   const handleCellChange = (nodeIdx, rowIdx, field, value) => {
     setForms(prev => prev.map((f, i) => {
       if (i !== nodeIdx) return f;
