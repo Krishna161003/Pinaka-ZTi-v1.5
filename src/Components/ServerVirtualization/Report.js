@@ -80,7 +80,11 @@ const Report = ({ ibn, onDeploymentComplete }) => {
             license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
             license_type: JSON.parse(sessionStorage.getItem('licenseStatus'))?.type || null,
             license_period: JSON.parse(sessionStorage.getItem('licenseStatus'))?.period || null,
-            vip: sessionStorage.getItem('vip') || null
+            vip: sessionStorage.getItem('vip') || null,
+            Management: sessionStorage.getItem('Management') || null,
+            External_Traffic: sessionStorage.getItem('External_Traffic') || null,
+            Storage: sessionStorage.getItem('Storage') || null,
+            VXLAN: sessionStorage.getItem('VXLAN') || null
           })
         });
         const data = await res.json();
@@ -126,7 +130,11 @@ const Report = ({ ibn, onDeploymentComplete }) => {
             server_type,
             license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
             role: server_type === 'host' ? 'master' : 'worker',
-            host_serverid: server_type === 'child' ? 'parent-host-id' : null // Only needed for child nodes
+            host_serverid: server_type === 'child' ? 'parent-host-id' : null, // Only needed for child nodes
+            Management: sessionStorage.getItem('Management') || null,
+            External_Traffic: sessionStorage.getItem('External_Traffic') || null,
+            Storage: sessionStorage.getItem('Storage') || null,
+            VXLAN: sessionStorage.getItem('VXLAN') || null
           })
         });
 

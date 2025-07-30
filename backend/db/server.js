@@ -276,6 +276,10 @@ db.connect((err) => {
       status VARCHAR(255),               -- status
       type VARCHAR(255),                 -- type
       server_vip VARCHAR(255),           -- Server_vip (can be NULL or value)
+      Management VARCHAR(255) NULL,
+      Storage VARCHAR(255) NULL,
+      External_Traffic VARCHAR(255) NULL,
+      VXLAN VARCHAR(255) NULL,
       datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_user_id (user_id)        -- Added index for foreign key
     ) ENGINE=InnoDB;
@@ -284,77 +288,86 @@ db.connect((err) => {
   db.query(deploymentActivityLogTableSQL, (err, result) => {
     if (err) throw err;
     console.log("Deployment_Activity_log table checked/created...");
-  });
 
-  // Create License table
-  const licenseTableSQL = `
-    CREATE TABLE IF NOT EXISTS License (
-      id INT AUTO_INCREMENT PRIMARY KEY, -- S.No
-      license_code VARCHAR(255) UNIQUE NOT NULL, -- License_code (Primary Key)
-      license_type VARCHAR(255), -- License_type
-      license_period VARCHAR(255), -- License_period
-      license_status VARCHAR(255), -- License_status
-      server_id CHAR(36), -- Server_id (Foreign Key)
-      FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid)
-    ) ENGINE=InnoDB;
-  `;
+    // Create License table
+    const licenseTableSQL = `
+      CREATE TABLE IF NOT EXISTS License (
+        id INT AUTO_INCREMENT PRIMARY KEY, -- S.No
+        license_code VARCHAR(255) UNIQUE NOT NULL, -- License_code (Primary Key)
+        license_type VARCHAR(255), -- License_type
+        license_period VARCHAR(255), -- License_period
+        license_status VARCHAR(255), -- License_status
+        server_id CHAR(36), -- Server_id (Foreign Key)
+        FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid)
+      ) ENGINE=InnoDB;
+    `;
 
-  db.query(licenseTableSQL, (err, result) => {
-    if (err) throw err;
-    console.log("License table checked/created...");
-  });
+    db.query(licenseTableSQL, (err, result) => {
+      if (err) throw err;
+      console.log("License table checked/created...");
 
-  // Create Host table
-  const hostTableSQL = `
-    CREATE TABLE IF NOT EXISTS Host (
-      id INT AUTO_INCREMENT PRIMARY KEY, -- S.No
-      user_id CHAR(36), -- User_id (Foreign Key)
-      server_id CHAR(36), -- Server_id (Foreign Key)
-      cloudname VARCHAR(255), -- Cloudname
-      serverip VARCHAR(15), -- ServerIP
-      servervip VARCHAR(255), -- ServerVIP
-      role VARCHAR(255), -- Role
-      license_code VARCHAR(255), -- License_code (Foreign Key)
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Timestamp
-      FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
-      FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
-      FOREIGN KEY (license_code) REFERENCES License(license_code)
-    ) ENGINE=InnoDB;
-  `;
+      // Create Host table
+      const hostTableSQL = `
+        CREATE TABLE IF NOT EXISTS Host (
+          id INT AUTO_INCREMENT PRIMARY KEY, -- S.No
+          user_id CHAR(36), -- User_id (Foreign Key)
+          server_id CHAR(36), -- Server_id (Foreign Key)
+          cloudname VARCHAR(255), -- Cloudname
+          serverip VARCHAR(15), -- ServerIP
+          servervip VARCHAR(255), -- ServerVIP
+          role VARCHAR(255), -- Role
+          license_code VARCHAR(255), -- License_code (Foreign Key)
+          Management VARCHAR(255) NULL,
+          Storage VARCHAR(255) NULL,
+          External_Traffic VARCHAR(255) NULL,
+          VXLAN VARCHAR(255) NULL,
+          timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Timestamp
+          FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
+          FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
+          FOREIGN KEY (license_code) REFERENCES License(license_code)
+        ) ENGINE=InnoDB;
+      `;
 
-  db.query(hostTableSQL, (err, result) => {
-    if (err) throw err;
-    console.log("Host table checked/created...");
-    // Ensure unique constraint on server_id
-    db.query('ALTER TABLE Host ADD UNIQUE KEY unique_server_id (server_id)', (err) => {
-      if (err && err.code !== 'ER_DUP_KEYNAME' && err.code !== 'ER_DUP_ENTRY' && err.code !== 'ER_ALREADY_EXISTS') {
-        // Ignore if already exists, else log
-        console.error('Error adding unique constraint to Host.server_id:', err.message);
-      } else if (!err) {
-        console.log('Unique constraint on Host.server_id ensured.');
-      }
+      db.query(hostTableSQL, (err, result) => {
+        if (err) throw err;
+        console.log("Host table checked/created...");
+        // Ensure unique constraint on server_id
+        db.query('ALTER TABLE Host ADD UNIQUE KEY unique_server_id (server_id)', (err) => {
+          if (err && err.code !== 'ER_DUP_KEYNAME' && err.code !== 'ER_DUP_ENTRY' && err.code !== 'ER_ALREADY_EXISTS') {
+            // Ignore if already exists, else log
+            console.error('Error adding unique constraint to Host.server_id:', err.message);
+          } else if (!err) {
+            console.log('Unique constraint on Host.server_id ensured.');
+          }
+        });
+      });
+
+      // Create Child Node table
+      const childNodeTableSQL = `
+        CREATE TABLE IF NOT EXISTS child_node (
+          id INT AUTO_INCREMENT PRIMARY KEY, -- S.No
+          user_id CHAR(36), -- User_id (Foreign Key)
+          server_id CHAR(36), -- Server_id (Foreign Key)
+          host_serverid VARCHAR(255), -- Host_serverid
+          serverip VARCHAR(15), -- ServerIP
+          role VARCHAR(255), -- Role
+          license_code VARCHAR(255), -- License_code (Foreign Key)
+          Management VARCHAR(255) NULL,
+          Storage VARCHAR(255) NULL,
+          External_Traffic VARCHAR(255) NULL,
+          VXLAN VARCHAR(255) NULL,
+          timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Timestamp
+          FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
+          FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
+          FOREIGN KEY (license_code) REFERENCES License(license_code)
+        ) ENGINE=InnoDB;
+      `;
+
+      db.query(childNodeTableSQL, (err, result) => {
+        if (err) throw err;
+        console.log("Child Node table checked/created...");
+      });
     });
-  });
-
-  // Create Child Node table
-  const childNodeTableSQL = `
-    CREATE TABLE IF NOT EXISTS child_node (
-      id INT AUTO_INCREMENT PRIMARY KEY, -- S.No
-      user_id CHAR(36), -- User_id (Foreign Key)
-      server_id CHAR(36), -- Server_id (Foreign Key)
-      host_serverid VARCHAR(255), -- Host_serverid
-      serverip VARCHAR(15), -- ServerIP
-      role VARCHAR(255), -- Role
-      license_code VARCHAR(255), -- License_code (Foreign Key)
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Timestamp
-      FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
-      FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
-      FOREIGN KEY (license_code) REFERENCES License(license_code)
-    ) ENGINE=InnoDB;
-  `;
-
-  db.query(childNodeTableSQL, (err, result) => {
-    if (err) throw err;
     console.log("Child Node table checked/created...");
   });
 });
@@ -364,7 +377,7 @@ db.connect((err) => {
 const { nanoid } = require('nanoid');
 
 app.post('/api/deployment-activity-log', (req, res) => {
-  const { user_id, username, cloudname, serverip, vip } = req.body;
+  const { user_id, username, cloudname, serverip, vip, Management, External_Traffic, Storage, VXLAN } = req.body;
   if (!user_id || !username || !cloudname || !serverip) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -381,10 +394,10 @@ app.post('/api/deployment-activity-log', (req, res) => {
   }
   const sql = `
     INSERT INTO deployment_activity_log
-      (serverid, user_id, username, cloudname, serverip, status, type, server_vip)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      (serverid, user_id, username, cloudname, serverip, status, type, server_vip, Management, External_Traffic, Storage, VXLAN)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
-  db.query(sql, [serverid, user_id, username, cloudname, serverip, status, type, vip], (err, result) => {
+  db.query(sql, [serverid, user_id, username, cloudname, serverip, status, type, vip, Management || null, External_Traffic || null, Storage || null, VXLAN || null], (err, result) => {
     if (err) {
       console.error('Error inserting deployment activity log:', err);
       return res.status(500).json({ error: 'Failed to insert deployment activity log' });
@@ -466,8 +479,8 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
       if (server_type === 'host') {
         // Insert into Host table
         const hostSQL = `
-          INSERT IGNORE INTO Host (user_id, server_id, cloudname, serverip, servervip, role, license_code)
-          VALUES (?, ?, ?, ?, ?, ?, ?)
+          INSERT IGNORE INTO Host (user_id, server_id, cloudname, serverip, servervip, role, license_code, Management, External_Traffic, Storage, VXLAN)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         db.query(hostSQL, [
           deployment.user_id,
@@ -476,7 +489,11 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
           deployment.serverip,
           deployment.server_vip,
           role || 'host',
-          licenseCodeToUse
+          licenseCodeToUse,
+          req.body.Management || deployment.Management || null,
+          req.body.External_Traffic || deployment.External_Traffic || null,
+          req.body.Storage || deployment.Storage || null,
+          req.body.VXLAN || deployment.VXLAN || null
         ], (err) => {
           if (err) {
             console.error('Error creating host record:', err);
@@ -487,8 +504,8 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
       } else if (server_type === 'child') {
         // Insert into child_node table
         const childSQL = `
-          INSERT INTO child_node (user_id, server_id, host_serverid, serverip, role, license_code)
-          VALUES (?, ?, ?, ?, ?, ?)
+          INSERT INTO child_node (user_id, server_id, host_serverid, serverip, role, license_code, Management, External_Traffic, Storage, VXLAN)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         db.query(childSQL, [
           deployment.user_id,
@@ -496,7 +513,11 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
           host_serverid || '',
           deployment.serverip,
           role || 'child',
-          licenseCodeToUse
+          licenseCodeToUse,
+          req.body.Management || deployment.Management || null,
+          req.body.External_Traffic || deployment.External_Traffic || null,
+          req.body.Storage || deployment.Storage || null,
+          req.body.VXLAN || deployment.VXLAN || null
         ], (err) => {
           if (err) {
             console.error('Error creating child node record:', err);

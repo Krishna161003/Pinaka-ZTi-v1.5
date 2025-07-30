@@ -200,6 +200,31 @@ const Deployment = ({ next }) => {
       if (serverIp) {
         sessionStorage.setItem("server_ip", serverIp);
       }
+      // --- Store network role IPs (Management, External_Traffic, Storage, VXLAN) ---
+      const roleTypes = [
+        { key: 'Management', label: 'Management' },
+        { key: 'External_Traffic', label: 'External Traffic' },
+        { key: 'Storage', label: 'Storage' },
+        { key: 'VXLAN', label: 'VXLAN' },
+      ];
+      roleTypes.forEach(({ key, label }) => {
+        // For each row, if type matches (can be string or array), collect IP
+        let ips = tableData
+          .filter(row => {
+            if (Array.isArray(row.type)) {
+              return row.type.includes(label);
+            } else {
+              return row.type === label;
+            }
+          })
+          .map(row => row.ip)
+          .filter(ip => !!ip);
+        if (ips.length > 0) {
+          sessionStorage.setItem(key, ips.join(','));
+        } else {
+          sessionStorage.removeItem(key); // Clean up if not present
+        }
+      });
       // message.success('All validations passed. Proceeding to submit...');
       // TODO: Add actual submission logic
     } catch (error) {
