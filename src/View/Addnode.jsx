@@ -5,6 +5,7 @@ import Zti from "../Components/Zti.jsx"
 import Discovery from '../Components/Cloud/Discovery.jsx';
 import NodeValidation from '../Components/Cloud/validate.jsx';
 import LicenseActivation from '../Components/Cloud/licenseactivation.jsx';
+import NetworkApply from '../Components/Cloud/networkapply.jsx';
 // Placeholder components for new tabs
 
 const App = () => {
@@ -181,6 +182,9 @@ const App = () => {
             results={licenseActivationResults}
             setResults={handleLicenseActivation}
           />
+        </Tabs.TabPane>
+        <Tabs.TabPane tab="Network Apply" key="4" disabled={!licenseNodes || licenseNodes.length === 0}>
+          <NetworkApply />
         </Tabs.TabPane>
       </Tabs>
     </Zti>
