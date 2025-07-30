@@ -44,19 +44,26 @@ const NetworkApply = () => {
   };
   const [forms, setForms] = useState(getInitialForms);
 
-  // If licenseNodes changes (e.g. after license activation), reset forms
+  // If licenseNodes changes (e.g. after license activation), restore from sessionStorage if available, else reset
   useEffect(() => {
-    setForms(
-      licenseNodes.map(node => ({
-        ip: node.ip,
-        configType: 'default',
-        useBond: false,
-        tableData: generateRows('default', false),
-        defaultGateway: '',
-        defaultGatewayError: '',
-      }))
-    );
-    setCardStatus(licenseNodes.map(() => ({ loading: false, applied: false })));
+    const savedForms = sessionStorage.getItem('cloud_networkApplyForms');
+    const savedStatus = sessionStorage.getItem('cloud_networkApplyCardStatus');
+    if (savedForms && savedStatus) {
+      setForms(JSON.parse(savedForms));
+      setCardStatus(JSON.parse(savedStatus));
+    } else {
+      setForms(
+        licenseNodes.map(node => ({
+          ip: node.ip,
+          configType: 'default',
+          useBond: false,
+          tableData: generateRows('default', false),
+          defaultGateway: '',
+          defaultGatewayError: '',
+        }))
+      );
+      setCardStatus(licenseNodes.map(() => ({ loading: false, applied: false })));
+    }
   }, [licenseNodes]);
 
   // Persist forms and cardStatus to sessionStorage on change
