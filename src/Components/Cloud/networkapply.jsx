@@ -22,8 +22,13 @@ function getLicenseNodes() {
 
 const NetworkApply = () => {
   const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
-  // Per-card loading and applied state
-  const [cardStatus, setCardStatus] = useState(() => licenseNodes.map(() => ({ loading: false, applied: false })));
+  // Per-card loading and applied state, restore from sessionStorage if available
+  const getInitialCardStatus = () => {
+    const saved = sessionStorage.getItem('cloud_networkApplyCardStatus');
+    if (saved) return JSON.parse(saved);
+    return licenseNodes.map(() => ({ loading: false, applied: false }));
+  };
+  const [cardStatus, setCardStatus] = useState(getInitialCardStatus);
   // Restore forms from sessionStorage if available
   const getInitialForms = () => {
     const saved = sessionStorage.getItem('cloud_networkApplyForms');
@@ -54,8 +59,14 @@ const NetworkApply = () => {
     setCardStatus(licenseNodes.map(() => ({ loading: false, applied: false })));
   }, [licenseNodes]);
 
-  // Persist forms to sessionStorage on change
+  // Persist forms and cardStatus to sessionStorage on change
   useEffect(() => {
+    sessionStorage.setItem('cloud_networkApplyForms', JSON.stringify(forms));
+  }, [forms]);
+
+  useEffect(() => {
+    sessionStorage.setItem('cloud_networkApplyCardStatus', JSON.stringify(cardStatus));
+  }, [cardStatus]);
     sessionStorage.setItem('cloud_networkApplyForms', JSON.stringify(forms));
   }, [forms]);
 
@@ -460,7 +471,17 @@ const NetworkApply = () => {
 
   return (
     <div style={{ padding: 24 }}>
-      <Typography.Title level={3}>Network Apply</Typography.Title>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>Network Apply</Typography.Title>
+        <Button
+          type="primary"
+          onClick={handleNext}
+          style={{ width: 120, visibility: 'visible' }}
+          disabled={!allApplied}
+        >
+          Next
+        </Button>
+      </div>
       <Divider />
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {forms.map((form, idx) => (
@@ -522,14 +543,6 @@ const NetworkApply = () => {
           </Card>
         </Spin>
         ))}
-        {/* Next button at top right after all applied */}
-        {allApplied && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginTop: 16 }}>
-            <Button type="primary" onClick={handleNext} style={{ width: 120 }}>
-              Next
-            </Button>
-          </div>
-        )}
       </Space>
     </div>
   );
