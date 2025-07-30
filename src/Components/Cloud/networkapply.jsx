@@ -22,7 +22,8 @@ function getLicenseNodes() {
 
 const NetworkApply = () => {
   const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
-  const [loading, setLoading] = useState(false);
+  // Per-card loading and applied state
+  const [cardStatus, setCardStatus] = useState(() => licenseNodes.map(() => ({ loading: false, applied: false })));
   // Restore forms from sessionStorage if available
   const getInitialForms = () => {
     const saved = sessionStorage.getItem('cloud_networkApplyForms');
@@ -50,6 +51,7 @@ const NetworkApply = () => {
         defaultGatewayError: '',
       }))
     );
+    setCardStatus(licenseNodes.map(() => ({ loading: false, applied: false })));
   }, [licenseNodes]);
 
   // Persist forms to sessionStorage on change
@@ -403,6 +405,7 @@ const NetworkApply = () => {
   };
 
   const handleSubmit = (nodeIdx) => {
+    if (cardStatus[nodeIdx].loading || cardStatus[nodeIdx].applied) return;
     // Validate all rows for this node
     const form = forms[nodeIdx];
     for (let i = 0; i < form.tableData.length; i++) {
@@ -439,7 +442,20 @@ const NetworkApply = () => {
       return;
     }
     // Submit logic here (API call or sessionStorage)
-    message.success(`Network config for node ${form.ip} submitted!`);
+    setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { ...s, loading: true } : s));
+    // Simulate network apply and node restart (replace with real API call)
+    setTimeout(() => {
+      setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
+      message.success(`Network config for node ${form.ip} applied! Node restarted.`);
+    }, 3000); // Simulate 3s loader
+  };
+
+  // Check if all cards are applied
+  const allApplied = cardStatus.length > 0 && cardStatus.every(s => s.applied);
+
+  const handleNext = () => {
+    // TODO: Implement next step (e.g., go to next tab or section)
+    message.info('Proceeding to the next step...');
   };
 
   return (
@@ -448,12 +464,14 @@ const NetworkApply = () => {
       <Divider />
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {forms.map((form, idx) => (
-          <Card key={form.ip} title={`Node: ${form.ip}`} style={{ width: '100%' }}>
-            <div style={{ marginBottom: 16 }}>
-              <Radio.Group
-                value={form.configType}
-                onChange={e => handleConfigTypeChange(idx, e.target.value)}
-              >
+          <Spin spinning={cardStatus[idx]?.loading} tip="Applying network changes & restarting node...">
+            <Card key={form.ip} title={`Node: ${form.ip}`} style={{ width: '100%' }}>
+              <div style={{ marginBottom: 16 }}>
+                <Radio.Group
+                  value={form.configType}
+                  onChange={e => handleConfigTypeChange(idx, e.target.value)}
+                  disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
+                >
                 <Radio value="default">Default</Radio>
                 <Radio value="segregated">Segregated</Radio>
               </Radio.Group>
@@ -461,6 +479,7 @@ const NetworkApply = () => {
                 checked={form.useBond}
                 style={{ marginLeft: 24 }}
                 onChange={e => handleUseBondChange(idx, e.target.checked)}
+                disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
               >
                 Bond
               </Checkbox>
@@ -472,6 +491,7 @@ const NetworkApply = () => {
               bordered
               size="small"
               scroll={{ x: true }}
+              rowClassName={() => (cardStatus[idx]?.loading || cardStatus[idx]?.applied ? 'ant-table-disabled' : '')}
             />
             {/* Default Gateway Field */}
             <div style={{ margin: '16px 0 0 0', width: '300px' }}>
@@ -486,20 +506,30 @@ const NetworkApply = () => {
                   placeholder="Enter Default Gateway"
                   onChange={e => handleCellChange(idx, 0, 'defaultGateway', e.target.value)}
                   style={{ width: 200 }}
+                  disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
                 />
               </Form.Item>
             </div>
             <Divider />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginRight: '5%' }}>
-              <Button danger onClick={() => handleReset(idx)} style={{ width: '110px', display: 'flex' }}>
+              <Button danger onClick={() => handleReset(idx)} style={{ width: '110px', display: 'flex' }} disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}>
                 Reset Value
               </Button>
-              <Button type="primary" onClick={() => handleSubmit(idx)} style={{ width: '110px', display: 'flex' }} >
+              <Button type="primary" onClick={() => handleSubmit(idx)} style={{ width: '110px', display: 'flex' }} disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}>
                 Apply Change
               </Button>
             </div>
           </Card>
+        </Spin>
         ))}
+        {/* Next button at top right after all applied */}
+        {allApplied && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%', marginTop: 16 }}>
+            <Button type="primary" onClick={handleNext} style={{ width: 120 }}>
+              Next
+            </Button>
+          </div>
+        )}
       </Space>
     </div>
   );
