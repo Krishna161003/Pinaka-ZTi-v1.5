@@ -21,7 +21,9 @@ function getLicenseNodes() {
 }
 
 const RESTART_DURATION = 3000; // ms
+const BOOT_DURATION = 5000; // ms after restart
 const RESTART_ENDTIME_KEY = 'cloud_networkApplyRestartEndTimes';
+const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
 
 const NetworkApply = () => {
   const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
@@ -69,41 +71,61 @@ const NetworkApply = () => {
       );
       setCardStatus(licenseNodes.map(() => ({ loading: false, applied: false })));
     }
-    // Loader recovery: check restartEndTimes
+  }, [licenseNodes]);
+
+  // Loader recovery: ensure loader is cleared or timer set after remount or cardStatus change
+  useEffect(() => {
     const restartEndTimesRaw = sessionStorage.getItem(RESTART_ENDTIME_KEY);
+    const bootEndTimesRaw = sessionStorage.getItem(BOOT_ENDTIME_KEY);
     const restartEndTimes = restartEndTimesRaw ? JSON.parse(restartEndTimesRaw) : {};
+    const bootEndTimes = bootEndTimesRaw ? JSON.parse(bootEndTimesRaw) : {};
     const now = Date.now();
     let changed = false;
     let newCardStatus = null;
-    Object.entries(restartEndTimes).forEach(([idx, endTime]) => {
-      idx = parseInt(idx, 10);
-      if (cardStatus[idx] && cardStatus[idx].loading) {
-        const remaining = endTime - now;
+    cardStatus.forEach((status, idx) => {
+      if (status.loading && bootEndTimes[idx]) {
+        const remaining = bootEndTimes[idx] - now;
         if (remaining <= 0) {
           // Should already be applied
           newCardStatus = (newCardStatus || [...cardStatus]);
           newCardStatus[idx] = { loading: false, applied: true };
           delete restartEndTimes[idx];
+          delete bootEndTimes[idx];
           changed = true;
         } else {
           // Set a timer to apply when time is up
-          timerRefs.current[idx] = setTimeout(() => {
-            setCardStatus(prev => prev.map((s, i) => i === idx ? { loading: false, applied: true } : s));
-            // Remove from sessionStorage
-            const stored = sessionStorage.getItem(RESTART_ENDTIME_KEY);
-            const obj = stored ? JSON.parse(stored) : {};
-            delete obj[idx];
-            sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(obj));
-          }, remaining);
+          if (!timerRefs.current[idx]) {
+            timerRefs.current[idx] = setTimeout(() => {
+              setCardStatus(prev => prev.map((s, i) => i === idx ? { loading: false, applied: true } : s));
+              // Remove from sessionStorage
+              const storedR = sessionStorage.getItem(RESTART_ENDTIME_KEY);
+              const objR = storedR ? JSON.parse(storedR) : {};
+              const storedB = sessionStorage.getItem(BOOT_ENDTIME_KEY);
+              const objB = storedB ? JSON.parse(storedB) : {};
+              delete objR[idx];
+              delete objB[idx];
+              sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(objR));
+              sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(objB));
+            }, remaining);
+          }
         }
       }
     });
     if (changed && newCardStatus) {
       setCardStatus(newCardStatus);
       sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(restartEndTimes));
+      sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(bootEndTimes));
     }
+    // Clean up timers if loading is false
+    cardStatus.forEach((status, idx) => {
+      if (!status.loading && timerRefs.current[idx]) {
+        clearTimeout(timerRefs.current[idx]);
+        timerRefs.current[idx] = null;
+      }
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [licenseNodes]);
+  }, [cardStatus]);
+
   // Persist forms and cardStatus to sessionStorage on change
   useEffect(() => {
     sessionStorage.setItem('cloud_networkApplyForms', JSON.stringify(forms));
@@ -497,22 +519,25 @@ const NetworkApply = () => {
     }
     // Submit logic here (API call or sessionStorage)
     setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { ...s, loading: true } : s));
-    // Store restartEndTime in sessionStorage
+    // Store restartEndTime and bootEndTime in sessionStorage
     const restartEndTimesRaw = sessionStorage.getItem(RESTART_ENDTIME_KEY);
+    const bootEndTimesRaw = sessionStorage.getItem(BOOT_ENDTIME_KEY);
     const restartEndTimes = restartEndTimesRaw ? JSON.parse(restartEndTimesRaw) : {};
-    const endTime = Date.now() + RESTART_DURATION;
-    restartEndTimes[nodeIdx] = endTime;
+    const bootEndTimes = bootEndTimesRaw ? JSON.parse(bootEndTimesRaw) : {};
+    const now = Date.now();
+    const restartEnd = now + RESTART_DURATION;
+    const bootEnd = restartEnd + BOOT_DURATION;
+    restartEndTimes[nodeIdx] = restartEnd;
+    bootEndTimes[nodeIdx] = bootEnd;
     sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(restartEndTimes));
+    sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(bootEndTimes));
     // Simulate network apply and node restart (replace with real API call)
     timerRefs.current[nodeIdx] = setTimeout(() => {
-      setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
-      // Remove from sessionStorage
-      const stored = sessionStorage.getItem(RESTART_ENDTIME_KEY);
-      const obj = stored ? JSON.parse(stored) : {};
-      delete obj[nodeIdx];
-      sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(obj));
-      message.success(`Network config for node ${form.ip} applied! Node restarted.`);
+      // Simulate server restart done, now wait for boot
+      message.success(`Network config for node ${form.ip} applied! Node restarting...`);
+      // The loader will remain until BOOT_DURATION is also over (handled by loader recovery effect)
     }, RESTART_DURATION);
+
   };
 
   // Clean up timers on unmount
