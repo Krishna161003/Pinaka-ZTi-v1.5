@@ -41,14 +41,14 @@ const Dashboard = () => {
         const hostIP = process.env.REACT_APP_HOST_IP;
         const res = await fetch(`https://${hostIP}:2020/system-utilization-history`);
         const data = await res.json();
-        console.log('Fetched CPU history:', data);
+        // console.log('Fetched CPU history:', data);
         if (data && Array.isArray(data.cpu_history)) {
           setCpuHistory(
             data.cpu_history.map(item => {
               const cpuVal = typeof item.cpu === 'number' && !isNaN(item.cpu) ? item.cpu : 0;
               return {
                 date: new Date(item.timestamp * 1000),
-                value: cpuVal
+                cpu: cpuVal
               };
             })
           );
@@ -71,7 +71,7 @@ const Dashboard = () => {
         const hostIP = process.env.REACT_APP_HOST_IP;
         const res = await fetch(`https://${hostIP}:2020/system-utilization`);
         const data = await res.json();
-        console.log('Fetched utilization:', data);
+        // console.log('Fetched utilization:', data);
         if (
           data.error ||
           typeof data.cpu !== 'number' || isNaN(data.cpu) ||
@@ -258,32 +258,9 @@ const Dashboard = () => {
                     <Area
                       data={cpuHistory}
                       xField="date"
-                      yField="value"
+                      yField="cpu"
                       height={240}
                       width={320}
-                      xAxis={{
-                        type: 'time',
-                        tickCount: 5,
-                        label: { formatter: (date) => date.toLocaleTimeString().slice(0, 8) }
-                      }}
-                      yAxis={{
-                        min: 0,
-                        max: 100,
-                        label: { formatter: (v) => `${v.toFixed(1)}%` },
-                        title: { text: 'CPU %' }
-                      }}
-                      tooltip={{
-                        customItems: (originalItems) => {
-                          return originalItems.map(item => {
-                            const cpu = item.data?.value ?? item.value ?? 0;
-                            return {
-                              ...item,
-                              name: 'CPU',
-                              value: `${cpu.toFixed(1)}%`,
-                            };
-                          });
-                        }
-                      }}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                     />
 

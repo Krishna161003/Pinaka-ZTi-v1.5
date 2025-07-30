@@ -83,7 +83,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
           })
         });
         const data = await res.json();
-        console.log('Deployment activity log response:', data);
+        // console.log('Deployment activity log response:', data);
         if (data.serverid) {
           serveridRef.current = data.serverid;
           sessionStorage.setItem('currentServerid', data.serverid);
