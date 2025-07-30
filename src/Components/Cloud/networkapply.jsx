@@ -67,8 +67,6 @@ const NetworkApply = () => {
   useEffect(() => {
     sessionStorage.setItem('cloud_networkApplyCardStatus', JSON.stringify(cardStatus));
   }, [cardStatus]);
-    sessionStorage.setItem('cloud_networkApplyForms', JSON.stringify(forms));
-  }, [forms]);
 
   function generateRows(configType, useBond) {
     const count = configType === 'default' ? 2 : 4;
