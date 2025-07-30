@@ -58,8 +58,9 @@ const Report = ({ ibn, onDeploymentComplete }) => {
       const userData = loginDetails?.data;
       const user_id = userData?.id;
       const username = userData?.companyName;
-      if (!user_id || !username || !cloudName || !hostIP) {
-        console.warn('Missing required fields for deployment log', { user_id, username, cloudName, hostIP });
+      const server_ip = sessionStorage.getItem('server_ip');
+      if (!user_id || !username || !cloudName || !server_ip) {
+        console.warn('Missing required fields for deployment log', { user_id, username, cloudName, hostIP, server_ip });
         return;
       }
       if (serveridRef.current) {
@@ -67,7 +68,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         return;
       }
       try {
-        console.log('POSTing deployment activity log', { user_id, username, cloudName, hostIP });
+        console.log('POSTing deployment activity log', { user_id, username, cloudName, server_ip });
         const res = await fetch(`https://${hostIP}:5000/api/deployment-activity-log`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -75,7 +76,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
             user_id,
             username,
             cloudname: cloudName,
-            serverip: hostIP,
+            serverip: sessionStorage.getItem('server_ip') || null,
             license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
             license_type: JSON.parse(sessionStorage.getItem('licenseStatus'))?.type || null,
             license_period: JSON.parse(sessionStorage.getItem('licenseStatus'))?.period || null,
@@ -306,7 +307,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         &nbsp;&nbsp;{cloudName} Cloud
       </h5>
       <Divider />
-      <Card title={`Progress Report for ${cloudName} Cloud (${hostIP})`}>
+      <Card title={`Progress Report for ${cloudName} Cloud (${sessionStorage.getItem('server_ip')})`}>
         <Row gutter={24}>
           <Col span={24}>
             <Flex gap="small" vertical style={{ marginBottom: '20px' }}>

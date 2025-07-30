@@ -181,10 +181,24 @@ const Deployment = ({ next }) => {
       }
 
       // ✅ All validations passed
-      // Store VIP in sessionStorage
+      // Store VIP and Server IP in sessionStorage
       const vipSessionValue = vipform.getFieldValue("vip");
       if (vipSessionValue) {
         sessionStorage.setItem("vip", vipSessionValue);
+      }
+      // --- Store server IP ---
+      let serverIp = null;
+      if (configType === 'default') {
+        // Find row with type 'primary'
+        const primaryRow = tableData.find(row => row.type === 'primary');
+        if (primaryRow && primaryRow.ip) serverIp = primaryRow.ip;
+      } else if (configType === 'segregated') {
+        // Find row with type including 'Management'
+        const mgmtRow = tableData.find(row => Array.isArray(row.type) && row.type.includes('Management'));
+        if (mgmtRow && mgmtRow.ip) serverIp = mgmtRow.ip;
+      }
+      if (serverIp) {
+        sessionStorage.setItem("server_ip", serverIp);
       }
       // message.success('All validations passed. Proceeding to submit...');
       // TODO: Add actual submission logic
@@ -527,54 +541,63 @@ const Deployment = ({ next }) => {
       {
         title: 'Type',
         dataIndex: 'type',
-        render: (_, record, index) => (
-          <Select
-            mode={configType === 'segregated' ? 'multiple' : undefined}
-            allowClear
-            style={{ width: '100%' }}
-            value={record.type}
-            placeholder="Select type"
-            onChange={(value) => handleCellChange(index, 'type', value)}
-          >
-            {configType === 'segregated' ? (
-              <>
-                <Option value="Management">
-                  <Tooltip placement="right" title="Mangement" >
-                    Mgmt
-                  </Tooltip>
-                </Option>
-                <Option value="VXLAN">
-                  <Tooltip placement="right" title="VXLAN">
-                    VXLAN
-                  </Tooltip>
-                </Option>
-                <Option value="Storage">
-                  <Tooltip placement="right" title="Storage">
-                    Storage
-                  </Tooltip>
-                </Option>
-                <Option value="External Traffic">
-                  <Tooltip placement="right" title="External Traffic">
-                    External Traffic
-                  </Tooltip>
-                </Option>
-              </>
-            ) : (
-              <>
-                <Option value="primary">
-                  <Tooltip placement="right" title="Primary">
-                    Primary
-                  </Tooltip>
-                </Option>
-                <Option value="secondary">
-                  <Tooltip placement="right" title="Secondary">
-                    Secondary
-                  </Tooltip>
-                </Option>
-              </>
-            )}
-          </Select>
-        ),
+        render: (_, record, index) => {
+          // --- Restrict Management type in segregated mode ---
+          let managementTaken = false;
+          if (configType === 'segregated') {
+            managementTaken = tableData.some((row, i) => i !== index && Array.isArray(row.type) && row.type.includes('Management'));
+          }
+          return (
+            <Select
+              mode={configType === 'segregated' ? 'multiple' : undefined}
+              allowClear
+              style={{ width: '100%' }}
+              value={record.type}
+              placeholder="Select type"
+              onChange={(value) => handleCellChange(index, 'type', value)}
+            >
+              {configType === 'segregated' ? (
+                <>
+                  {!managementTaken || (Array.isArray(record.type) && record.type.includes('Management')) ? (
+                    <Option value="Management">
+                      <Tooltip placement="right" title="Mangement" >
+                        Mgmt
+                      </Tooltip>
+                    </Option>
+                  ) : null}
+                  <Option value="VXLAN">
+                    <Tooltip placement="right" title="VXLAN">
+                      VXLAN
+                    </Tooltip>
+                  </Option>
+                  <Option value="Storage">
+                    <Tooltip placement="right" title="Storage">
+                      Storage
+                    </Tooltip>
+                  </Option>
+                  <Option value="External Traffic">
+                    <Tooltip placement="right" title="External Traffic">
+                      External Traffic
+                    </Tooltip>
+                  </Option>
+                </>
+              ) : (
+                <>
+                  <Option value="primary">
+                    <Tooltip placement="right" title="Primary">
+                      Primary
+                    </Tooltip>
+                  </Option>
+                  <Option value="secondary">
+                    <Tooltip placement="right" title="Secondary">
+                      Secondary
+                    </Tooltip>
+                  </Option>
+                </>
+              )}
+            </Select>
+          );
+        },
       },
       {
         title: 'IP ADDRESS',
