@@ -20,6 +20,9 @@ function getLicenseNodes() {
   return saved ? JSON.parse(saved) : [];
 }
 
+const RESTART_DURATION = 3000; // ms
+const RESTART_ENDTIME_KEY = 'cloud_networkApplyRestartEndTimes';
+
 const NetworkApply = () => {
   const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
   // Per-card loading and applied state, restore from sessionStorage if available
@@ -29,6 +32,8 @@ const NetworkApply = () => {
     return licenseNodes.map(() => ({ loading: false, applied: false }));
   };
   const [cardStatus, setCardStatus] = useState(getInitialCardStatus);
+  // For loader recovery timers
+  const timerRefs = React.useRef([]);
   // Restore forms from sessionStorage if available
   const getInitialForms = () => {
     const saved = sessionStorage.getItem('cloud_networkApplyForms');
@@ -64,8 +69,41 @@ const NetworkApply = () => {
       );
       setCardStatus(licenseNodes.map(() => ({ loading: false, applied: false })));
     }
+    // Loader recovery: check restartEndTimes
+    const restartEndTimesRaw = sessionStorage.getItem(RESTART_ENDTIME_KEY);
+    const restartEndTimes = restartEndTimesRaw ? JSON.parse(restartEndTimesRaw) : {};
+    const now = Date.now();
+    let changed = false;
+    let newCardStatus = null;
+    Object.entries(restartEndTimes).forEach(([idx, endTime]) => {
+      idx = parseInt(idx, 10);
+      if (cardStatus[idx] && cardStatus[idx].loading) {
+        const remaining = endTime - now;
+        if (remaining <= 0) {
+          // Should already be applied
+          newCardStatus = (newCardStatus || [...cardStatus]);
+          newCardStatus[idx] = { loading: false, applied: true };
+          delete restartEndTimes[idx];
+          changed = true;
+        } else {
+          // Set a timer to apply when time is up
+          timerRefs.current[idx] = setTimeout(() => {
+            setCardStatus(prev => prev.map((s, i) => i === idx ? { loading: false, applied: true } : s));
+            // Remove from sessionStorage
+            const stored = sessionStorage.getItem(RESTART_ENDTIME_KEY);
+            const obj = stored ? JSON.parse(stored) : {};
+            delete obj[idx];
+            sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(obj));
+          }, remaining);
+        }
+      }
+    });
+    if (changed && newCardStatus) {
+      setCardStatus(newCardStatus);
+      sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(restartEndTimes));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [licenseNodes]);
-
   // Persist forms and cardStatus to sessionStorage on change
   useEffect(() => {
     sessionStorage.setItem('cloud_networkApplyForms', JSON.stringify(forms));
@@ -459,12 +497,30 @@ const NetworkApply = () => {
     }
     // Submit logic here (API call or sessionStorage)
     setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { ...s, loading: true } : s));
+    // Store restartEndTime in sessionStorage
+    const restartEndTimesRaw = sessionStorage.getItem(RESTART_ENDTIME_KEY);
+    const restartEndTimes = restartEndTimesRaw ? JSON.parse(restartEndTimesRaw) : {};
+    const endTime = Date.now() + RESTART_DURATION;
+    restartEndTimes[nodeIdx] = endTime;
+    sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(restartEndTimes));
     // Simulate network apply and node restart (replace with real API call)
-    setTimeout(() => {
+    timerRefs.current[nodeIdx] = setTimeout(() => {
       setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
+      // Remove from sessionStorage
+      const stored = sessionStorage.getItem(RESTART_ENDTIME_KEY);
+      const obj = stored ? JSON.parse(stored) : {};
+      delete obj[nodeIdx];
+      sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(obj));
       message.success(`Network config for node ${form.ip} applied! Node restarted.`);
-    }, 3000); // Simulate 3s loader
+    }, RESTART_DURATION);
   };
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      timerRefs.current.forEach(t => t && clearTimeout(t));
+    };
+  }, []);
 
   // Check if all cards are applied
   const allApplied = cardStatus.length > 0 && cardStatus.every(s => s.applied);
