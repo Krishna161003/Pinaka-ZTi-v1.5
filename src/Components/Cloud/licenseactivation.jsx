@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Input, Tag, message } from 'antd';
 
-const LicenseActivationTable = ({ nodes = [], results, setResults }) => {
+const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
     const [data, setData] = useState(results || []);
 
     useEffect(() => {
@@ -109,6 +109,12 @@ const LicenseActivationTable = ({ nodes = [], results, setResults }) => {
                                 size="middle"
                                 style={{ width: "75px" }}
                                 type="primary"
+                                onClick={() => {
+                                    if (typeof onNext === 'function') {
+                                        const successfulNodes = data.filter(row => row.result === 'Success');
+                                        onNext(successfulNodes);
+                                    }
+                                }}
                             >
                                 Next
                             </Button>
@@ -123,4 +129,4 @@ const LicenseActivationTable = ({ nodes = [], results, setResults }) => {
     );
 };
 
-export default LicenseActivationTable;
+export default LicenseActivation;

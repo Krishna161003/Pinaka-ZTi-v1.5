@@ -38,7 +38,7 @@ const Dashboard = () => {
   useEffect(() => {
     async function fetchCpuHistory() {
       try {
-        const hostIP = process.env.REACT_APP_HOST_IP;
+        const hostIP = window.location.hostname;
         const res = await fetch(`https://${hostIP}:2020/system-utilization-history`);
         const data = await res.json();
         // console.log('Fetched CPU history:', data);
@@ -68,7 +68,7 @@ const Dashboard = () => {
   useEffect(() => {
     async function fetchUtilization() {
       try {
-        const hostIP = process.env.REACT_APP_HOST_IP;
+        const hostIP = window.location.hostname;
         const res = await fetch(`https://${hostIP}:2020/system-utilization`);
         const data = await res.json();
         // console.log('Fetched utilization:', data);
@@ -116,7 +116,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const storedData = JSON.parse(sessionStorage.getItem("loginDetails")) || {};
   const userId = storedData?.data?.id || "";
-  const hostIP = process.env.REACT_APP_HOST_IP;
+  const hostIP = window.location.hostname;
 
   // Function to navigate to Iaas page with specific tab
   const navigateToIaasTab = (tabKey) => {

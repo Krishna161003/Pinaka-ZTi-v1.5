@@ -275,8 +275,8 @@ const NetworkApply = () => {
               scroll={{ x: true }}
             />
             <Divider />
-            <Button type="primary" onClick={() => handleSubmit(idx)}>
-              Submit
+            <Button type="primary" onClick={() => handleSubmit(idx)} style={{ width: '110px', display: 'flex', marginLeft: '88%' }} >
+              Apply Change
             </Button>
           </Card>
         ))}
@@ -284,3 +284,5 @@ const NetworkApply = () => {
     </div>
   );
 };
+
+export default NetworkApply;

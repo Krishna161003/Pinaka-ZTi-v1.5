@@ -181,6 +181,12 @@ const App = () => {
             nodes={licenseNodes}
             results={licenseActivationResults}
             setResults={handleLicenseActivation}
+            onNext={successfulNodes => {
+              setLicenseNodes(successfulNodes);
+              sessionStorage.setItem("cloud_licenseNodes", JSON.stringify(successfulNodes));
+              setDisabledTabs(prev => ({ ...prev, "4": false }));
+              setTimeout(() => setActiveTab("4"), 0);
+            }}
           />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Network Apply" key="4" disabled={!licenseNodes || licenseNodes.length === 0}>
