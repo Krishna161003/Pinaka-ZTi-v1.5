@@ -6,6 +6,14 @@ const { Option } = Select;
 const ipRegex = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/;
 const subnetRegex = /^(255|254|252|248|240|224|192|128|0+)\.((255|254|252|248|240|224|192|128|0+)\.){2}(255|254|252|248|240|224|192|128|0+)$/;
 
+// Example interface list for demo; replace with real data if available
+const interfaces = [
+  { iface: 'eth0' },
+  { iface: 'eth1' },
+  { iface: 'eth2' },
+  { iface: 'eth3' },
+];
+
 // Get the nodes from sessionStorage (as in Addnode.jsx)
 function getLicenseNodes() {
   const saved = sessionStorage.getItem('cloud_licenseNodes');
@@ -81,26 +89,76 @@ const NetworkApply = () => {
       const updated = [...f.tableData];
       const row = { ...updated[rowIdx] };
       if (!row.errors) row.errors = {};
-      row[field] = value;
-      // Validation logic (IP, subnet, etc.)
-      if (["ip", "dns", "gateway"].includes(field)) {
-        if (!ipRegex.test(value)) {
-          row.errors[field] = 'Should be a valid address';
-        } else {
-          delete row.errors[field];
+
+      if (field === 'type' && f.configType === 'default') {
+        row.type = value;
+        // Enforce primary/secondary mutual exclusivity
+        const otherIndex = rowIdx === 0 ? 1 : 0;
+        const otherRow = updated[otherIndex];
+        if (value === 'primary') {
+          otherRow.type = 'secondary';
+        } else if (value === 'secondary') {
+          otherRow.type = 'primary';
         }
-      }
-      if (field === 'subnet') {
-        if (!subnetRegex.test(value)) {
-          row.errors[field] = 'Invalid subnet format';
-        } else {
-          delete row.errors[field];
+        updated[otherIndex] = otherRow;
+      } else {
+        row[field] = value;
+        // Validation for IP/DNS/Gateway
+        if (["ip", "dns", "gateway"].includes(field)) {
+          if (!ipRegex.test(value)) {
+            row.errors[field] = 'Should be a valid address';
+          } else {
+            // Duplicate IP check for segregated mode
+            if (field === "ip" && f.configType === "segregated") {
+              const isDuplicate = updated.some((r, i) => i !== rowIdx && r.ip === value && value);
+              if (isDuplicate) {
+                row.errors.ip = 'Duplicate IP address in another row';
+              } else {
+                delete row.errors.ip;
+              }
+            } else {
+              delete row.errors[field];
+            }
+          }
+        }
+        // Validation for subnet
+        if (field === 'subnet') {
+          if (!subnetRegex.test(value)) {
+            row.errors[field] = 'Invalid subnet format';
+          } else {
+            delete row.errors[field];
+          }
+        }
+        // Validation for interface (bonding: max 2)
+        if (field === 'interface') {
+          if (f.useBond && value.length > 2) {
+            value = value.slice(0, 2);
+          }
+          row.interface = value;
+        }
+        // Validation for bondName uniqueness
+        if (field === 'bondName') {
+          const isDuplicate = updated.some((r, i) => i !== rowIdx && r.bondName === value);
+          if (isDuplicate) {
+            row.errors[field] = 'Bond name must be unique';
+          } else {
+            delete row.errors[field];
+          }
+        }
+        // Validation for VLAN ID
+        if (field === 'vlanId') {
+          if (value && (!/^[0-9]*$/.test(value) || value.length > 4 || Number(value) < 1 || Number(value) > 4094)) {
+            row.errors[field] = 'VLAN ID must be 1-4094';
+          } else {
+            delete row.errors[field];
+          }
         }
       }
       updated[rowIdx] = row;
       return { ...f, tableData: updated };
     }));
   };
+
 
   const getColumns = (form, nodeIdx) => {
     const baseColumns = [
@@ -114,97 +172,199 @@ const NetworkApply = () => {
       title: 'Bond Name',
       dataIndex: 'bondName',
       render: (_, record, rowIdx) => (
-        <Input
-          value={record.bondName ?? ''}
-          placeholder="Enter Bond Name"
-          onChange={e => handleCellChange(nodeIdx, rowIdx, 'bondName', e.target.value)}
-        />
+        <Form.Item
+          validateStatus={record.errors?.bondName ? 'error' : ''}
+          help={record.errors?.bondName}
+          style={{ marginBottom: 0 }}
+        >
+          <Input
+            value={record.bondName ?? ''}
+            placeholder="Enter Bond Name"
+            onChange={e => handleCellChange(nodeIdx, rowIdx, 'bondName', e.target.value)}
+          />
+        </Form.Item>
       ),
     };
+
     const vlanColumn = {
       title: 'VLAN ID',
       dataIndex: 'vlanId',
       render: (_, record, rowIdx) => (
-        <Input
-          value={record.vlanId ?? ''}
-          placeholder="Enter VLAN ID (optional)"
-          onChange={e => handleCellChange(nodeIdx, rowIdx, 'vlanId', e.target.value)}
-        />
+        <Tooltip placement='right' title="VLAN ID (1-4094, optional)">
+          <Form.Item
+            validateStatus={record.errors?.vlanId ? 'error' : ''}
+            help={record.errors?.vlanId}
+            style={{ marginBottom: 0 }}
+          >
+            <Input
+              value={record.vlanId ?? ''}
+              placeholder="Enter VLAN ID (optional)"
+              onChange={e => handleCellChange(nodeIdx, rowIdx, 'vlanId', e.target.value)}
+            />
+          </Form.Item>
+        </Tooltip>
       ),
     };
+
     const mainColumns = [
       {
         title: 'Interfaces Required',
         dataIndex: 'interface',
-        render: (_, record, rowIdx) => (
-          <Input
-            value={record.interface}
-            placeholder={form.useBond ? 'Enter interfaces (comma separated)' : 'Enter interface'}
-            onChange={e => handleCellChange(nodeIdx, rowIdx, 'interface', e.target.value)}
-          />
-        ),
+        render: (_, record, rowIdx) => {
+          // Deployment.js: render as Select for interface(s)
+          const selectedInterfaces = form.tableData
+            .filter((_, i) => i !== rowIdx)
+            .flatMap(row => {
+              if (form.useBond && Array.isArray(row.interface)) return row.interface;
+              if (!form.useBond && row.interface) return [row.interface];
+              return [];
+            });
+          const currentSelection = form.useBond
+            ? Array.isArray(record.interface) ? record.interface : []
+            : record.interface ? [record.interface] : [];
+          const availableInterfaces = interfaces.filter(
+            (iface) =>
+              !selectedInterfaces.includes(iface.iface) || currentSelection.includes(iface.iface)
+          );
+          return (
+            <Select
+              mode={form.useBond ? 'multiple' : undefined}
+              style={{ width: '100%' }}
+              value={record.interface}
+              allowClear
+              placeholder={form.useBond ? 'Select interfaces' : 'Select interface'}
+              onChange={(value) => {
+                if (form.useBond && Array.isArray(value) && value.length > 2) {
+                  value = value.slice(0, 2);
+                }
+                handleCellChange(nodeIdx, rowIdx, 'interface', value);
+              }}
+              maxTagCount={2}
+            >
+              {availableInterfaces.map((ifaceObj) => (
+                <Option key={ifaceObj.iface} value={ifaceObj.iface}>
+                  {ifaceObj.iface}
+                </Option>
+              ))}
+            </Select>
+          );
+        },
       },
+
       {
         title: 'Type',
         dataIndex: 'type',
-        render: (_, record, rowIdx) => (
-          <Select
-            mode={form.configType === 'segregated' ? 'multiple' : undefined}
-            allowClear
-            style={{ width: '100%' }}
-            value={record.type}
-            placeholder="Select type"
-            onChange={value => handleCellChange(nodeIdx, rowIdx, 'type', value)}
-          >
-            {form.configType === 'segregated' ? (
-              <>
-                <Option value="Management">Management</Option>
-                <Option value="VXLAN">VXLAN</Option>
-                <Option value="Storage">Storage</Option>
-                <Option value="External Traffic">External Traffic</Option>
-              </>
-            ) : (
-              <>
-                <Option value="primary">Primary</Option>
-                <Option value="secondary">Secondary</Option>
-              </>
-            )}
-          </Select>
-        ),
+        render: (_, record, rowIdx) => {
+          // Management restriction for segregated mode
+          let managementTaken = false;
+          if (form.configType === 'segregated') {
+            managementTaken = form.tableData.some((row, i) => i !== rowIdx && Array.isArray(row.type) && row.type.includes('Management'));
+          }
+          return (
+            <Select
+              mode={form.configType === 'segregated' ? 'multiple' : undefined}
+              allowClear
+              style={{ width: '100%' }}
+              value={record.type}
+              placeholder="Select type"
+              onChange={value => handleCellChange(nodeIdx, rowIdx, 'type', value)}
+            >
+              {form.configType === 'segregated' ? (
+                <>
+                  {!managementTaken || (Array.isArray(record.type) && record.type.includes('Management')) ? (
+                    <Option value="Management">
+                      <Tooltip placement="right" title="Management" >
+                        Mgmt
+                      </Tooltip>
+                    </Option>
+                  ) : null}
+                  <Option value="VXLAN">
+                    <Tooltip placement="right" title="VXLAN">
+                      VXLAN
+                    </Tooltip>
+                  </Option>
+                  <Option value="Storage">
+                    <Tooltip placement="right" title="Storage">
+                      Storage
+                    </Tooltip>
+                  </Option>
+                  <Option value="External Traffic">
+                    <Tooltip placement="right" title="External Traffic">
+                      External Traffic
+                    </Tooltip>
+                  </Option>
+                </>
+              ) : (
+                <>
+                  <Option value="primary">
+                    <Tooltip placement="right" title="Primary">
+                      Primary
+                    </Tooltip>
+                  </Option>
+                  <Option value="secondary">
+                    <Tooltip placement="right" title="Secondary">
+                      Secondary
+                    </Tooltip>
+                  </Option>
+                </>
+              )}
+            </Select>
+          );
+        },
       },
+
       {
         title: 'IP ADDRESS',
         dataIndex: 'ip',
         render: (_, record, rowIdx) => (
-          <Input
-            value={record.ip}
-            placeholder="Enter IP Address"
-            onChange={e => handleCellChange(nodeIdx, rowIdx, 'ip', e.target.value)}
-          />
+          <Form.Item
+            validateStatus={record.errors?.ip ? 'error' : ''}
+            help={record.errors?.ip}
+            style={{ marginBottom: 0 }}
+          >
+            <Input
+              value={record.ip}
+              placeholder="Enter IP Address"
+              onChange={e => handleCellChange(nodeIdx, rowIdx, 'ip', e.target.value)}
+            />
+          </Form.Item>
         ),
       },
       {
         title: 'SUBNET MASK',
         dataIndex: 'subnet',
         render: (_, record, rowIdx) => (
-          <Input
-            value={record.subnet}
-            placeholder="Enter Subnet"
-            onChange={e => handleCellChange(nodeIdx, rowIdx, 'subnet', e.target.value)}
-          />
+          <Form.Item
+            validateStatus={record.errors?.subnet ? 'error' : ''}
+            help={record.errors?.subnet}
+            style={{ marginBottom: 0 }}
+          >
+            <Input
+              value={record.subnet}
+              placeholder="Enter Subnet"
+              onChange={e => handleCellChange(nodeIdx, rowIdx, 'subnet', e.target.value)}
+            />
+          </Form.Item>
         ),
       },
       {
         title: 'DNS Servers',
         dataIndex: 'dns',
         render: (_, record, rowIdx) => (
-          <Input
-            value={record.dns}
-            placeholder="Enter Nameserver"
-            onChange={e => handleCellChange(nodeIdx, rowIdx, 'dns', e.target.value)}
-          />
+          <Form.Item
+            validateStatus={record.errors?.dns ? 'error' : ''}
+            help={record.errors?.dns}
+            style={{ marginBottom: 0 }}
+          >
+            <Input
+              value={record.dns}
+              placeholder="Enter Nameserver"
+              onChange={e => handleCellChange(nodeIdx, rowIdx, 'dns', e.target.value)}
+            />
+          </Form.Item>
         ),
       },
+
     ];
     return [
       ...baseColumns,
