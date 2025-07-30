@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Modal, Tag, message, Empty } from 'antd';
 
-const ValidateTable = ({ nodes = [], onNext }) => {
-    const [data, setData] = useState([]);
+const ValidateTable = ({ nodes = [], onNext, results, setResults }) => {
+    const [data, setData] = useState(results || []);
     const [infoModal, setInfoModal] = useState({ visible: false, details: '' });
 
-    // Reset data when nodes changes
+    // Sync data with results or nodes
     useEffect(() => {
-        setData(
+        if (results) setData(results);
+        else setData(
             (nodes || []).map(node => ({
                 ...node,
                 key: node.ip,
@@ -16,7 +17,7 @@ const ValidateTable = ({ nodes = [], onNext }) => {
                 validating: false,
             }))
         );
-    }, [nodes]);
+    }, [results, nodes]);
 
     // Simulate validation API call
     const handleValidate = (ip) => {
@@ -26,16 +27,20 @@ const ValidateTable = ({ nodes = [], onNext }) => {
         setTimeout(() => {
             // Random pass/fail for demo
             const isPass = Math.random() > 0.3;
-            setData(prev => prev.map(row =>
-                row.ip === ip
-                    ? {
-                        ...row,
-                        result: isPass ? 'Pass' : 'Fail',
-                        details: isPass ? 'All checks passed.' : 'Validation failed: Example error.',
-                        validating: false
-                    }
-                    : row
-            ));
+            setData(prev => {
+                const newData = prev.map(row =>
+                    row.ip === ip
+                        ? {
+                            ...row,
+                            result: isPass ? 'Pass' : 'Fail',
+                            details: isPass ? 'All checks passed.' : 'Validation failed: Example error.',
+                            validating: false
+                        }
+                        : row
+                );
+                setResults && setResults(newData);
+                return newData;
+            });
             message.success(`Validation for ${ip}: ${isPass ? 'Pass' : 'Fail'}`);
         }, 1200);
     };
@@ -102,7 +107,7 @@ const ValidateTable = ({ nodes = [], onNext }) => {
                             message.error("All nodes failed validation. Please ensure at least one node passes before proceeding.");
                             return;
                         }
-                        onNext && onNext(passed);
+                        onNext && onNext(passed, data);
                     }}
                 >
                     Next

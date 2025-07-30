@@ -4,12 +4,12 @@ import { Table, Button, Input, Form, Space, message } from 'antd';
 const subnetRegex = /^([0-9]{1,3}\.){3}[0-9]{1,3}\/(\d|[1-2]\d|3[0-2])$/;
 const hostIP = window.location.hostname;
 
-const Cloud = ({ onNext }) => {
+const Cloud = ({ onNext, results, setResults }) => {
   const [form] = Form.useForm();
   const [subnet, setSubnet] = useState('');
   const [scanLoading, setScanLoading] = useState(false);
   // const [refreshLoading, setRefreshLoading] = useState(false);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState(results || []);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
   // Fetch scan results
@@ -25,7 +25,9 @@ const Cloud = ({ onNext }) => {
       const result = await res.json();
       if (res.ok) {
         // Use active_nodes from backend response
-        setData(Array.isArray(result) ? result : (result.active_nodes || []));
+        const scanData = Array.isArray(result) ? result : (result.active_nodes || []);
+        setData(scanData);
+        setResults && setResults(scanData);
       } else {
         message.error(result.error || 'Failed to scan the network.');
         setData([]);
@@ -71,6 +73,11 @@ const Cloud = ({ onNext }) => {
     },
   ];
 
+  // Sync data if results prop changes
+  useEffect(() => {
+    if (results) setData(results);
+  }, [results]);
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -110,7 +117,7 @@ const Cloud = ({ onNext }) => {
           disabled={selectedRowKeys.length === 0}
           onClick={() => {
             const selected = data.filter(row => selectedRowKeys.includes(row.ip + (row.mac || '')));
-            onNext && onNext(selected);
+            onNext && onNext(selected, data); // Pass both selection and all scan results
           }}
           style={{ size: "middle", width: "75px" }}
         >

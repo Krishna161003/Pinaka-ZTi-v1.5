@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Input, Tag, message } from 'antd';
 
-const LicenseActivationTable = ({ nodes = [] }) => {
-    const [data, setData] = useState([]);
+const LicenseActivationTable = ({ nodes = [], results, setResults }) => {
+    const [data, setData] = useState(results || []);
 
     useEffect(() => {
-        setData(
+        if (results) setData(results);
+        else setData(
             (nodes || []).map(node => ({
                 ...node,
                 key: node.ip,
@@ -15,7 +16,7 @@ const LicenseActivationTable = ({ nodes = [] }) => {
                 checking: false,
             }))
         );
-    }, [nodes]);
+    }, [results, nodes]);
 
     const handleLicenseChange = (ip, value) => {
         setData(prev => prev.map(row =>
@@ -30,18 +31,22 @@ const LicenseActivationTable = ({ nodes = [] }) => {
         ));
         setTimeout(() => {
             const isSuccess = Math.random() > 0.3;
-            setData(prev => prev.map(row =>
-                row.ip === ip
-                    ? {
-                        ...row,
-                        result: isSuccess ? 'Success' : 'Failed',
-                        details: isSuccess
-                            ? { type: 'Enterprise', period: '1 Year' }
-                            : { type: 'N/A', period: 'N/A' },
-                        checking: false,
-                    }
-                    : row
-            ));
+            setData(prev => {
+                const newData = prev.map(row =>
+                    row.ip === ip
+                        ? {
+                            ...row,
+                            result: isSuccess ? 'Success' : 'Failed',
+                            details: isSuccess
+                                ? { type: 'Enterprise', period: '1 Year' }
+                                : { type: 'N/A', period: 'N/A' },
+                            checking: false,
+                        }
+                        : row
+                );
+                setResults && setResults(newData);
+                return newData;
+            });
             message.success(`License check for ${ip}: ${isSuccess ? 'Success' : 'Failed'}`);
         }, 1200);
     };

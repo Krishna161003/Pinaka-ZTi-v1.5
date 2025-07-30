@@ -8,6 +8,22 @@ import LicenseActivation from '../Components/Cloud/licenseactivation.jsx';
 // Placeholder components for new tabs
 
 const App = () => {
+  // --- Persistent tab results state ---
+  // Discovery tab results
+  const [discoveryResults, setDiscoveryResults] = useState(() => {
+    const saved = sessionStorage.getItem("cloud_discoveryResults");
+    return saved ? JSON.parse(saved) : null;
+  });
+  // Validation tab results
+  const [validationResults, setValidationResults] = useState(() => {
+    const saved = sessionStorage.getItem("cloud_validationResults");
+    return saved ? JSON.parse(saved) : null;
+  });
+  // License activation tab results
+  const [licenseActivationResults, setLicenseActivationResults] = useState(() => {
+    const saved = sessionStorage.getItem("cloud_licenseActivationResults");
+    return saved ? JSON.parse(saved) : null;
+  });
   // React Router hooks
   const location = useLocation();
   const navigate = useNavigate();
@@ -80,19 +96,33 @@ const App = () => {
   }, [location.search]);
 
   // When Discovery Next is clicked, enable Validation tab and switch to it
-  const handleDiscoveryNext = (nodes) => {
+  const handleDiscoveryNext = (nodes, results) => {
     setSelectedNodes(nodes);
     sessionStorage.setItem("cloud_selectedNodes", JSON.stringify(nodes));
+    if (results) {
+      setDiscoveryResults(results);
+      sessionStorage.setItem("cloud_discoveryResults", JSON.stringify(results));
+    }
     setDisabledTabs((prev) => ({ ...prev, "2": false }));
     setActiveTab("2");
   };
 
   // When Validation Next is clicked, enable License tab and switch to it
-  const handleValidationNext = (passedNodes) => {
+  const handleValidationNext = (passedNodes, results) => {
     setLicenseNodes(passedNodes);
     sessionStorage.setItem("cloud_licenseNodes", JSON.stringify(passedNodes));
+    if (results) {
+      setValidationResults(results);
+      sessionStorage.setItem("cloud_validationResults", JSON.stringify(results));
+    }
     setDisabledTabs((prev) => ({ ...prev, "3": false }));
     setActiveTab("3");
+  };
+
+  // When License Activation completes, save results
+  const handleLicenseActivation = (results) => {
+    setLicenseActivationResults(results);
+    sessionStorage.setItem("cloud_licenseActivationResults", JSON.stringify(results));
   };
 
   // When user manually clicks a tab
@@ -110,13 +140,47 @@ const App = () => {
       <h2>Add Node</h2>
       <Tabs activeKey={activeTab} onChange={(key) => setActiveTab(key)}>
         <Tabs.TabPane tab="Discovery" key="1" disabled={disabledTabs["1"]}>
-          <Discovery onNext={handleDiscoveryNext} />
+          {/*
+            Pass discoveryResults and setDiscoveryResults to Discovery.
+            In Discovery, use discoveryResults as the source of truth for results.
+            When scan completes, call props.onNext(nodes, results) and props.setDiscoveryResults(newResults).
+          */}
+          <Discovery
+            onNext={handleDiscoveryNext}
+            results={discoveryResults}
+            setResults={(results) => {
+              setDiscoveryResults(results);
+              sessionStorage.setItem("cloud_discoveryResults", JSON.stringify(results));
+            }}
+          />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Node Validation" key="2" disabled={disabledTabs["2"]}>
-          <NodeValidation nodes={selectedNodes} onNext={handleValidationNext} />
+          {/*
+            Pass validationResults and setValidationResults to NodeValidation.
+            In NodeValidation, use validationResults as the source of truth for results.
+            When validation completes, call props.onNext(passedNodes, results) and props.setValidationResults(newResults).
+          */}
+          <NodeValidation
+            nodes={selectedNodes}
+            onNext={handleValidationNext}
+            results={validationResults}
+            setResults={(results) => {
+              setValidationResults(results);
+              sessionStorage.setItem("cloud_validationResults", JSON.stringify(results));
+            }}
+          />
         </Tabs.TabPane>
         <Tabs.TabPane tab="License Activate" key="3" disabled={disabledTabs["3"]}>
-          <LicenseActivation nodes={licenseNodes} />
+          {/*
+            Pass licenseActivationResults and setLicenseActivationResults to LicenseActivation.
+            In LicenseActivation, use licenseActivationResults as the source of truth for results.
+            When activation completes, call props.onActivate(results) and props.setResults(newResults).
+          */}
+          <LicenseActivation
+            nodes={licenseNodes}
+            results={licenseActivationResults}
+            setResults={handleLicenseActivation}
+          />
         </Tabs.TabPane>
       </Tabs>
     </Zti>
