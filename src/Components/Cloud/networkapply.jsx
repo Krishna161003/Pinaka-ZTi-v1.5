@@ -826,13 +826,14 @@ const getInitialForms = () => {
                     style={{ width: 200 }}
                     disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
                     onChange={value => handleDiskChange(idx, value)}
+                    optionLabelProp="label"
                   >
                     {(nodeDisks[form.ip] || []).map(disk => {
-                      const diskValue = typeof disk === 'object' ? disk.value : disk;
-                      const diskLabel = typeof disk === 'object' ? disk.value : disk;
+                      const diskValue = disk.name || disk;
+                      const diskLabel = disk.label || disk.name || disk;
                       return (
-                        <Option key={diskValue} value={diskValue}>
-                          {diskLabel}
+                        <Option key={diskValue} value={diskValue} label={diskLabel}>
+                          {diskLabel} {disk.size ? `(${disk.size})` : ''}
                         </Option>
                       );
                     })}
