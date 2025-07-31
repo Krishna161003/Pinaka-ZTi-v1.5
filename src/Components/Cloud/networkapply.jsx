@@ -130,7 +130,7 @@ const NetworkApply = () => {
           delete bootEndTimes[idx];
           changed = true;
           // Store the form data for this node in sessionStorage under its IP
-          const nodeIp = forms[idx]?.ip || `node${idx+1}`;
+          const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
           networkApplyResult[nodeIp] = {
             ...forms[idx],
             tableData: forms[idx]?.tableData || [],
@@ -150,7 +150,7 @@ const NetworkApply = () => {
               sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(objR));
               sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(objB));
               // Store the form data for this node in sessionStorage under its IP
-              const nodeIp = forms[idx]?.ip || `node${idx+1}`;
+              const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
               let networkApplyResultInner = {};
               const resultRawInner = sessionStorage.getItem('cloud_networkApplyResult');
               if (resultRawInner) {
@@ -176,7 +176,7 @@ const NetworkApply = () => {
         }
         // If applied and not yet stored, store the result (for robustness)
         if (status.applied) {
-          const nodeIp = forms[idx]?.ip || `node${idx+1}`;
+          const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
           if (!networkApplyResult[nodeIp]) {
             networkApplyResult[nodeIp] = {
               ...forms[idx],
@@ -212,13 +212,13 @@ const NetworkApply = () => {
   }, [cardStatus]);
 
   function handleDiskChange(idx, value) {
-  setForms(prev => prev.map((f, i) => i === idx ? { ...f, selectedDisks: value, diskError: '' } : f));
-}
-function handleRoleChange(idx, value) {
-  setForms(prev => prev.map((f, i) => i === idx ? { ...f, selectedRoles: value, roleError: '' } : f));
-}
+    setForms(prev => prev.map((f, i) => i === idx ? { ...f, selectedDisks: value, diskError: '' } : f));
+  }
+  function handleRoleChange(idx, value) {
+    setForms(prev => prev.map((f, i) => i === idx ? { ...f, selectedRoles: value, roleError: '' } : f));
+  }
 
-function generateRows(configType, useBond) {
+  function generateRows(configType, useBond) {
     const count = configType === 'default' ? 2 : 4;
     return Array.from({ length: count }, (_, i) => ({
       key: i,
@@ -680,113 +680,109 @@ function generateRows(configType, useBond) {
                   onChange={e => handleConfigTypeChange(idx, e.target.value)}
                   disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
                 >
-                <Radio value="default">Default</Radio>
-                <Radio value="segregated">Segregated</Radio>
-              </Radio.Group>
-              <Checkbox
-                checked={form.useBond}
-                style={{ marginLeft: 24 }}
-                onChange={e => handleUseBondChange(idx, e.target.checked)}
-                disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
-              >
-                Bond
-              </Checkbox>
-            </div>
-            <Table
-              columns={getColumns(form, idx)}
-              dataSource={form.tableData}
-              pagination={false}
-              bordered
-              size="small"
-              scroll={{ x: true }}
-              rowClassName={() => (cardStatus[idx]?.loading || cardStatus[idx]?.applied ? 'ant-table-disabled' : '')}
-            />
-            {/* License Details Display - all in one line */}
-            <div style={{ margin: '16px 0 0 0', padding: '8px 16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontWeight: 500, marginRight: 16 }}>License Type:</span>
-              <span>{form.licenseType || '-'}</span>
-              <span style={{ fontWeight: 500, margin: '0 0 0 32px' }}>License Period:</span>
-              <span>{form.licensePeriod || '-'}</span>
-              <span style={{ fontWeight: 500, margin: '0 0 0 32px' }}>License Code:</span>
-              <span>{form.licenseCode || '-'}</span>
-            </div>
-            {/* Default Gateway Field */}
-            <div style={{ display: 'flex', flexDirection: 'row', gap: 24, margin: '16px 0 0 0' }}>
-              <Form.Item
-                label="Default Gateway"
-                validateStatus={form.defaultGatewayError ? 'error' : ''}
-                help={form.defaultGatewayError}
-                required
-                style={{ minWidth: 220 }}
-              >
-                <Input
-                  value={form.defaultGateway}
-                  placeholder="Enter Default Gateway"
-                  onChange={e => handleCellChange(idx, 0, 'defaultGateway', e.target.value)}
-                  style={{ width: 200 }}
+                  <Radio value="default">Default</Radio>
+                  <Radio value="segregated">Segregated</Radio>
+                </Radio.Group>
+                <Checkbox
+                  checked={form.useBond}
+                  style={{ marginLeft: 24 }}
+                  onChange={e => handleUseBondChange(idx, e.target.checked)}
                   disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
-                />
-              </Form.Item>
-              <Form.Item
-                label="Select Disk"
-                required
-                validateStatus={form.diskError ? 'error' : ''}
-                help={form.diskError}
-                style={{ minWidth: 220 }}
-              >
-                <Select
-                  mode="multiple"
-                  allowClear
-                  placeholder="Select disk(s)"
-                  value={form.selectedDisks || []}
-                  style={{ width: 200 }}
-                  disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
-                  onChange={value => handleDiskChange(idx, value)}
                 >
-                  {/* Placeholder disk data; replace with API data if available */}
-                  <Option value="sda">sda</Option>
-                  <Option value="sdb">sdb</Option>
-                  <Option value="nvme0n1">nvme0n1</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item
-                label="Select Role"
-                required
-                validateStatus={form.roleError ? 'error' : ''}
-                help={form.roleError}
-                style={{ minWidth: 220 }}
-              >
-                <Select
-                  mode="multiple"
-                  allowClear
-                  placeholder="Select role(s)"
-                  value={form.selectedRoles || []}
-                  style={{ width: 200 }}
-                  disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
-                  onChange={value => handleRoleChange(idx, value)}
+                  Bond
+                </Checkbox>
+              </div>
+              <Table
+                columns={getColumns(form, idx)}
+                dataSource={form.tableData}
+                pagination={false}
+                bordered
+                size="small"
+                scroll={{ x: true }}
+                rowClassName={() => (cardStatus[idx]?.loading || cardStatus[idx]?.applied ? 'ant-table-disabled' : '')}
+              />
+
+              {/* Default Gateway Field */}
+              <div style={{ display: 'flex', flexDirection: 'row', gap: 24, margin: '16px 0 0 0' }}>
+                <Form.Item
+                  label="Default Gateway"
+                  validateStatus={form.defaultGatewayError ? 'error' : ''}
+                  help={form.defaultGatewayError}
+                  required
+                  style={{ minWidth: 220 }}
                 >
-                  <Option value="Control">Control</Option>
-                  <Option value="Compute">Compute</Option>
-                  <Option value="Storage">Storage</Option>
-                </Select>
-              </Form.Item>
-            </div>
-            {/* License Code Display */}
-            <div style={{ margin: '8px 0 0 0', padding: '8px 16px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
-              <span style={{ fontWeight: 500, marginRight: 16 }}>License Code:</span>
-              <span>{form.licenseCode || '-'}</span>
-            </div>
-            <Divider />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginRight: '5%' }}>
-              <Button danger onClick={() => handleReset(idx)} style={{ width: '110px', display: 'flex' }} disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}>
-                Reset Value
-              </Button>
-              <Button type="primary" onClick={() => handleSubmit(idx)} style={{ width: '110px', display: 'flex' }} disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}>
-                Apply Change
-              </Button>
-            </div>
-          </Card>
-        </Spin>
+                  <Input
+                    value={form.defaultGateway}
+                    placeholder="Enter Default Gateway"
+                    onChange={e => handleCellChange(idx, 0, 'defaultGateway', e.target.value)}
+                    style={{ width: 200 }}
+                    disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="Select Disk"
+                  required
+                  validateStatus={form.diskError ? 'error' : ''}
+                  help={form.diskError}
+                  style={{ minWidth: 220 }}
+                >
+                  <Select
+                    mode="multiple"
+                    allowClear
+                    placeholder="Select disk(s)"
+                    value={form.selectedDisks || []}
+                    style={{ width: 200 }}
+                    disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
+                    onChange={value => handleDiskChange(idx, value)}
+                  >
+                    {/* Placeholder disk data; replace with API data if available */}
+                    <Option value="sda">sda</Option>
+                    <Option value="sdb">sdb</Option>
+                    <Option value="nvme0n1">nvme0n1</Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item
+                  label="Select Role"
+                  required
+                  validateStatus={form.roleError ? 'error' : ''}
+                  help={form.roleError}
+                  style={{ minWidth: 220 }}
+                >
+                  <Select
+                    mode="multiple"
+                    allowClear
+                    placeholder="Select role(s)"
+                    value={form.selectedRoles || []}
+                    style={{ width: 200 }}
+                    disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
+                    onChange={value => handleRoleChange(idx, value)}
+                  >
+                    <Option value="Control">Control</Option>
+                    <Option value="Compute">Compute</Option>
+                    <Option value="Storage">Storage</Option>
+                  </Select>
+                </Form.Item>
+              </div>
+              {/* License Details Display - all in one line */}
+              <div style={{ margin: '16px 0 0 0', padding: '8px 16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontWeight: 500, marginRight: 16 }}>License Type:</span>
+                <span>{form.licenseType || '-'}</span>
+                <span style={{ fontWeight: 500, margin: '0 0 0 32px' }}>License Period:</span>
+                <span>{form.licensePeriod || '-'}</span>
+                <span style={{ fontWeight: 500, margin: '0 0 0 32px' }}>License Code:</span>
+                <span>{form.licenseCode || '-'}</span>
+              </div>
+              <Divider />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginRight: '5%' }}>
+                <Button danger onClick={() => handleReset(idx)} style={{ width: '110px', display: 'flex' }} disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}>
+                  Reset Value
+                </Button>
+                <Button type="primary" onClick={() => handleSubmit(idx)} style={{ width: '110px', display: 'flex' }} disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}>
+                  Apply Change
+                </Button>
+              </div>
+            </Card>
+          </Spin>
         ))}
       </Space>
     </div>
