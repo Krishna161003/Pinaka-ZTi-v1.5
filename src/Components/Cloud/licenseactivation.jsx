@@ -35,7 +35,7 @@ const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
         ));
 
         try {
-            const response = await axios.post(`http://${ip}:2020/decrypt-code`, {
+            const response = await axios.post(`https://${ip}:2020/decrypt-code`, {
                 encrypted_code: row.license
             });
 
