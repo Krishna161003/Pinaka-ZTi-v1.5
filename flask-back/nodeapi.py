@@ -81,6 +81,20 @@ def export_license_period(key_type):
 
     return period
 
+def trigger_program():
+    try:
+        result = subprocess.run(
+            ["python3", "encrypt.py"],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        return {"success": True, "output": result.stdout}
+    except subprocess.CalledProcessError as e:
+        return {"success": False, "message": e.stderr}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
 
 @app.route("/decrypt-code", methods=["POST"])
 def decrypt_code_endpoint():

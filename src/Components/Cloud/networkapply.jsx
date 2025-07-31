@@ -724,6 +724,7 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
                   onClick={() => fetchNodeData(form.ip)}
                   size="small"
                   type="default"
+                  style={{ width: 120 }}
                 >
                   Refetch Data
                 </Button>
