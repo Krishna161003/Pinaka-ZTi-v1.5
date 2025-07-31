@@ -702,33 +702,32 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
         {forms.map((form, idx) => (
           <Spin spinning={cardStatus[idx]?.loading} tip="Applying network changes & restarting node...">
             <Card key={form.ip} title={`Node: ${form.ip}`} style={{ width: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+                  <Radio.Group
+                    value={form.configType}
+                    onChange={e => handleConfigTypeChange(idx, e.target.value)}
+                    disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
+                  >
+                    <Radio value="default">Default</Radio>
+                    <Radio value="segregated">Segregated</Radio>
+                  </Radio.Group>
+                  <Checkbox
+                    checked={form.useBond}
+                    onChange={e => handleUseBondChange(idx, e.target.checked)}
+                    disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
+                  >
+                    Bond
+                  </Checkbox>
+                </div>
                 <Button
                   onClick={() => fetchNodeData(form.ip)}
-                  style={{ marginBottom: 8 }}
                   size="small"
                   type="default"
                 >
                   Refetch Data
                 </Button>
               </div>
-                <Radio.Group
-                  value={form.configType}
-                  onChange={e => handleConfigTypeChange(idx, e.target.value)}
-                  disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
-                >
-                  <Radio value="default">Default</Radio>
-                  <Radio value="segregated">Segregated</Radio>
-                </Radio.Group>
-                <Checkbox
-                  checked={form.useBond}
-                  style={{ marginLeft: 24 }}
-                  onChange={e => handleUseBondChange(idx, e.target.checked)}
-                  disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
-                >
-                  Bond
-                </Checkbox>
               <Table
                 columns={getColumns(form, idx)}
                 dataSource={form.tableData}

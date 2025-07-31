@@ -468,12 +468,29 @@ def get_interfaces():
             interfaces.append({"iface": iface, "mac": mac, "ip": ip or "N/A"})
 
     # Fetch the number of CPU sockets (physical CPUs)
-    cpu_sockets = get_cpu_socket_count()
 
     # Include the number of CPU sockets in the response
-    response = {"interfaces": interfaces, "cpu_sockets": cpu_sockets}
+    response = {"interfaces": interfaces}
 
     return jsonify(response)
+
+# Function to get the CPU socket count
+def get_cpu_socket_count():
+    try:
+        if os.path.exists("/proc/cpuinfo"):
+            with open("/proc/cpuinfo", "r") as cpuinfo:
+                sockets = set()
+                for line in cpuinfo:
+                    if line.startswith("physical id"):
+                        sockets.add(line.split(":")[1].strip())
+                return len(sockets)
+        else:
+            print("This script is designed to work on Linux systems.")
+            return None
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
 
 # ------------------------------------------------ local Interface list End --------------------------------------------
 if __name__ == "__main__":
