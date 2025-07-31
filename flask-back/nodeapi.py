@@ -16,6 +16,9 @@ from collections import deque
 
 
 
+app = Flask(__name__)
+CORS(app)
+
 # ------------------------------------------------ Validate License Start --------------------------------------------
 # Function to decrypt a code (lookup MAC address, key, and key type)
 def decrypt_code(code, lookup_table):
