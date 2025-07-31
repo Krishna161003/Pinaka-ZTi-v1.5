@@ -701,12 +701,14 @@ function generateRows(configType, useBond) {
               scroll={{ x: true }}
               rowClassName={() => (cardStatus[idx]?.loading || cardStatus[idx]?.applied ? 'ant-table-disabled' : '')}
             />
-            {/* License Details Display */}
-            <div style={{ margin: '16px 0 0 0', padding: '8px 16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4 }}>
+            {/* License Details Display - all in one line */}
+            <div style={{ margin: '16px 0 0 0', padding: '8px 16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4, display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
               <span style={{ fontWeight: 500, marginRight: 16 }}>License Type:</span>
               <span>{form.licenseType || '-'}</span>
               <span style={{ fontWeight: 500, margin: '0 0 0 32px' }}>License Period:</span>
               <span>{form.licensePeriod || '-'}</span>
+              <span style={{ fontWeight: 500, margin: '0 0 0 32px' }}>License Code:</span>
+              <span>{form.licenseCode || '-'}</span>
             </div>
             {/* Default Gateway Field */}
             <div style={{ display: 'flex', flexDirection: 'row', gap: 24, margin: '16px 0 0 0' }}>
