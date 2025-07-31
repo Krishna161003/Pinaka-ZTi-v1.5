@@ -39,9 +39,11 @@ const App = () => {
     return savedTab || "1";
   }); // Only use cloud_activeTab for Cloud
   const [disabledTabs, setDisabledTabs] = useState(() => {
-    const saved = sessionStorage.getItem("cloud_disabledTabs");
-    return saved ? JSON.parse(saved) : { "2": true, "3": true };
-  });
+  const saved = sessionStorage.getItem("cloud_disabledTabs");
+  const initial = saved ? JSON.parse(saved) : { "2": true, "3": true };
+  // Always disable tab 5 (Report)
+  return { ...initial, "5": true };
+});
 
   // Selected nodes for validation
   const [selectedNodes, setSelectedNodes] = useState(() => {
