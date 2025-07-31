@@ -82,8 +82,8 @@ const Report = ({ onDeploymentComplete }) => {
     if (percent === 100) {
       const handleBeforeUnload = () => {
         sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
-        sessionStorage.setItem('lastMenuPath', '/cloud');
-        sessionStorage.setItem('lastCloudPath', '/cloud');
+        sessionStorage.setItem('lastMenuPath', '/addnode');
+        sessionStorage.setItem('lastCloudPath', '/addnode');
         sessionStorage.setItem('cloud_activeTab', '1');
         // sessionStorage.setItem('disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
         sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
@@ -93,8 +93,8 @@ const Report = ({ onDeploymentComplete }) => {
       return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
         sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
-        sessionStorage.setItem('lastMenuPath', '/cloud');
-        sessionStorage.setItem('lastCloudPath', '/cloud');
+        sessionStorage.setItem('lastMenuPath', '/addnode');
+        sessionStorage.setItem('lastCloudPath', '/addnode');
         sessionStorage.setItem('cloud_activeTab', '1');
         // sessionStorage.setItem('disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
         sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
@@ -135,9 +135,9 @@ const Report = ({ onDeploymentComplete }) => {
                   type="primary" 
                   onClick={() => {
                     sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
-                    sessionStorage.setItem('lastMenuPath', '/cloud');
-                    sessionStorage.setItem('lastCloudPath', '/cloud');
-                    navigate('/cloud');
+                    sessionStorage.setItem('lastMenuPath', '/iaas');
+                    sessionStorage.setItem('lastCloudPath', '/iaas');
+                    navigate('/iaas');
                   }}
                 >
                   Back to Cloud
