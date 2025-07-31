@@ -264,7 +264,7 @@ db.connect((err) => {
     console.log("Hardware_info table checked/created...");
   });
 
-  // Create new deployment_activity_log table
+  // Create new deployment_activity_log table with default timestamp
   const deploymentActivityLogTableSQL = `
     CREATE TABLE IF NOT EXISTS deployment_activity_log (
       id INT AUTO_INCREMENT PRIMARY KEY, -- S.NO
@@ -280,18 +280,9 @@ db.connect((err) => {
       Storage VARCHAR(255) NULL,
       External_Traffic VARCHAR(255) NULL,
       VXLAN VARCHAR(255) NULL,
-      datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+      datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_user_id (user_id)        -- Added index for foreign key
     ) ENGINE=InnoDB;
-    
-    -- Create a trigger to update the datetime column with IST timezone
-    DROP TRIGGER IF EXISTS before_insert_deployment_activity_log;
-    CREATE TRIGGER before_insert_deployment_activity_log
-    BEFORE INSERT ON deployment_activity_log
-    FOR EACH ROW
-    BEGIN
-      SET NEW.datetime = CONVERT_TZ(NOW(), @@session.time_zone, '+05:30');
-    END;
   `;
 
   db.query(deploymentActivityLogTableSQL, (err, result) => {
@@ -330,7 +321,7 @@ db.connect((err) => {
           Storage VARCHAR(255) NULL,
           External_Traffic VARCHAR(255) NULL,
           VXLAN VARCHAR(255) NULL,
-      datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+          datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
           FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
           FOREIGN KEY (license_code) REFERENCES License(license_code)
@@ -365,7 +356,7 @@ db.connect((err) => {
           Storage VARCHAR(255) NULL,
           External_Traffic VARCHAR(255) NULL,
           VXLAN VARCHAR(255) NULL,
-          datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+          datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
           FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
           FOREIGN KEY (license_code) REFERENCES License(license_code)
