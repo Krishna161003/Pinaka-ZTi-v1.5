@@ -9,14 +9,6 @@ const { Option } = Select;
 const ipRegex = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/;
 const subnetRegex = /^(255|254|252|248|240|224|192|128|0+)\.((255|254|252|248|240|224|192|128|0+)\.){2}(255|254|252|248|240|224|192|128|0+)$/;
 
-// Example interface list for demo; replace with real data if available
-const interfaces = [
-  { iface: 'eth0' },
-  { iface: 'eth1' },
-  { iface: 'eth2' },
-  { iface: 'eth3' },
-];
-
 // Get the nodes from sessionStorage (as in Addnode.jsx)
 function getLicenseNodes() {
   const saved = sessionStorage.getItem('cloud_licenseNodes');
@@ -28,6 +20,8 @@ const BOOT_DURATION = 5000; // ms after restart
 const RESTART_ENDTIME_KEY = 'cloud_networkApplyRestartEndTimes';
 const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
 
+  const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
+  
   // Dynamic per-node disks and interfaces
   const [nodeDisks, setNodeDisks] = useState({});
   const [nodeInterfaces, setNodeInterfaces] = useState({});
@@ -52,8 +46,6 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
       if (node.ip) fetchNodeData(node.ip);
     });
   }, [licenseNodes]);
-
-  const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
   // Per-card loading and applied state, restore from sessionStorage if available
   const getInitialCardStatus = () => {
     const saved = sessionStorage.getItem('cloud_networkApplyCardStatus');
