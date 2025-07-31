@@ -436,7 +436,8 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
               style={{ width: '100%' }}
               value={record.interface}
               allowClear
-              placeholder={form.useBond ? 'Select interfaces' : 'Select interface'}
+              placeholder="Select interface"
+              // placeholder={form.useBond ? 'Select interfaces' : 'Select interface'}
               onChange={(value) => {
                 if (form.useBond && Array.isArray(value) && value.length > 2) {
                   value = value.slice(0, 2);
@@ -772,13 +773,15 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
                     disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
                     onChange={value => handleDiskChange(idx, value)}
                   >
-                    {(nodeDisks[form.ip] || [
-                      { value: "sda" },
-                      { value: "sdb" },
-                      { value: "nvme0n1" }
-                    ]).map(disk => (
-                      <Option key={disk} value={disk}>{disk}</Option>
-                    ))}
+                    {(nodeDisks[form.ip] || []).map(disk => {
+                      const diskValue = typeof disk === 'object' ? disk.value : disk;
+                      const diskLabel = typeof disk === 'object' ? disk.value : disk;
+                      return (
+                        <Option key={diskValue} value={diskValue}>
+                          {diskLabel}
+                        </Option>
+                      );
+                    })}
                   </Select>
                 </Form.Item>
                 <Form.Item
