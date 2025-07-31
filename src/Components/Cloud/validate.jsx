@@ -35,8 +35,11 @@ const ValidateTable = ({ nodes = [], onNext, results, setResults }) => {
                 host: ip
             });
 
-            const { data: result } = response;
-            
+            // Patch: unwrap array response from backend if needed
+            let result = response.data;
+            if (Array.isArray(result)) {
+                result = result[0];
+            }
             if (result.error) {
                 throw new Error(result.error);
             }
