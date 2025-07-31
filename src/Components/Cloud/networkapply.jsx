@@ -434,10 +434,9 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
             <Select
               mode={form.useBond ? 'multiple' : undefined}
               style={{ width: '100%' }}
-              value={record.interface}
+              value={record.interface || undefined}
               allowClear
               placeholder="Select interface"
-              // placeholder={form.useBond ? 'Select interfaces' : 'Select interface'}
               onChange={(value) => {
                 if (form.useBond && Array.isArray(value) && value.length > 2) {
                   value = value.slice(0, 2);
@@ -468,7 +467,7 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
               mode={form.configType === 'segregated' ? 'multiple' : undefined}
               allowClear
               style={{ width: '100%' }}
-              value={record.type}
+              value={record.type || undefined}
               placeholder="Select type"
               onChange={value => handleCellChange(nodeIdx, rowIdx, 'type', value)}
             >
