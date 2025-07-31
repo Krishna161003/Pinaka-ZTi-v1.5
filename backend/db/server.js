@@ -280,7 +280,7 @@ db.connect((err) => {
       Storage VARCHAR(255) NULL,
       External_Traffic VARCHAR(255) NULL,
       VXLAN VARCHAR(255) NULL,
-      datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_user_id (user_id)        -- Added index for foreign key
     ) ENGINE=InnoDB;
   `;
@@ -321,7 +321,7 @@ db.connect((err) => {
           Storage VARCHAR(255) NULL,
           External_Traffic VARCHAR(255) NULL,
           VXLAN VARCHAR(255) NULL,
-          datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
           FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
           FOREIGN KEY (license_code) REFERENCES License(license_code)
@@ -356,7 +356,7 @@ db.connect((err) => {
           Storage VARCHAR(255) NULL,
           External_Traffic VARCHAR(255) NULL,
           VXLAN VARCHAR(255) NULL,
-          datetime TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
           FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
           FOREIGN KEY (license_code) REFERENCES License(license_code)
