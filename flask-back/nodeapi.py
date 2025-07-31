@@ -220,7 +220,7 @@ def store_network_config(data):
     # Use hostname or default gateway as key, but not VIP
     key = data.get("hostname") or data.get("default_gateway") or "unknown"
     
-    # Remove disk information if present
+    # Remove disk information if present and ensure no pinakasv wrapper
     if 'disk' in data:
         data = {k: v for k, v in data.items() if k != 'disk'}
     
@@ -229,40 +229,125 @@ def store_network_config(data):
             with open(file_path, "r") as f:
                 try:
                     configs = json.load(f)
+                    # If the config has a pinakasv wrapper, extract the inner data
+                    if key in configs and 'pinakasv' in configs[key]:
+                        configs[key] = configs[key]['pinakasv']
                 except Exception:
                     configs = {}
         else:
             configs = {}
+            
+        # Store the data directly without pinakasv wrapper
         configs[key] = data
+        
         with open(file_path, "w") as f:
             json.dump(configs, f, indent=4)
     return True
+
+def validate_ip_address(ip):
+    """Validate an IP address format."""
+    try:
+        parts = ip.split('.')
+        if len(parts) != 4:
+            return False
+        for part in parts:
+            if not part.isdigit() or not 0 <= int(part) <= 255:
+                return False
+        return True
+    except Exception:
+        return False
+
+def validate_subnet_mask(mask):
+    """Validate a subnet mask."""
+    try:
+        # Convert to CIDR if it's in dot-decimal notation
+        if '.' in mask:
+            if not validate_ip_address(mask):
+                return False
+            # Convert to CIDR notation
+            binary_str = ''.join([f"{int(octet):08b}" for octet in mask.split('.')])
+            cidr = len(binary_str.rstrip('0'))
+            return 0 <= cidr <= 32
+        # If it's already in CIDR notation
+        cidr = int(mask)
+        return 0 <= cidr <= 32
+    except (ValueError, AttributeError):
+        return False
 
 @app.route("/submit-network-config", methods=["POST"])
 def submit_network_config():
     try:
         data = request.get_json(force=True)
-
         print("✅ Received data:", json.dumps(data, indent=2))
 
-        # Basic validation - removed disk check
+        # Basic validation
+        if not isinstance(data, dict):
+            return jsonify({"success": False, "message": "Invalid configuration format"}), 400
+
+        # Validate using_interfaces
         if "using_interfaces" not in data or not isinstance(data["using_interfaces"], dict):
             return jsonify({"success": False, "message": "Invalid or missing 'using_interfaces'"}), 400
+
+        # Validate default gateway
         if "default_gateway" not in data or not data["default_gateway"]:
             return jsonify({"success": False, "message": "Missing 'default_gateway'"}), 400
+        
+        if not validate_ip_address(data["default_gateway"]):
+            return jsonify({"success": False, "message": "Invalid default gateway IP address"}), 400
 
-        # Store in canonical file
+        # Validate hostname if provided
+        if "hostname" in data and not data["hostname"].strip():
+            return jsonify({"success": False, "message": "Hostname cannot be empty"}), 400
+
+        # Validate DNS servers if provided
+        if "dns_servers" in data and isinstance(data["dns_servers"], list):
+            for dns in data["dns_servers"]:
+                if not validate_ip_address(dns):
+                    return jsonify({"success": False, "message": f"Invalid DNS server IP: {dns}"}), 400
+
+        # Validate network interfaces
+        for iface_name, iface_config in data["using_interfaces"].items():
+            # Check if interface exists and is up
+            if not is_interface_up(iface_name):
+                return jsonify({"success": False, "message": f"Interface {iface_name} is not available or could not be brought up"}), 400
+            
+            # Validate IP configuration if provided
+            if "ip" in iface_config and iface_config["ip"]:
+                if not validate_ip_address(iface_config["ip"]):
+                    return jsonify({"success": False, "message": f"Invalid IP address for interface {iface_name}"}), 400
+                
+                # Validate subnet mask if provided
+                if "netmask" in iface_config and iface_config["netmask"]:
+                    if not validate_subnet_mask(iface_config["netmask"]):
+                        return jsonify({"success": False, "message": f"Invalid subnet mask for interface {iface_name}"}), 400
+                
+                # Check if the network is available
+                if not is_network_available(iface_config.get("ip")):
+                    return jsonify({"success": False, "message": f"Network for interface {iface_name} is not available"}), 400
+        
+        # Validate default gateway reachability
+        if not is_ip_reachable(data["default_gateway"]):
+            return jsonify({"success": False, "message": "Default gateway is not reachable"}), 400
+
+        # Validate DNS servers reachability if provided
+        if "dns_servers" in data and isinstance(data["dns_servers"], list):
+            for dns in data["dns_servers"]:
+                if not is_ip_reachable(dns):
+                    return jsonify({"success": False, "message": f"DNS server {dns} is not reachable"}), 400
+
+        # All validations passed, store the configuration
         store_network_config(data)
 
         return (
             jsonify({
                 "success": True, 
-                "message": "Network configuration saved successfully", 
+                "message": "Network configuration validated and saved successfully", 
                 "key": data.get("hostname") or data.get("default_gateway") or "unknown"
             }),
             200,
         )
 
+# ... (rest of the code remains the same)
     except Exception as e:
         app.logger.error(f"❌ Exception occurred: {str(e)}")
         return jsonify({"success": False, "message": f"Bad Request: {str(e)}"}), 400

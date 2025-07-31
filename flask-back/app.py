@@ -626,7 +626,7 @@ def submit_network_config():
         }
 
         if default_gateway:
-            if not is_network_available(default_gateway):
+            if not is_ip_reachable(default_gateway):
                 app.logger.error(
                     f"Default gateway {default_gateway} is not available on local network"
                 )
