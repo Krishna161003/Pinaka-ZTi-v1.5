@@ -160,7 +160,7 @@ def validate():
     elif mode == "remote":
         host = data.get("host")
         username = "pinakasupport"
-        pem_path = "./keypair/ps_key.pem"
+        pem_path = "/home/pinaka/ps_key.pem"
 
         if not all([host, username, pem_path]):
             return jsonify({"error": "Missing remote credentials"}), 400
