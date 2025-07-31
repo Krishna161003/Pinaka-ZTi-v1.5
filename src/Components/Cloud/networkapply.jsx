@@ -831,7 +831,8 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
           </Spin>
         ))}
       </Space>
-      </div>
+    </div>
   );
+};
 
 export default NetworkApply;
