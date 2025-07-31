@@ -52,7 +52,8 @@ const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
                                     type: result.key_type || 'N/A',
                                     period: result.license_period ? `${result.license_period} days` : 'N/A',
                                     mac_address: result.mac_address,
-                                    socket_count: result.socket_count
+                                    socket_count: result.socket_count,
+                                    licenseCode: row.license || '-' // Store the license code
                                 },
                                 checking: false,
                             }

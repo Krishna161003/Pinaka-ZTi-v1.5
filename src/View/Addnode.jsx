@@ -193,7 +193,7 @@ const App = () => {
         <Tabs.TabPane tab="Network Apply" key="4" disabled={!licenseNodes || licenseNodes.length === 0}>
           <NetworkApply />
         </Tabs.TabPane>
-        <Tabs.TabPane tab="Report" key="5" disabled={!licenseNodes || licenseNodes.length === 0}>
+        <Tabs.TabPane tab="Report" key="5" disabled={disabledTabs["5"]}>
           <Report />
         </Tabs.TabPane>
       </Tabs>

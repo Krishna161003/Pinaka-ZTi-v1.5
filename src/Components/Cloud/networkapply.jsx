@@ -64,6 +64,7 @@ const NetworkApply = () => {
       defaultGatewayError: '',
       licenseType: licenseDetailsMap[node.ip]?.type || '-',
       licensePeriod: licenseDetailsMap[node.ip]?.period || '-',
+      licenseCode: licenseDetailsMap[node.ip]?.licenseCode || '-',
       selectedDisks: [],
       diskError: '',
       selectedRoles: [],
@@ -769,21 +770,9 @@ function generateRows(configType, useBond) {
               </Form.Item>
             </div>
             {/* License Code Display */}
-            <div style={{ margin: '8px 0 0 0', padding: '8px 16px', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4 }}>
+            <div style={{ margin: '8px 0 0 0', padding: '8px 16px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: 4 }}>
               <span style={{ fontWeight: 500, marginRight: 16 }}>License Code:</span>
-              <span>{(() => {
-                // Try to get license code from activation results in sessionStorage
-                try {
-                  const licenseArr = JSON.parse(sessionStorage.getItem('cloud_licenseActivationResults'));
-                  if (Array.isArray(licenseArr)) {
-                    const found = licenseArr.find(row => row.ip === form.ip);
-                    return found && found.license_code ? found.license_code : '-';
-                  }
-                  return '-';
-                } catch {
-                  return '-';
-                }
-              })()}</span>
+              <span>{form.licenseCode || '-'}</span>
             </div>
             <Divider />
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '16px', marginRight: '5%' }}>
