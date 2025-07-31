@@ -168,7 +168,7 @@ const FlightDeckHostsTable = () => {
       render: (_, record) => (
         <Button size="small" onClick={() => {
           setModalRecord(record);
-          setModalVisible(true);
+          setModalVisible('credential');
         }} type='primary' style={{ width: '95px' }}>
           View
         </Button>
@@ -204,6 +204,7 @@ const FlightDeckHostsTable = () => {
         onCancel={() => setModalVisible(null)}
         title="Host Credentials"
         footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
+        width={600}
       >
         <div>
           <b>1. Flight Deck</b>
@@ -341,7 +342,7 @@ const SquadronNodesTable = () => {
       render: (_, record) => (
         <Button size="small" onClick={() => {
           setModalRecord(record);
-          setModalVisible(true);
+          setModalVisible('credential');
         }} type='primary' style={{ width: '95px' }}>
           View
         </Button>
@@ -377,6 +378,7 @@ const SquadronNodesTable = () => {
         onCancel={() => setModalVisible(null)}
         title="Squadron Node Credentials"
         footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
+        width={600}
       >
         <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
       </Modal>
