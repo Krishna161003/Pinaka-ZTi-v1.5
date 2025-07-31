@@ -426,10 +426,10 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
           const currentSelection = form.useBond
             ? Array.isArray(record.interface) ? record.interface : []
             : record.interface ? [record.interface] : [];
-          const availableInterfaces = (nodeInterfaces[form.ip] || interfaces).filter(
+          const availableInterfaces = (nodeInterfaces[form.ip] || []).filter(
             (iface) =>
               !selectedInterfaces.includes(iface.iface) || currentSelection.includes(iface.iface)
-          );
+          ) || [];
           return (
             <Select
               mode={form.useBond ? 'multiple' : undefined}
