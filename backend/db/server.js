@@ -280,7 +280,7 @@ db.connect((err) => {
       Storage VARCHAR(255) NULL,
       External_Traffic VARCHAR(255) NULL,
       VXLAN VARCHAR(255) NULL,
-      datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+      datetime DATETIME DEFAULT (CONVERT_TZ(CURRENT_TIMESTAMP, @@session.time_zone, '+05:30')),
       INDEX idx_user_id (user_id)        -- Added index for foreign key
     ) ENGINE=InnoDB;
   `;
@@ -321,7 +321,7 @@ db.connect((err) => {
           Storage VARCHAR(255) NULL,
           External_Traffic VARCHAR(255) NULL,
           VXLAN VARCHAR(255) NULL,
-          timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Timestamp
+          timestamp DATETIME DEFAULT (CONVERT_TZ(CURRENT_TIMESTAMP, @@session.time_zone, '+05:30')), -- Timestamp in IST
           FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
           FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
           FOREIGN KEY (license_code) REFERENCES License(license_code)
@@ -356,7 +356,7 @@ db.connect((err) => {
           Storage VARCHAR(255) NULL,
           External_Traffic VARCHAR(255) NULL,
           VXLAN VARCHAR(255) NULL,
-          timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Timestamp
+          timestamp DATETIME DEFAULT (CONVERT_TZ(CURRENT_TIMESTAMP, @@session.time_zone, '+05:30')), -- Timestamp in IST
           FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
           FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
           FOREIGN KEY (license_code) REFERENCES License(license_code)
@@ -496,8 +496,8 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
       if (server_type === 'host') {
         // Insert into Host table
         const hostSQL = `
-          INSERT IGNORE INTO Host (user_id, server_id, cloudname, serverip, servervip, role, license_code, Management, External_Traffic, Storage, VXLAN)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT IGNORE INTO Host (user_id, server_id, cloudname, serverip, servervip, role, license_code, Management, Storage, External_Traffic, VXLAN)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         db.query(hostSQL, [
           deployment.user_id,
