@@ -41,12 +41,14 @@ const ValidateTable = ({ nodes = [], onNext, results, setResults }) => {
                 throw new Error(result.error);
             }
 
+            // Defensive: Ensure result.validation exists and is an object
+            const validation = (result && typeof result.validation === 'object') ? result.validation : {};
             const isPass = result.validation_result === 'passed';
             const details = [
-                `CPU Cores: ${result.cpu_cores} (${result.validation.cpu ? '✓' : '✗'})`,
-                `Memory: ${result.memory_gb}GB (${result.validation.memory ? '✓' : '✗'})`,
-                `Disks: ${result.data_disks} (${result.validation.disks ? '✓' : '✗'})`,
-                `Network Interfaces: ${result.network_interfaces} (${result.validation.network ? '✓' : '✗'})`
+                `CPU Cores: ${result.cpu_cores ?? 'N/A'} (${validation.cpu === true ? '✓' : validation.cpu === false ? '✗' : '-'})`,
+                `Memory: ${result.memory_gb ?? 'N/A'}GB (${validation.memory === true ? '✓' : validation.memory === false ? '✗' : '-'})`,
+                `Disks: ${result.data_disks ?? 'N/A'} (${validation.disks === true ? '✓' : validation.disks === false ? '✗' : '-'})`,
+                `Network Interfaces: ${result.network_interfaces ?? 'N/A'} (${validation.network === true ? '✓' : validation.network === false ? '✗' : '-'})`
             ].join('\n');
 
             setData(prev => {
