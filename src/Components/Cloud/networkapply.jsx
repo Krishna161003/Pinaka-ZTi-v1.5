@@ -33,10 +33,21 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
         fetch(`https://${ip}:2020/get-disks`).then(r => r.json()),
         fetch(`https://${ip}:2020/get-interfaces`).then(r => r.json()),
       ]);
-      setNodeDisks(prev => ({ ...prev, [ip]: diskRes.disks || [] }));
+      
+      // Map disks to include both name and size in the label
+      const formattedDisks = (diskRes.disks || []).map(disk => ({
+        name: disk.name,
+        size: disk.size,
+        wwn: disk.wwn,
+        label: `${disk.name} (${disk.size})`,
+        value: disk.name
+      }));
+      
+      setNodeDisks(prev => ({ ...prev, [ip]: formattedDisks }));
       setNodeInterfaces(prev => ({ ...prev, [ip]: (ifaceRes.interfaces || []).map(i => ({ iface: i.iface })) }));
     } catch (e) {
-      message.error(`Failed to fetch data from node ${ip}`);
+      console.error(`Failed to fetch data from node ${ip}:`, e);
+      message.error(`Failed to fetch data from node ${ip}: ${e.message}`);
     }
   };
 
