@@ -280,9 +280,18 @@ db.connect((err) => {
       Storage VARCHAR(255) NULL,
       External_Traffic VARCHAR(255) NULL,
       VXLAN VARCHAR(255) NULL,
-      datetime DATETIME DEFAULT (CONVERT_TZ(CURRENT_TIMESTAMP, @@session.time_zone, '+05:30')),
+      datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_user_id (user_id)        -- Added index for foreign key
     ) ENGINE=InnoDB;
+    
+    -- Create a trigger to update the datetime column with IST timezone
+    DROP TRIGGER IF EXISTS before_insert_deployment_activity_log;
+    CREATE TRIGGER before_insert_deployment_activity_log
+    BEFORE INSERT ON deployment_activity_log
+    FOR EACH ROW
+    BEGIN
+      SET NEW.datetime = CONVERT_TZ(NOW(), @@session.time_zone, '+05:30');
+    END;
   `;
 
   db.query(deploymentActivityLogTableSQL, (err, result) => {
@@ -321,7 +330,7 @@ db.connect((err) => {
           Storage VARCHAR(255) NULL,
           External_Traffic VARCHAR(255) NULL,
           VXLAN VARCHAR(255) NULL,
-          timestamp DATETIME DEFAULT (CONVERT_TZ(CURRENT_TIMESTAMP, @@session.time_zone, '+05:30')), -- Timestamp in IST
+      datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
           FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
           FOREIGN KEY (license_code) REFERENCES License(license_code)
@@ -356,7 +365,7 @@ db.connect((err) => {
           Storage VARCHAR(255) NULL,
           External_Traffic VARCHAR(255) NULL,
           VXLAN VARCHAR(255) NULL,
-          timestamp DATETIME DEFAULT (CONVERT_TZ(CURRENT_TIMESTAMP, @@session.time_zone, '+05:30')), -- Timestamp in IST
+          datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
           FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
           FOREIGN KEY (license_code) REFERENCES License(license_code)
@@ -946,7 +955,7 @@ app.get('/api/squadron-nodes', async (req, res) => {
 // API: Get dashboard counts for Cloud, Flight Deck, and Squadron
 app.get('/api/dashboard-counts/:userId', async (req, res) => {
   const { userId } = req.params;
-  
+
   if (!userId) {
     return res.status(400).json({ error: 'User ID is required' });
   }
@@ -954,13 +963,13 @@ app.get('/api/dashboard-counts/:userId', async (req, res) => {
   try {
     // Get unique cloud count from Host table
     const cloudCountQuery = `SELECT COUNT(DISTINCT cloudname) AS cloudCount FROM Host WHERE user_id = ?`;
-    
+
     // Get flight deck count from Host table
     const flightDeckCountQuery = `SELECT COUNT(*) AS flightDeckCount FROM Host WHERE user_id = ?`;
-    
+
     // Get squadron count from child_node table
     const squadronCountQuery = `SELECT COUNT(*) AS squadronCount FROM child_node WHERE user_id = ?`;
-    
+
     // Execute all queries in parallel
     const [cloudResult, flightDeckResult, squadronResult] = await Promise.all([
       new Promise((resolve, reject) => {
@@ -982,7 +991,7 @@ app.get('/api/dashboard-counts/:userId', async (req, res) => {
         });
       })
     ]);
-    
+
     // Return the counts
     res.status(200).json({
       cloudCount: cloudResult,
@@ -1037,13 +1046,13 @@ app.get('/api/server-counts', async (req, res) => {
   try {
     // Get count of servers from Host table
     const hostCountQuery = `SELECT COUNT(*) as host_count FROM Host`;
-    
+
     // Get count of servers from child_node table
     const childCountQuery = `SELECT COUNT(*) as child_count FROM child_node`;
-    
+
     // Get all server IPs for status check
     const serverIpsQuery = `SELECT serverip FROM Host UNION SELECT serverip FROM child_node`;
-    
+
     // Execute all queries in parallel
     const [hostResult, childResult, serversResult] = await Promise.all([
       new Promise((resolve, reject) => {
@@ -1065,26 +1074,26 @@ app.get('/api/server-counts', async (req, res) => {
         });
       })
     ]);
-    
+
     // Calculate total count
     const total_count = hostResult + childResult;
-    
+
     // For the Node.js implementation, we'll call the Flask endpoint to check server status
     // This is a temporary solution until we implement SSH functionality directly in Node.js
     const axios = require('axios');
     const https = require('https');
-    
+
     // Create an HTTPS agent that doesn't validate certificates (for local development)
     const agent = new https.Agent({ rejectUnauthorized: false });
-    
+
     // Check status of each server
     let online_count = 0;
     let offline_count = 0;
-    
+
     // Process servers in batches to avoid too many concurrent connections
     const batchSize = 5;
     const servers = serversResult;
-    
+
     for (let i = 0; i < servers.length; i += batchSize) {
       const batch = servers.slice(i, i + batchSize);
       const statusChecks = batch.map(async (server) => {
@@ -1095,18 +1104,18 @@ app.get('/api/server-counts', async (req, res) => {
             headers: { 'Content-Type': 'application/json' },
             httpsAgent: agent
           });
-          
+
           return response.data.status === 'online';
         } catch (error) {
           return false;
         }
       });
-      
+
       const results = await Promise.all(statusChecks);
       online_count += results.filter(status => status).length;
       offline_count += results.filter(status => !status).length;
     }
-    
+
     return res.status(200).json({
       total_count,
       online_count,
