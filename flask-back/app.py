@@ -44,10 +44,16 @@ ENV_REQUIREMENTS = {
     #     "disks": 2,
     #     "network": 2,
     # },
+    # "production": {
+    #     "cpu_cores": 48,
+    #     "memory_gb": 128,
+    #     "disks": 4,
+    #     "network": 2,
+    # },
     "production": {
-        "cpu_cores": 48,
-        "memory_gb": 128,
-        "disks": 4,
+        "cpu_cores": 12,
+        "memory_gb": 16,
+        "disks": 2,
         "network": 2,
     },
 }
