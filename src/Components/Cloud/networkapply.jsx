@@ -26,7 +26,31 @@ const BOOT_DURATION = 5000; // ms after restart
 const RESTART_ENDTIME_KEY = 'cloud_networkApplyRestartEndTimes';
 const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
 
-const NetworkApply = () => {
+  // Dynamic per-node disks and interfaces
+  const [nodeDisks, setNodeDisks] = useState({});
+  const [nodeInterfaces, setNodeInterfaces] = useState({});
+
+  // Fetch disks and interfaces for a node
+  const fetchNodeData = async (ip) => {
+    try {
+      const [diskRes, ifaceRes] = await Promise.all([
+        fetch(`https://${ip}:2020/get-disks`).then(r => r.json()),
+        fetch(`https://${ip}:2020/get-interfaces`).then(r => r.json()),
+      ]);
+      setNodeDisks(prev => ({ ...prev, [ip]: diskRes.disks || [] }));
+      setNodeInterfaces(prev => ({ ...prev, [ip]: (ifaceRes.interfaces || []).map(i => ({ iface: i.iface })) }));
+    } catch (e) {
+      message.error(`Failed to fetch data from node ${ip}`);
+    }
+  };
+
+  // On mount, fetch for all nodes
+  useEffect(() => {
+    licenseNodes.forEach(node => {
+      if (node.ip) fetchNodeData(node.ip);
+    });
+  }, [licenseNodes]);
+
   const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
   // Per-card loading and applied state, restore from sessionStorage if available
   const getInitialCardStatus = () => {
@@ -398,7 +422,6 @@ const NetworkApply = () => {
         title: 'Interfaces Required',
         dataIndex: 'interface',
         render: (_, record, rowIdx) => {
-          // Deployment.js: render as Select for interface(s)
           const selectedInterfaces = form.tableData
             .filter((_, i) => i !== rowIdx)
             .flatMap(row => {
@@ -409,7 +432,7 @@ const NetworkApply = () => {
           const currentSelection = form.useBond
             ? Array.isArray(record.interface) ? record.interface : []
             : record.interface ? [record.interface] : [];
-          const availableInterfaces = interfaces.filter(
+          const availableInterfaces = (nodeInterfaces[form.ip] || interfaces).filter(
             (iface) =>
               !selectedInterfaces.includes(iface.iface) || currentSelection.includes(iface.iface)
           );
@@ -437,12 +460,10 @@ const NetworkApply = () => {
           );
         },
       },
-
       {
         title: 'Type',
         dataIndex: 'type',
         render: (_, record, rowIdx) => {
-          // Management restriction for segregated mode
           let managementTaken = false;
           if (form.configType === 'segregated') {
             managementTaken = form.tableData.some((row, i) => i !== rowIdx && Array.isArray(row.type) && row.type.includes('Management'));
@@ -499,7 +520,6 @@ const NetworkApply = () => {
           );
         },
       },
-
       {
         title: 'IP ADDRESS',
         dataIndex: 'ip',
@@ -554,7 +574,6 @@ const NetworkApply = () => {
           </Form.Item>
         ),
       },
-
     ];
     return [
       ...baseColumns,
@@ -689,7 +708,17 @@ const NetworkApply = () => {
         {forms.map((form, idx) => (
           <Spin spinning={cardStatus[idx]?.loading} tip="Applying network changes & restarting node...">
             <Card key={form.ip} title={`Node: ${form.ip}`} style={{ width: '100%' }}>
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div />
+                <Button
+                  onClick={() => fetchNodeData(form.ip)}
+                  style={{ marginBottom: 8 }}
+                  size="small"
+                  type="default"
+                >
+                  Refetch Data
+                </Button>
+              </div>
                 <Radio.Group
                   value={form.configType}
                   onChange={e => handleConfigTypeChange(idx, e.target.value)}
@@ -706,7 +735,6 @@ const NetworkApply = () => {
                 >
                   Bond
                 </Checkbox>
-              </div>
               <Table
                 columns={getColumns(form, idx)}
                 dataSource={form.tableData}
@@ -750,10 +778,13 @@ const NetworkApply = () => {
                     disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
                     onChange={value => handleDiskChange(idx, value)}
                   >
-                    {/* Placeholder disk data; replace with API data if available */}
-                    <Option value="sda">sda</Option>
-                    <Option value="sdb">sdb</Option>
-                    <Option value="nvme0n1">nvme0n1</Option>
+                    {(nodeDisks[form.ip] || [
+                      { value: "sda" },
+                      { value: "sdb" },
+                      { value: "nvme0n1" }
+                    ]).map(disk => (
+                      <Option key={disk} value={disk}>{disk}</Option>
+                    ))}
                   </Select>
                 </Form.Item>
                 <Form.Item
@@ -800,8 +831,7 @@ const NetworkApply = () => {
           </Spin>
         ))}
       </Space>
-    </div>
+      </div>
   );
-};
 
 export default NetworkApply;
