@@ -34,13 +34,14 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
         fetch(`https://${ip}:2020/get-interfaces`).then(r => r.json()),
       ]);
       
-      // Map disks to include both name and size in the label
+      // Map disks to include all necessary properties
       const formattedDisks = (diskRes.disks || []).map(disk => ({
         name: disk.name,
         size: disk.size,
         wwn: disk.wwn,
         label: `${disk.name} (${disk.size})`,
-        value: disk.name
+        value: disk.wwn, // Store WWN as the value
+        display: `${disk.name} (${disk.size}, ${disk.wwn})`
       }));
       
       setNodeDisks(prev => ({ ...prev, [ip]: formattedDisks }));
@@ -828,15 +829,15 @@ const getInitialForms = () => {
                     onChange={value => handleDiskChange(idx, value)}
                     optionLabelProp="label"
                   >
-                    {(nodeDisks[form.ip] || []).map(disk => {
-                      const diskValue = disk.name || disk;
-                      const diskLabel = disk.label || disk.name || disk;
-                      return (
-                        <Option key={diskValue} value={diskValue} label={diskLabel}>
-                          {diskLabel} {disk.size ? `(${disk.size})` : ''}
-                        </Option>
-                      );
-                    })}
+                    {(nodeDisks[form.ip] || []).map(disk => (
+                      <Option 
+                        key={disk.wwn || disk} 
+                        value={disk.wwn || disk}
+                        label={disk.display || disk}
+                      >
+                        {disk.display || disk}
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
                 <Form.Item
