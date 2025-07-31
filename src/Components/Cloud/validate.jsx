@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Modal, Tag, message, Empty } from 'antd';
+import axios from 'axios';
+
+const hostIP = window.location.hostname;
 
 const ValidateTable = ({ nodes = [], onNext, results, setResults }) => {
     const [data, setData] = useState(results || []);
@@ -19,30 +22,64 @@ const ValidateTable = ({ nodes = [], onNext, results, setResults }) => {
         );
     }, [results, nodes]);
 
-    // Simulate validation API call
-    const handleValidate = (ip) => {
+    // Call backend validation API
+    const handleValidate = async (ip) => {
         setData(prev => prev.map(row =>
             row.ip === ip ? { ...row, validating: true } : row
         ));
-        setTimeout(() => {
-            // Random pass/fail for demo
-            const isPass = Math.random() > 0.3;
+
+        try {
+            const response = await axios.post(`https://${hostIP}:2020/validate`, {
+                environment: 'production', // You might want to make this configurable
+                mode: 'remote',
+                host: ip
+            });
+
+            const { data: result } = response;
+            
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            const isPass = result.validation_result === 'passed';
+            const details = [
+                `CPU Cores: ${result.cpu_cores} (${result.validation.cpu ? '✓' : '✗'})`,
+                `Memory: ${result.memory_gb}GB (${result.validation.memory ? '✓' : '✗'})`,
+                `Disks: ${result.data_disks} (${result.validation.disks ? '✓' : '✗'})`,
+                `Network Interfaces: ${result.network_interfaces} (${result.validation.network ? '✓' : '✗'})`
+            ].join('\n');
+
             setData(prev => {
                 const newData = prev.map(row =>
                     row.ip === ip
                         ? {
                             ...row,
                             result: isPass ? 'Pass' : 'Fail',
-                            details: isPass ? 'All checks passed.' : 'Validation failed: Example error.',
-                            validating: false
+                            details: details,
+                            validating: false,
+                            validationData: result // Store full validation data
                         }
                         : row
                 );
                 setResults && setResults(newData);
                 return newData;
             });
+            
             message.success(`Validation for ${ip}: ${isPass ? 'Pass' : 'Fail'}`);
-        }, 1200);
+        } catch (error) {
+            console.error('Validation error:', error);
+            setData(prev => prev.map(row =>
+                row.ip === ip 
+                    ? { 
+                        ...row, 
+                        result: 'Fail', 
+                        details: `Validation failed: ${error.message || 'Unknown error'}`,
+                        validating: false 
+                    } 
+                    : row
+            ));
+            message.error(`Validation failed for ${ip}: ${error.message || 'Unknown error'}`);
+        }
     };
 
     const columns = [

@@ -4,6 +4,41 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { theme, Layout, Tabs, Table, Button, Modal, Spin, Alert, Input } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 
+// LicenseDetailsModalContent: fetches and displays license details for a serverid
+function LicenseDetailsModalContent({ serverid }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [license, setLicense] = useState(null);
+
+  useEffect(() => {
+    if (!serverid) return;
+    setLoading(true);
+    setError(null);
+    setLicense(null);
+    fetch(`https://${hostIP}:5000/api/license-details/${serverid}`)
+      .then(res => {
+        if (!res.ok) throw new Error('No license found');
+        return res.json();
+      })
+      .then(setLicense)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [serverid]);
+
+  if (!serverid) return <div style={{color:'#aaa'}}>No server ID selected.</div>;
+  if (loading) return <Spin tip="Loading license details..." />;
+  if (error) return <Alert type="error" message={error} showIcon />;
+  if (!license) return <div style={{color:'#aaa'}}>No license data found.</div>;
+  return (
+    <div>
+      <div><b>License Code:</b> {license.license_code || <span style={{ color: '#aaa' }}>-</span>}</div>
+      <div><b>Type:</b> {license.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
+      <div><b>Period:</b> {license.license_period || <span style={{ color: '#aaa' }}>-</span>}</div>
+      <div><b>Status:</b> {license.license_status || <span style={{ color: '#aaa' }}>-</span>}</div>
+    </div>
+  );
+}
+
 const { Content } = Layout;
 const hostIP=window.location.hostname;
 
@@ -163,11 +198,12 @@ const FlightDeckHostsTable = () => {
           size="middle"
         />
       </Spin>
+      {/* Credential Modal */}
       <Modal
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        open={modalVisible === 'credential'}
+        onCancel={() => setModalVisible(null)}
         title="Host Credentials"
-        footer={<Button onClick={() => setModalVisible(false)}>Close</Button>}
+        footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
       >
         <div>
           <b>1. Flight Deck</b>
@@ -210,6 +246,20 @@ const FlightDeckHostsTable = () => {
               </a>
             ) : <span>No URL</span>}</li>
           </ul>
+        </div>
+      </Modal>
+      {/* License Modal */}
+      <Modal
+        open={modalVisible === 'license'}
+        onCancel={() => setModalVisible(null)}
+        title="License Details"
+        footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
+      >
+        <div>
+          <div><b>License Code:</b> {modalRecord?.licensecode || <span style={{ color: '#aaa' }}>-</span>}</div>
+          {modalRecord?.licenseType && <div><b>Type:</b> {modalRecord.licenseType}</div>}
+          {modalRecord?.licensePeriod && <div><b>Period:</b> {modalRecord.licensePeriod}</div>}
+          {/* Add more license fields if available */}
         </div>
       </Modal>
     </div>
@@ -321,45 +371,27 @@ const SquadronNodesTable = () => {
           size="middle"
         />
       </Spin>
+      {/* Credential Modal */}
       <Modal
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        open={modalVisible === 'credential'}
+        onCancel={() => setModalVisible(null)}
         title="Squadron Node Credentials"
-        footer={<Button onClick={() => setModalVisible(false)}>Close</Button>}
+        footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
+      >
+        <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
+      </Modal>
+      {/* License Modal */}
+      <Modal
+        open={modalVisible === 'license'}
+        onCancel={() => setModalVisible(null)}
+        title="License Details"
+        footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
       >
         <div>
-          <b>1. Squadron</b>
-          <ul style={{ marginBottom: 8 }}>
-            <li>{modalRecord?.credentialUrl ? (
-              <a href={modalRecord.credentialUrl} target="_blank" rel="noopener noreferrer">
-                {modalRecord.credentialUrl}
-              </a>
-            ) : <span>No URL</span>}</li>
-          </ul>
-          <b>2. Monitoring</b>
-          <ul style={{ marginBottom: 8 }}>
-            <li>{modalRecord?.vip ? (
-              <a href={`https://${modalRecord.vip}:7000/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.vip}:7000/
-              </a>
-            ) : modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:7000/
-              </a>
-            ) : <span>No URL</span>}</li>
-          </ul>
-          <b>3. Diagnosis Dashboard</b>
-          <ul style={{ marginBottom: 0 }}>
-            <li>{modalRecord?.vip ? (
-              <a href={`https://${modalRecord.vip}:5601/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.vip}:5601/
-              </a>
-            ) : modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:5601/
-              </a>
-            ) : <span>No URL</span>}</li>
-          </ul>
+          <div><b>License Code:</b> {modalRecord?.licensecode || <span style={{ color: '#aaa' }}>-</span>}</div>
+          {modalRecord?.licenseType && <div><b>Type:</b> {modalRecord.licenseType}</div>}
+          {modalRecord?.licensePeriod && <div><b>Period:</b> {modalRecord.licensePeriod}</div>}
+          {/* Add more license fields if available */}
         </div>
       </Modal>
     </div>

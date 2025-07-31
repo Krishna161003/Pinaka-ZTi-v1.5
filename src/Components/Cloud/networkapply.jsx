@@ -40,6 +40,21 @@ const NetworkApply = () => {
   const getInitialForms = () => {
     const saved = sessionStorage.getItem('cloud_networkApplyForms');
     if (saved) return JSON.parse(saved);
+    // Attach license details if available
+    const licenseDetailsMap = (() => {
+      const saved = sessionStorage.getItem('cloud_licenseActivationResults');
+      if (!saved) return {};
+      try {
+        const arr = JSON.parse(saved);
+        const map = {};
+        for (const row of arr) {
+          if (row.ip && row.details) map[row.ip] = row.details;
+        }
+        return map;
+      } catch {
+        return {};
+      }
+    })();
     return licenseNodes.map(node => ({
       ip: node.ip,
       configType: 'default',
@@ -47,6 +62,12 @@ const NetworkApply = () => {
       tableData: generateRows('default', false),
       defaultGateway: '',
       defaultGatewayError: '',
+      licenseType: licenseDetailsMap[node.ip]?.type || '-',
+      licensePeriod: licenseDetailsMap[node.ip]?.period || '-',
+      selectedDisks: [],
+      diskError: '',
+      selectedRoles: [],
+      roleError: '',
     }));
   };
   const [forms, setForms] = useState(getInitialForms);
@@ -67,6 +88,10 @@ const NetworkApply = () => {
           tableData: generateRows('default', false),
           defaultGateway: '',
           defaultGatewayError: '',
+          selectedDisks: [],
+          diskError: '',
+          selectedRoles: [],
+          roleError: '',
         }))
       );
       setCardStatus(licenseNodes.map(() => ({ loading: false, applied: false })));
@@ -185,7 +210,14 @@ const NetworkApply = () => {
     sessionStorage.setItem('cloud_networkApplyCardStatus', JSON.stringify(cardStatus));
   }, [cardStatus]);
 
-  function generateRows(configType, useBond) {
+  function handleDiskChange(idx, value) {
+  setForms(prev => prev.map((f, i) => i === idx ? { ...f, selectedDisks: value, diskError: '' } : f));
+}
+function handleRoleChange(idx, value) {
+  setForms(prev => prev.map((f, i) => i === idx ? { ...f, selectedRoles: value, roleError: '' } : f));
+}
+
+function generateRows(configType, useBond) {
     const count = configType === 'default' ? 2 : 4;
     return Array.from({ length: count }, (_, i) => ({
       key: i,
@@ -560,12 +592,30 @@ const NetworkApply = () => {
     }
     // Validate default gateway
     if (!form.defaultGateway) {
+      setForms(prev => prev.map((f, i) => i === nodeIdx ? { ...f, defaultGatewayError: 'Required' } : f));
       message.error('Please enter Default Gateway.');
       return;
     }
     if (!ipRegex.test(form.defaultGateway)) {
+      setForms(prev => prev.map((f, i) => i === nodeIdx ? { ...f, defaultGatewayError: 'Invalid IP' } : f));
       message.error('Default Gateway must be a valid IP address.');
       return;
+    }
+    // Validate disks
+    if (!form.selectedDisks || form.selectedDisks.length === 0) {
+      setForms(prev => prev.map((f, i) => i === nodeIdx ? { ...f, diskError: 'At least one disk required' } : f));
+      message.error('Please select at least one disk.');
+      return;
+    } else {
+      setForms(prev => prev.map((f, i) => i === nodeIdx ? { ...f, diskError: '' } : f));
+    }
+    // Validate roles
+    if (!form.selectedRoles || form.selectedRoles.length === 0) {
+      setForms(prev => prev.map((f, i) => i === nodeIdx ? { ...f, roleError: 'At least one role required' } : f));
+      message.error('Please select at least one role.');
+      return;
+    } else {
+      setForms(prev => prev.map((f, i) => i === nodeIdx ? { ...f, roleError: '' } : f));
     }
     // Submit logic here (API call or sessionStorage)
     setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { ...s, loading: true } : s));
@@ -615,7 +665,7 @@ const NetworkApply = () => {
           style={{ width: 120, visibility: 'visible' }}
           disabled={!allApplied}
         >
-          Next
+          Deploy
         </Button>
       </div>
       <Divider />
@@ -650,13 +700,21 @@ const NetworkApply = () => {
               scroll={{ x: true }}
               rowClassName={() => (cardStatus[idx]?.loading || cardStatus[idx]?.applied ? 'ant-table-disabled' : '')}
             />
+            {/* License Details Display */}
+            <div style={{ margin: '16px 0 0 0', padding: '8px 16px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4 }}>
+              <span style={{ fontWeight: 500, marginRight: 16 }}>License Type:</span>
+              <span>{form.licenseType || '-'}</span>
+              <span style={{ fontWeight: 500, margin: '0 0 0 32px' }}>License Period:</span>
+              <span>{form.licensePeriod || '-'}</span>
+            </div>
             {/* Default Gateway Field */}
-            <div style={{ margin: '16px 0 0 0', width: '300px' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: 24, margin: '16px 0 0 0' }}>
               <Form.Item
                 label="Default Gateway"
                 validateStatus={form.defaultGatewayError ? 'error' : ''}
                 help={form.defaultGatewayError}
                 required
+                style={{ minWidth: 220 }}
               >
                 <Input
                   value={form.defaultGateway}
@@ -665,6 +723,49 @@ const NetworkApply = () => {
                   style={{ width: 200 }}
                   disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
                 />
+              </Form.Item>
+              <Form.Item
+                label="Select Disk"
+                required
+                validateStatus={form.diskError ? 'error' : ''}
+                help={form.diskError}
+                style={{ minWidth: 220 }}
+              >
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder="Select disk(s)"
+                  value={form.selectedDisks || []}
+                  style={{ width: 200 }}
+                  disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
+                  onChange={value => handleDiskChange(idx, value)}
+                >
+                  {/* Placeholder disk data; replace with API data if available */}
+                  <Option value="sda">sda</Option>
+                  <Option value="sdb">sdb</Option>
+                  <Option value="nvme0n1">nvme0n1</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item
+                label="Select Role"
+                required
+                validateStatus={form.roleError ? 'error' : ''}
+                help={form.roleError}
+                style={{ minWidth: 220 }}
+              >
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder="Select role(s)"
+                  value={form.selectedRoles || []}
+                  style={{ width: 200 }}
+                  disabled={cardStatus[idx]?.loading || cardStatus[idx]?.applied}
+                  onChange={value => handleRoleChange(idx, value)}
+                >
+                  <Option value="Control">Control</Option>
+                  <Option value="Compute">Compute</Option>
+                  <Option value="Storage">Storage</Option>
+                </Select>
               </Form.Item>
             </div>
             <Divider />

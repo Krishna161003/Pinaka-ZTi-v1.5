@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Input, Tag, message } from 'antd';
+import axios from 'axios';
 
 const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
     const [data, setData] = useState(results || []);
@@ -24,31 +25,60 @@ const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
         ));
     };
 
-    // Simulate license check
-    const handleCheck = (ip) => {
+    // Call backend to validate license
+    const handleCheck = async (ip) => {
+        const row = data.find(r => r.ip === ip);
+        if (!row || !row.license) return;
+
         setData(prev => prev.map(row =>
             row.ip === ip ? { ...row, checking: true } : row
         ));
-        setTimeout(() => {
-            const isSuccess = Math.random() > 0.3;
-            setData(prev => {
-                const newData = prev.map(row =>
-                    row.ip === ip
-                        ? {
-                            ...row,
-                            result: isSuccess ? 'Success' : 'Failed',
-                            details: isSuccess
-                                ? { type: 'Enterprise', period: '1 Year' }
-                                : { type: 'N/A', period: 'N/A' },
-                            checking: false,
-                        }
-                        : row
-                );
-                setResults && setResults(newData);
-                return newData;
+
+        try {
+            const response = await axios.post(`https://${ip}:2020/decrypt-code`, {
+                encrypted_code: row.license
             });
-            message.success(`License check for ${ip}: ${isSuccess ? 'Success' : 'Failed'}`);
-        }, 1200);
+
+            const result = response.data;
+            
+            if (result.success) {
+                setData(prev => {
+                    const newData = prev.map(row =>
+                        row.ip === ip
+                            ? {
+                                ...row,
+                                result: 'Success',
+                                details: {
+                                    type: result.key_type || 'N/A',
+                                    period: result.license_period ? `${result.license_period} days` : 'N/A',
+                                    mac_address: result.mac_address,
+                                    socket_count: result.socket_count
+                                },
+                                checking: false,
+                            }
+                            : row
+                    );
+                    setResults && setResults(newData);
+                    return newData;
+                });
+                message.success(`License activated successfully for ${ip}`);
+            } else {
+                throw new Error(result.message || 'License activation failed');
+            }
+        } catch (error) {
+            console.error('License activation error:', error);
+            setData(prev => prev.map(row =>
+                row.ip === ip
+                    ? {
+                        ...row,
+                        result: 'Failed',
+                        details: { type: 'N/A', period: 'N/A' },
+                        checking: false,
+                    }
+                    : row
+            ));
+            message.error(`License activation failed for ${ip}: ${error.response?.data?.message || error.message}`);
+        }
     };
 
     const columns = [
@@ -97,6 +127,12 @@ const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
                 <div>
                     <div>Type: <b>{record.details?.type || '-'}</b></div>
                     <div>Period: <b>{record.details?.period || '-'}</b></div>
+                    {record.details?.mac_address && (
+                        <div>MAC: <b>{record.details.mac_address}</b></div>
+                    )}
+                    {record.details?.socket_count && (
+                        <div>Sockets: <b>{record.details.socket_count}</b></div>
+                    )}
                 </div>
             ),
         },

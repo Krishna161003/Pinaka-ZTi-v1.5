@@ -435,7 +435,24 @@ app.patch('/api/deployment-activity-log/:serverid', (req, res) => {
   });
 });
 
+// API to fetch license details for a serverid
+app.get('/api/license-details/:serverid', (req, res) => {
+  const { serverid } = req.params;
+  const sql = 'SELECT license_code, license_type, license_period, license_status FROM License WHERE server_id = ? LIMIT 1';
+  db.query(sql, [serverid], (err, results) => {
+    if (err) {
+      console.error('Error fetching license details:', err);
+      return res.status(500).json({ error: 'Failed to fetch license details' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'No license found for this serverid' });
+    }
+    res.json(results[0]);
+  });
+});
+
 // API to transfer completed deployment to appropriate table
+
 app.post('/api/finalize-deployment/:serverid', (req, res) => {
   const { serverid } = req.params;
   const { server_type, role, host_serverid } = req.body;
