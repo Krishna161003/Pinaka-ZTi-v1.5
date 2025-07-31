@@ -196,6 +196,28 @@ def check_license_used(file_path, license_code):
 
 # ------------------------------------------------- Save and validate deploy config start----------------------------
 
+def store_network_config(data):
+    """Store or update the network config for a node in a canonical JSON file."""
+    import threading
+    lock = threading.Lock()
+    file_path = os.path.join("submitted_configs", "network_configs.json")
+    os.makedirs("submitted_configs", exist_ok=True)
+    
+    key = data.get("hostname") or data.get("vip") or data.get("default_gateway") or "unknown"
+    with lock:
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                try:
+                    configs = json.load(f)
+                except Exception:
+                    configs = {}
+        else:
+            configs = {}
+        configs[key] = data
+        with open(file_path, "w") as f:
+            json.dump(configs, f, indent=4)
+    return True
+
 @app.route("/submit-network-config", methods=["POST"])
 def submit_network_config():
     try:
@@ -203,245 +225,19 @@ def submit_network_config():
 
         print("✅ Received data:", json.dumps(data, indent=2))
 
-        table_data = data.get("tableData", [])
-        config_type = data.get("configType", "default")
-        use_bond = data.get("useBond", False)
+        # Basic validation
+        if "using_interfaces" not in data or not isinstance(data["using_interfaces"], dict):
+            return jsonify({"success": False, "message": "Invalid or missing 'using_interfaces'"}), 400
+        if "disk" not in data or not isinstance(data["disk"], list):
+            return jsonify({"success": False, "message": "Invalid or missing 'disk'"}), 400
+        if "default_gateway" not in data or not data["default_gateway"]:
+            return jsonify({"success": False, "message": "Missing 'default_gateway'"}), 400
 
-        provider = data.get("providerNetwork", {})
-        tenant = data.get("tenantNetwork", {})
-
-        disk = data.get("disk", [])
-        if not isinstance(disk, list):
-            disk = [disk] if disk else []
-
-        vip = data.get("vip", "")
-        default_gateway = data.get("defaultGateway", "")
-
-        # === Top-level validation ===
-        if not table_data:
-            app.logger.error(f"Missing tableData: {data}")
-            return jsonify({"success": False, "message": "tableData is required"}), 400
-
-        if config_type not in ["default", "segregated"]:
-            app.logger.error(f"Invalid configType: {config_type}")
-            return jsonify({"success": False, "message": "Invalid configType"}), 400
-
-        # === Validate each row in tableData ===
-        for i, row in enumerate(table_data):
-            interface = row.get("interface")
-            if not interface:
-                app.logger.error(f"Missing 'interface' in row {i+1}: {row}")
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": f"'interface' is required in row {i+1}",
-                        }
-                    ),
-                    400,
-                )
-
-            if isinstance(interface, str):
-                interface = [interface]
-
-            for iface in interface:
-                if not iface.strip():
-                    app.logger.error(f"Empty interface name in row {i+1}: {row}")
-                    return (
-                        jsonify(
-                            {
-                                "success": False,
-                                "message": f"Blank interface in row {i+1}",
-                            }
-                        ),
-                        400,
-                    )
-
-                # Check if the interface is up
-                if not is_interface_up(iface):
-                    app.logger.error(f"Interface {iface} is down.")
-                    return (
-                        jsonify(
-                            {
-                                "success": False,
-                                "message": f"Network interface '{iface}' is down. Please bring it up",
-                            }
-                        ),
-                        400,
-                    )
-
-            # Only check bond name if bonding is used
-            if use_bond and "bondName" in row:
-                if not row["bondName"]:
-                    app.logger.error(f"Empty bondName in row {i+1}")
-                    return (
-                        jsonify(
-                            {
-                                "success": False,
-                                "message": f"'bondName' cannot be empty in row {i+1}",
-                            }
-                        ),
-                        400,
-                    )
-
-            # Only check VLAN ID if provided (optional, not required)
-            if "vlanId" in row and row["vlanId"] != "":
-                try:
-                    int(row["vlanId"])
-                except ValueError:
-                    app.logger.error(f"Invalid VLAN ID in row {i+1}: {row['vlanId']}")
-                    return (
-                        jsonify(
-                            {
-                                "success": False,
-                                "message": f"VLAN ID must be an integer in row {i+1}",
-                            }
-                        ),
-                        400,
-                    )
-            if row.get("ip") and not is_network_available(row["ip"]):
-                app.logger.error(f"Unreachable interface IP in row {i+1}: {row['ip']}")
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": f"Interface IP {row['ip']} in row {i+1} is unreachable. Please check the network.",
-                        }
-                    ),
-                    400,
-                )
-
-
-            if row.get("dns") and not is_ip_reachable(row["dns"]):
-                app.logger.error(f"Unreachable DNS in row {i+1}: {row['dns']}")
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": f"DNS {row['dns']} in row {i+1} is unreachable (ping failed).",
-                        }
-                    ),
-                    400,
-                )
-
-                # ✅ Validate VIP
-        if vip:
-            try:
-                ipaddress.ip_address(vip)
-            except ValueError:
-                return jsonify({"success": False, "message": "Invalid VIP format"}), 400
-
-            if not is_network_available(vip):
-                return (
-                    jsonify(
-                        {"success": False, "message": "VIP network is not available"}
-                    ),
-                    400,
-                )
-
-            if is_ip_reachable(vip) or is_ip_assigned(vip):
-                return (
-                    jsonify({"success": False, "message": "VIP is already in use"}),
-                    400,
-                )
-
-        # === Build output JSON ===
-        response_json = {
-            "using_interfaces": {},
-            "disk": disk,
-            "vip": vip,
-            "default_gateway": default_gateway,  # Always include
-            "hostname": data.get("hostname", "pinakasv")  # Always include
-        }
-
-        if default_gateway:
-            if not is_network_available(default_gateway):
-                app.logger.error(
-                    f"Default gateway {default_gateway} is not available on local network"
-                )
-                return (
-                    jsonify(
-                        {
-                            "success": False,
-                            "message": f"Default gateway {default_gateway} is not reachable from the host",
-                        }
-                    ),
-                    400,
-                )
-
-        bond_count = 0
-        iface_count = 1
-
-        for row in table_data:
-            row_type = row.get("type", [])
-            if isinstance(row_type, str):
-                row_type = [row_type]
-
-            is_secondary = "Secondary" in row_type or row_type == ["secondary"]
-
-            if use_bond and "bondName" in row and row["bondName"]:
-                bond_key = f"bond{bond_count + 1}"
-                response_json["using_interfaces"][bond_key] = {
-                    "interface_name": row["bondName"],
-                    "type": row_type,
-                    "vlan_id": row.get("vlanId", "NULL") if row.get("vlanId") else "NULL",
-                }
-
-                if not is_secondary:
-                    response_json["using_interfaces"][bond_key]["Properties"] = {
-                        "IP_ADDRESS": row.get("ip", ""),
-                        "Netmask": row.get("subnet", ""),
-                        "DNS": row.get("dns", ""),
-                        # No gateway field in table rows anymore
-                    }
-
-                for iface in row.get("interface", []):
-                    iface_key = f"interface_0{iface_count}"
-                    response_json["using_interfaces"][iface_key] = {
-                        "interface_name": iface,
-                        "Bond_Slave": "YES",
-                        "Bond_Interface_Name": row["bondName"],
-                    }
-                    iface_count += 1
-
-                bond_count += 1
-
-            else:
-                iface_key = f"interface_0{iface_count}"
-                interface_name = (
-                    row["interface"][0]
-                    if isinstance(row["interface"], list)
-                    else row["interface"]
-                )
-                interface_entry = {
-                    "interface_name": interface_name,
-                    "type": row_type,
-                    "vlan_id": row.get("vlanId", "NULL") if row.get("vlanId") else "NULL",
-                    "Bond_Slave": "NO",
-                }
-
-                if not is_secondary or config_type == "segregated":
-                    interface_entry["Properties"] = {
-                        "IP_ADDRESS": row.get("ip", ""),
-                        "Netmask": row.get("subnet", ""),
-                        "DNS": row.get("dns", ""),
-                        # No gateway field in table rows anymore
-                    }
-
-                response_json["using_interfaces"][iface_key] = interface_entry
-                iface_count += 1
-
-        # === Save the file ===
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"network_config_{timestamp}.json"
-        file_path = os.path.join("submitted_configs", filename)
-        os.makedirs("submitted_configs", exist_ok=True)
-
-        with open(file_path, "w") as f:
-            json.dump(response_json, f, indent=4)
+        # Store in canonical file
+        store_network_config(data)
 
         return (
-            jsonify({"success": True, "message": "Config saved", "filename": filename}),
+            jsonify({"success": True, "message": "Config saved to canonical file", "key": data.get("hostname") or data.get("vip") or data.get("default_gateway") or "unknown"}),
             200,
         )
 
@@ -680,3 +476,9 @@ def get_interfaces():
     return jsonify(response)
 
 # ------------------------------------------------ local Interface list End --------------------------------------------
+if __name__ == "__main__":
+    app.run(
+        host="0.0.0.0",
+        port=2020,
+        ssl_context=("cert.pem", "key.pem"),  # (certificate, private key)
+    )

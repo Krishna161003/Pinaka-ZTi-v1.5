@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Input, Select, Button, Form, Radio, Checkbox, Divider, Typography, Space, Tooltip, message, Spin } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { buildNetworkConfigPayload } from './networkapply.format';
 
 const { Option } = Select;
 const ipRegex = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/;
@@ -133,7 +134,7 @@ const NetworkApply = () => {
           const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
           networkApplyResult[nodeIp] = {
             ...forms[idx],
-            tableData: forms[idx]?.tableData || [],
+            tableData: Array.isArray(forms[idx]?.tableData) ? forms[idx].tableData.map(row => ({ ...row, type: row.type })) : [],
           };
         } else {
           // Set a timer to clear loader at bootEndTime
@@ -162,7 +163,7 @@ const NetworkApply = () => {
               }
               networkApplyResultInner[nodeIp] = {
                 ...forms[idx],
-                tableData: forms[idx]?.tableData || [],
+                tableData: Array.isArray(forms[idx]?.tableData) ? forms[idx].tableData.map(row => ({ ...row, type: row.type })) : [],
               };
               sessionStorage.setItem('cloud_networkApplyResult', JSON.stringify(networkApplyResultInner));
             }, bootTime - now);
@@ -180,7 +181,7 @@ const NetworkApply = () => {
           if (!networkApplyResult[nodeIp]) {
             networkApplyResult[nodeIp] = {
               ...forms[idx],
-              tableData: forms[idx]?.tableData || [],
+              tableData: Array.isArray(forms[idx]?.tableData) ? forms[idx].tableData.map(row => ({ ...row, type: row.type })) : [],
             };
           }
         }
@@ -619,25 +620,39 @@ const NetworkApply = () => {
       setForms(prev => prev.map((f, i) => i === nodeIdx ? { ...f, roleError: '' } : f));
     }
     // Submit logic here (API call or sessionStorage)
-    setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { ...s, loading: true } : s));
-    // Store restartEndTime and bootEndTime in sessionStorage
-    const restartEndTimesRaw = sessionStorage.getItem(RESTART_ENDTIME_KEY);
-    const bootEndTimesRaw = sessionStorage.getItem(BOOT_ENDTIME_KEY);
-    const restartEndTimes = restartEndTimesRaw ? JSON.parse(restartEndTimesRaw) : {};
-    const bootEndTimes = bootEndTimesRaw ? JSON.parse(bootEndTimesRaw) : {};
-    const now = Date.now();
-    const restartEnd = now + RESTART_DURATION;
-    const bootEnd = restartEnd + BOOT_DURATION;
-    restartEndTimes[nodeIdx] = restartEnd;
-    bootEndTimes[nodeIdx] = bootEnd;
-    sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(restartEndTimes));
-    sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(bootEndTimes));
-    // Simulate network apply and node restart (replace with real API call)
-    timerRefs.current[nodeIdx] = setTimeout(() => {
-      // Simulate server restart done, now wait for boot
-      message.success(`Network config for node ${form.ip} applied! Node restarting...`);
-      // The loader will remain until BOOT_DURATION is also over (handled by loader recovery effect)
-    }, RESTART_DURATION);
+    const payload = buildNetworkConfigPayload(form);
+    fetch(`https://${form.ip}:2020/submit-network-config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(res => res.json())
+      .then(result => {
+        if (result.success) {
+          setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { ...s, loading: true } : s));
+          // Store restartEndTime and bootEndTime in sessionStorage
+          const restartEndTimesRaw = sessionStorage.getItem(RESTART_ENDTIME_KEY);
+          const bootEndTimesRaw = sessionStorage.getItem(BOOT_ENDTIME_KEY);
+          const restartEndTimes = restartEndTimesRaw ? JSON.parse(restartEndTimesRaw) : {};
+          const bootEndTimes = bootEndTimesRaw ? JSON.parse(bootEndTimesRaw) : {};
+          const now = Date.now();
+          const restartEnd = now + RESTART_DURATION;
+          const bootEnd = restartEnd + BOOT_DURATION;
+          restartEndTimes[nodeIdx] = restartEnd;
+          bootEndTimes[nodeIdx] = bootEnd;
+          sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(restartEndTimes));
+          sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(bootEndTimes));
+          timerRefs.current[nodeIdx] = setTimeout(() => {
+            message.success(`Network config for node ${form.ip} applied! Node restarting...`);
+          }, RESTART_DURATION);
+        } else {
+          message.error(result.message || 'Failed to apply network configuration.');
+        }
+      })
+      .catch(err => {
+        message.error('Network error: ' + err.message);
+      });
+    return;
 
   };
 
