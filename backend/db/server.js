@@ -499,19 +499,21 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
           INSERT IGNORE INTO Host (user_id, server_id, cloudname, serverip, servervip, role, license_code, Management, Storage, External_Traffic, VXLAN)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        db.query(hostSQL, [
+        const hostValues = [
           deployment.user_id,
           deployment.serverid,
           deployment.cloudname,
           deployment.serverip,
-          deployment.server_vip,
+          deployment.server_vip || null,
           role || 'host',
           licenseCodeToUse,
           req.body.Management || deployment.Management || null,
           req.body.External_Traffic || deployment.External_Traffic || null,
           req.body.Storage || deployment.Storage || null,
           req.body.VXLAN || deployment.VXLAN || null
-        ], (err) => {
+        ];
+        console.log('Executing host SQL:', { sql: hostSQL, values: hostValues });
+        db.query(hostSQL, hostValues, (err) => {
           if (err) {
             console.error('Error creating host record:', err);
             return res.status(500).json({ error: 'Failed to create host record' });
@@ -521,8 +523,8 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
       } else if (server_type === 'child') {
         // Insert into child_node table
         const childSQL = `
-          INSERT INTO child_node (user_id, server_id, host_serverid, serverip, role, license_code, Management, External_Traffic, Storage, VXLAN)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO child_node (user_id, server_id, host_serverid, serverip, role, license_code, Management, Storage, External_Traffic, VXLAN)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
         db.query(childSQL, [
           deployment.user_id,
