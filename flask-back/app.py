@@ -659,12 +659,15 @@ def submit_network_config():
                 }
 
                 if not is_secondary:
-                    response_json["using_interfaces"][bond_key]["Properties"] = {
+                    properties = {
                         "IP_ADDRESS": row.get("ip", ""),
                         "Netmask": row.get("subnet", ""),
                         "DNS": row.get("dns", ""),
-                        # No gateway field in table rows anymore
                     }
+                    # Add default gateway if this is the primary interface and gateway is provided
+                    if default_gateway and not any(t in ["Secondary", "secondary"] for t in row_type):
+                        properties["gateway"] = default_gateway
+                    response_json["using_interfaces"][bond_key]["Properties"] = properties
 
                 for iface in row.get("interface", []):
                     iface_key = f"interface_0{iface_count}"
@@ -692,12 +695,15 @@ def submit_network_config():
                 }
 
                 if not is_secondary or config_type == "segregated":
-                    interface_entry["Properties"] = {
+                    properties = {
                         "IP_ADDRESS": row.get("ip", ""),
                         "Netmask": row.get("subnet", ""),
                         "DNS": row.get("dns", ""),
-                        # No gateway field in table rows anymore
                     }
+                    # Add default gateway if this is the primary interface and gateway is provided
+                    if default_gateway and (not is_secondary or config_type == "segregated"):
+                        properties["gateway"] = default_gateway
+                    interface_entry["Properties"] = properties
 
                 response_json["using_interfaces"][iface_key] = interface_entry
                 iface_count += 1
