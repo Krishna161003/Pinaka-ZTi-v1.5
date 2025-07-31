@@ -121,7 +121,24 @@ const ValidateTable = ({ nodes = [], onNext, results, setResults }) => {
             key: 'info',
             render: (_, record) => (
                 <Button
-                    onClick={() => setInfoModal({ visible: true, details: record.details || 'No details yet.' })}
+                    onClick={() => {
+                        // Show recommended vs actual in the popup
+                        const recommended = {
+                            cpu_cores: 48,
+                            memory_gb: 128,
+                            disks: 4,
+                            network: 2
+                        };
+                        const actual = record.validationData || {};
+                        const validation = (actual && typeof actual.validation === 'object') ? actual.validation : {};
+                        const details = [
+                            `CPU Cores: ${actual.cpu_cores ?? 'N/A'} (Recommended: ${recommended.cpu_cores}) (${validation.cpu === true ? '✓' : validation.cpu === false ? '✗' : '-'})`,
+                            `Memory: ${actual.memory_gb ?? 'N/A'}GB (Recommended: ${recommended.memory_gb}GB) (${validation.memory === true ? '✓' : validation.memory === false ? '✗' : '-'})`,
+                            `Disks: ${actual.data_disks ?? 'N/A'} (Recommended: ${recommended.disks}) (${validation.disks === true ? '✓' : validation.disks === false ? '✗' : '-'})`,
+                            `Network Interfaces: ${actual.network_interfaces ?? 'N/A'} (Recommended: ${recommended.network}) (${validation.network === true ? '✓' : validation.network === false ? '✗' : '-'})`
+                        ].join('\n');
+                        setInfoModal({ visible: true, details });
+                    }}
                     disabled={!record.result}
                     style={{ width: "95px" }}
                 >
