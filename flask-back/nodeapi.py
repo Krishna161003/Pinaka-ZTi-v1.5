@@ -217,7 +217,13 @@ def store_network_config(data):
     file_path = os.path.join("submitted_configs", "network_configs.json")
     os.makedirs("submitted_configs", exist_ok=True)
     
-    key = data.get("hostname") or data.get("vip") or data.get("default_gateway") or "unknown"
+    # Use hostname or default gateway as key, but not VIP
+    key = data.get("hostname") or data.get("default_gateway") or "unknown"
+    
+    # Remove disk information if present
+    if 'disk' in data:
+        data = {k: v for k, v in data.items() if k != 'disk'}
+    
     with lock:
         if os.path.exists(file_path):
             with open(file_path, "r") as f:
@@ -239,11 +245,9 @@ def submit_network_config():
 
         print("✅ Received data:", json.dumps(data, indent=2))
 
-        # Basic validation
+        # Basic validation - removed disk check
         if "using_interfaces" not in data or not isinstance(data["using_interfaces"], dict):
             return jsonify({"success": False, "message": "Invalid or missing 'using_interfaces'"}), 400
-        if "disk" not in data or not isinstance(data["disk"], list):
-            return jsonify({"success": False, "message": "Invalid or missing 'disk'"}), 400
         if "default_gateway" not in data or not data["default_gateway"]:
             return jsonify({"success": False, "message": "Missing 'default_gateway'"}), 400
 
@@ -251,7 +255,11 @@ def submit_network_config():
         store_network_config(data)
 
         return (
-            jsonify({"success": True, "message": "Config saved to canonical file", "key": data.get("hostname") or data.get("vip") or data.get("default_gateway") or "unknown"}),
+            jsonify({
+                "success": True, 
+                "message": "Network configuration saved successfully", 
+                "key": data.get("hostname") or data.get("default_gateway") or "unknown"
+            }),
             200,
         )
 
