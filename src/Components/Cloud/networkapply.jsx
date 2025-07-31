@@ -3,6 +3,8 @@ import { Card, Table, Input, Select, Button, Form, Radio, Checkbox, Divider, Typ
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { buildNetworkConfigPayload } from './networkapply.format';
 
+const NetworkApply = () => {
+
 const { Option } = Select;
 const ipRegex = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/;
 const subnetRegex = /^(255|254|252|248|240|224|192|128|0+)\.((255|254|252|248|240|224|192|128|0+)\.){2}(255|254|252|248|240|224|192|128|0+)$/;
