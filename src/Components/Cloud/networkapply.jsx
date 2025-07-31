@@ -55,12 +55,65 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
   const [cardStatus, setCardStatus] = useState(getInitialCardStatus);
   // For loader recovery timers
   const timerRefs = React.useRef([]);
-  // Restore forms from sessionStorage if available
-  const getInitialForms = () => {
-    const saved = sessionStorage.getItem('cloud_networkApplyForms');
-    if (saved) return JSON.parse(saved);
-    // Attach license details if available
-    const licenseDetailsMap = (() => {
+  // Restore forms from sessionStorage if available and merge with license details
+const getInitialForms = () => {
+  // Get saved license details
+  const licenseDetailsMap = (() => {
+    const saved = sessionStorage.getItem('cloud_licenseActivationResults');
+    if (!saved) return {};
+    try {
+      const arr = JSON.parse(saved);
+      const map = {};
+      for (const row of arr) {
+        if (row.ip && row.details) map[row.ip] = row.details;
+      }
+      return map;
+    } catch {
+      return {};
+    }
+  })();
+
+  // Get saved forms from sessionStorage if they exist
+  const savedForms = sessionStorage.getItem('cloud_networkApplyForms');
+  if (savedForms) {
+    try {
+      const forms = JSON.parse(savedForms);
+      // Merge license details into saved forms
+      return forms.map(form => ({
+        ...form,
+        licenseType: licenseDetailsMap[form.ip]?.type || form.licenseType || '-',
+        licensePeriod: licenseDetailsMap[form.ip]?.period || form.licensePeriod || '-',
+        licenseCode: licenseDetailsMap[form.ip]?.licenseCode || form.licenseCode || '-',
+      }));
+    } catch (e) {
+      console.error('Failed to parse saved forms:', e);
+    }
+  }
+
+  // If no saved forms or error, create new forms with license details
+  return licenseNodes.map(node => ({
+    ip: node.ip,
+    configType: 'default',
+    useBond: false,
+    tableData: generateRows('default', false),
+    defaultGateway: '',
+    defaultGatewayError: '',
+    licenseType: licenseDetailsMap[node.ip]?.type || '-',
+    licensePeriod: licenseDetailsMap[node.ip]?.period || '-',
+    licenseCode: licenseDetailsMap[node.ip]?.licenseCode || '-',
+    selectedDisks: [],
+    diskError: '',
+    selectedRoles: [],
+    roleError: '',
+  }));
+};  
+  const [forms, setForms] = useState(getInitialForms);
+
+  // If licenseNodes changes (e.g. after license activation), restore from sessionStorage if available, else reset
+  useEffect(() => {
+    const savedForms = sessionStorage.getItem('cloud_networkApplyForms');
+    const savedStatus = sessionStorage.getItem('cloud_networkApplyCardStatus');
+    const savedLicenseDetails = (() => {
       const saved = sessionStorage.getItem('cloud_licenseActivationResults');
       if (!saved) return {};
       try {
@@ -74,30 +127,18 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
         return {};
       }
     })();
-    return licenseNodes.map(node => ({
-      ip: node.ip,
-      configType: 'default',
-      useBond: false,
-      tableData: generateRows('default', false),
-      defaultGateway: '',
-      defaultGatewayError: '',
-      licenseType: licenseDetailsMap[node.ip]?.type || '-',
-      licensePeriod: licenseDetailsMap[node.ip]?.period || '-',
-      licenseCode: licenseDetailsMap[node.ip]?.licenseCode || '-',
-      selectedDisks: [],
-      diskError: '',
-      selectedRoles: [],
-      roleError: '',
-    }));
-  };
-  const [forms, setForms] = useState(getInitialForms);
 
-  // If licenseNodes changes (e.g. after license activation), restore from sessionStorage if available, else reset
-  useEffect(() => {
-    const savedForms = sessionStorage.getItem('cloud_networkApplyForms');
-    const savedStatus = sessionStorage.getItem('cloud_networkApplyCardStatus');
     if (savedForms && savedStatus) {
-      setForms(JSON.parse(savedForms));
+      // Merge saved forms with any updated license details
+      const parsedForms = JSON.parse(savedForms);
+      const updatedForms = parsedForms.map(form => ({
+        ...form,
+        licenseType: savedLicenseDetails[form.ip]?.type || form.licenseType || '-',
+        licensePeriod: savedLicenseDetails[form.ip]?.period || form.licensePeriod || '-',
+        licenseCode: savedLicenseDetails[form.ip]?.licenseCode || form.licenseCode || '-',
+      }));
+      
+      setForms(updatedForms);
       setCardStatus(JSON.parse(savedStatus));
     } else {
       setForms(
@@ -108,6 +149,9 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
           tableData: generateRows('default', false),
           defaultGateway: '',
           defaultGatewayError: '',
+          licenseType: savedLicenseDetails[node.ip]?.type || '-',
+          licensePeriod: savedLicenseDetails[node.ip]?.period || '-',
+          licenseCode: savedLicenseDetails[node.ip]?.licenseCode || '-',
           selectedDisks: [],
           diskError: '',
           selectedRoles: [],
