@@ -39,17 +39,20 @@ const Report = ({ ibn, onDeploymentComplete }) => {
 
     // Check for in-progress deployment and set serveridRef/sessionStorage if needed
     const checkInProgress = async () => {
-      if (!user_id) return;
+      if (!user_id) return false;
       try {
         const res = await fetch(`https://${hostIP}:5000/api/deployment-activity-log/latest-in-progress/${user_id}`);
         const data = await res.json();
         if (data.inProgress && data.log?.serverid) {
+          console.log('Existing in-progress deployment found:', data.log.serverid);
           serveridRef.current = data.log.serverid;
           sessionStorage.setItem('currentServerid', data.log.serverid);
+          return true;
         }
       } catch (e) {
-        // Optionally handle error
+        console.error('Error checking in-progress deployments:', e);
       }
+      return false;
     };
 
     // Helper to log deployment start
@@ -202,7 +205,6 @@ const Report = ({ ibn, onDeploymentComplete }) => {
 
             // --- NEW: Log deployment start ONLY after first progress received (percent > 0) ---
             if ((data.percent || 0) > 0 && !logStartedRef.current && !serveridRef.current) {
-              logStartedRef.current = true;
               await logDeploymentStart();
             }
 

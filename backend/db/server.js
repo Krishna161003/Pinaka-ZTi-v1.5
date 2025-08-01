@@ -374,6 +374,7 @@ db.connect((err) => {
 
 
 // Helper to get the latest in-progress deployment for a user
+// Add this endpoint to check for in-progress deployments
 app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
   const { user_id } = req.params;
   const sql = `
