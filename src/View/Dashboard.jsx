@@ -234,23 +234,23 @@ const Dashboard = () => {
               </Col>
             </Row>
             {/* Second row: CPU and Memory cards side by side */}
-            <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32 }}>
-              <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-9px", gap: 24, width: '100%', boxSizing: 'border-box' }}>
+            <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32, flexWrap: 'wrap' }}>
+              <Col xs={24} sm={24} md={12} lg={12} xl={12} style={{ padding: 0, display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
                 {/* CPU Utilization Card */}
                 <div
                   style={{
                     background: '#fff',
-                    // borderRadius: '10px',
                     padding: '10px 10px',
-                    // minHeight: 0,
-                    height:'75%',
-                    width: '70%',
-                    maxWidth: 600,
+                    height: '100%',
+                    width: '100%',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
                     boxSizing: 'border-box',
+                    borderRadius: 10,
+                    minWidth: 0,
+                    maxWidth: 600,
                   }}
                 >
                   <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600,marginBottom: -14,marginTop: 6, letterSpacing: 0.2 }}>CPU Usage Trend</div>
@@ -258,7 +258,7 @@ const Dashboard = () => {
                   <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
                     Current: {cpuData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "120px", marginBottom: "100px" }}>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: 0 }}>
                     <Area
                       data={cpuHistory}
                       xField="date"
@@ -269,22 +269,23 @@ const Dashboard = () => {
                     />
                   </div>
                 </div>
+              </Col>
+              <Col xs={24} sm={24} md={12} lg={12} xl={12} style={{ padding: 0, display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
                 {/* Memory Utilization Card */}
                 <div
                   style={{
                     background: '#fff',
-                    // borderRadius: '10px',
                     padding: '10px 10px',
-                    minHeight: 50,
-                    height:'75%',
-                    width: '70%',
-                    maxWidth: 600,
+                    height: '100%',
+                    width: '100%',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
                     boxSizing: 'border-box',
-                    marginRight: "-12px"
+                    borderRadius: 10,
+                    minWidth: 0,
+                    maxWidth: 600,
                   }}
                 >
                   <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: -14,marginTop: 6, letterSpacing: 0.2 }}>Memory Usage Trend</div>
@@ -294,7 +295,7 @@ const Dashboard = () => {
                     Usage: {memoryData.toFixed(1)}%
                   </div>
 
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "120px", marginTop: -40 }}>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: 0 }}>
                     <Gauge
                       style={{ marginBottom: -30 }}
                       autoFit={false}
