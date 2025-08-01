@@ -154,7 +154,7 @@ const FlightDeckHostsTable = () => {
             setModalRecord(record);
             setModalVisible('license');
           }} 
-          type="primary"
+          color='primary' variant='link'
           style={{ width: '95px' }}
           disabled={!record.licensecode}
         >
@@ -179,7 +179,7 @@ const FlightDeckHostsTable = () => {
         <Button size="small" onClick={() => {
           setModalRecord(record);
           setModalVisible('credential');
-        }} type='primary' style={{ width: '95px' }}>
+        }} color='primary' variant='link' style={{ width: '95px' }}>
           View
         </Button>
       )
@@ -342,7 +342,7 @@ const SquadronNodesTable = () => {
             setModalRecord(record);
             setModalVisible('license');
           }} 
-          type="primary"
+          color='primary' variant='link'
           style={{ width: '95px' }}
           disabled={!record.licensecode}
         >
@@ -359,7 +359,7 @@ const SquadronNodesTable = () => {
         <Button size="small" onClick={() => {
           setModalRecord(record);
           setModalVisible('credential');
-        }} type='primary' style={{ width: '95px' }}>
+        }} color='primary' variant='link' style={{ width: '95px' }}>
           View
         </Button>
       )
@@ -463,7 +463,7 @@ const CloudDeploymentsTable = () => {
         <Button size="small" onClick={() => {
           setModalCredentials(record.credentials);
           setModalVisible(true);
-        }} type='primary' style={{ width: '95px' }}>
+        }} color='primary' variant='link' style={{ width: '95px' }}>
           View
         </Button>
       )
