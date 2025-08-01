@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Layout1 from "../Components/layout";
-import { theme, Layout, Spin, Row, Col, Divider } from "antd";
+import { theme, Layout, Spin, Row, Col, Divider, Select } from "antd";
 import { useNavigate } from "react-router-dom";
 import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
@@ -34,12 +34,20 @@ const Dashboard = () => {
   const [totalMemory, setTotalMemory] = useState(0);
   const [usedMemory, setUsedMemory] = useState(0);
 
+  // Host IP dropdown state
+  const hostIpOptions = [
+    window.location.hostname,
+    "192.168.1.10",
+    "192.168.1.20",
+    "10.0.0.5"
+  ];
+  const [selectedHostIP, setSelectedHostIP] = useState(window.location.hostname);
+
   // Fetch CPU time series for Area chart
   useEffect(() => {
     async function fetchCpuHistory() {
       try {
-        const hostIP = window.location.hostname;
-        const res = await fetch(`https://${hostIP}:2020/system-utilization-history`);
+        const res = await fetch(`https://${selectedHostIP}:2020/system-utilization-history`);
         const data = await res.json();
         // console.log('Fetched CPU history:', data);
         if (data && Array.isArray(data.cpu_history)) {
@@ -62,14 +70,13 @@ const Dashboard = () => {
     fetchCpuHistory();
     const interval = setInterval(fetchCpuHistory, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedHostIP]);
 
   // Still fetch memory and single CPU value for other UI
   useEffect(() => {
     async function fetchUtilization() {
       try {
-        const hostIP = window.location.hostname;
-        const res = await fetch(`https://${hostIP}:2020/system-utilization`);
+        const res = await fetch(`https://${selectedHostIP}:2020/system-utilization`);
         const data = await res.json();
         // console.log('Fetched utilization:', data);
         if (
@@ -99,7 +106,7 @@ const Dashboard = () => {
     fetchUtilization();
     const interval = setInterval(fetchUtilization, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedHostIP]);
 
 
 
@@ -116,7 +123,6 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const storedData = JSON.parse(sessionStorage.getItem("loginDetails")) || {};
   const userId = storedData?.data?.id || "";
-  const hostIP = window.location.hostname;
 
   // Function to navigate to Iaas page with specific tab
   const navigateToIaasTab = (tabKey) => {
@@ -129,7 +135,7 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         // Check password status
-        const passwordResponse = await fetch(`https://${hostIP}:5000/api/check-password-status/${userId}`);
+        const passwordResponse = await fetch(`https://${selectedHostIP}:5000/api/check-password-status/${userId}`);
         const passwordData = await passwordResponse.json();
 
         if (passwordData.updatePwdStatus === 1) {
@@ -139,7 +145,7 @@ const Dashboard = () => {
         }
 
         // Fetch dashboard counts
-        const countsResponse = await fetch(`https://${hostIP}:5000/api/dashboard-counts/${userId}`);
+        const countsResponse = await fetch(`https://${selectedHostIP}:5000/api/dashboard-counts/${userId}`);
         const countsData = await countsResponse.json();
 
         setCounts({
@@ -159,7 +165,7 @@ const Dashboard = () => {
     } else {
       setIsLoading(false); // Hide loading if no userId
     }
-  }, [userId, hostIP]);
+  }, [userId, selectedHostIP]);
 
   const {
     token: { colorBgContainer, borderRadiusLG },
@@ -191,6 +197,19 @@ const Dashboard = () => {
       <Layout>
         <Content>
           <div>
+            {/* Host IP Dropdown */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', margin: '0 0 16px 0' }}>
+              <span style={{ marginRight: 8, fontWeight: 500 }}>Host IP:</span>
+              <Select
+                style={{ width: 220 }}
+                value={selectedHostIP}
+                onChange={setSelectedHostIP}
+                options={hostIpOptions.map(ip => ({ label: ip, value: ip }))}
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())}
+              />
+            </div>
             {/* First row: summary cards */}
             <Row gutter={16} justify="space-between" style={{ marginLeft: "20px" }}>
               <Col className="gutter-row" span={7} style={hoveredCard === 'cloud' ? hoverStyle : style}
