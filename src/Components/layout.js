@@ -5,22 +5,22 @@ import logo from "../Images/logo.png";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   MenuFoldOutlined,
-  CheckCircleOutlined,
+  // CheckCircleOutlined,
   MenuUnfoldOutlined,
   UserOutlined,
   DashboardOutlined,
   DeploymentUnitOutlined,
-  SyncOutlined,
+  // SyncOutlined,
   TruckOutlined,
   CloudServerOutlined,
-  SettingOutlined,
-  FileDoneOutlined,
-  DatabaseOutlined,
-  WifiOutlined,
-  FileSearchOutlined,
+  // SettingOutlined,
+  // FileDoneOutlined,
+  // DatabaseOutlined,
+  // WifiOutlined,
+  // FileSearchOutlined,
   ProfileOutlined,
-  FundOutlined,
-  InteractionOutlined
+  // FundOutlined,
+  // InteractionOutlined
 
 } from "@ant-design/icons";
 import { Button, Layout, Menu, theme, Dropdown } from "antd";
@@ -59,19 +59,19 @@ const AppLayout = ({ children }) => {
     "/cloud": "2",
     "/edgecloud": "2",
     "/addnode": "2",
-    "/distributedstorage": "2",
+    // "/distributedstorage": "2",
     "/iaas": "3",
     "/inventory": "4",
-    "/hpc": "5",
-    "/aiworkbench": "6",
-    "/vdi": "7",
-    "/siem": "8",
-    "/noc": "9",
-    "/lifecyclemgmt": "10",
+    // "/hpc": "5",
+    // "/aiworkbench": "6",
+    // "/vdi": "7",
+    // "/siem": "8",
+    // "/noc": "9",
+    // "/lifecyclemgmt": "10",
     "/migration": "11",
-    "/compliance": "12",
-    "/marketplace": "13",
-    "/setting": "14",
+    // "/compliance": "12",
+    // "/marketplace": "13",
+    // "/setting": "14",
     "/administration": "15",
   };
 
@@ -149,60 +149,60 @@ const AppLayout = ({ children }) => {
         </Link>
       ),
     },
-    {
-      key: "5",
-      icon: <FileDoneOutlined />,
-      label: (
-        <Link to="/hpc" style={{ textDecoration: "none" }}>
-          HPC
-        </Link>
-      ),
-    },
-    {
-      key: "6",
-      icon: <InteractionOutlined />,
-      label: (
-        <Link to="/aiworkbench" style={{ textDecoration: "none" }}>
-          AI Workbench
-        </Link>
-      ),
-    },
-    {
-      key: "7",
-      icon: <DatabaseOutlined />,
-      label: (
-        <Link to="/vdi" style={{ textDecoration: "none" }}>
-          VDI
-        </Link>
-      ),
-    },
-    {
-      key: "8",
-      icon: <FileSearchOutlined />,
-      label: (
-        <Link to="/siem" style={{ textDecoration: "none" }}>
-          SIEM
-        </Link>
-      ),
-    },
-    {
-      key: "9",
-      icon: <WifiOutlined />,
-      label: (
-        <Link to="/noc" style={{ textDecoration: "none" }}>
-          NOC
-        </Link>
-      ),
-    },
-    {
-      key: "10",
-      icon: <SyncOutlined />,
-      label: (
-        <Link to="/lifecyclemgmt" style={{ textDecoration: "none" }}>
-          Lifecycle Mgmt
-        </Link>
-      ),
-    },
+    // {
+    //   key: "5",
+    //   icon: <FileDoneOutlined />,
+    //   label: (
+    //     <Link to="/hpc" style={{ textDecoration: "none" }}>
+    //       HPC
+    //     </Link>
+    //   ),
+    // },
+    // {
+    //   key: "6",
+    //   icon: <InteractionOutlined />,
+    //   label: (
+    //     <Link to="/aiworkbench" style={{ textDecoration: "none" }}>
+    //       AI Workbench
+    //     </Link>
+    //   ),
+    // },
+    // {
+    //   key: "7",
+    //   icon: <DatabaseOutlined />,
+    //   label: (
+    //     <Link to="/vdi" style={{ textDecoration: "none" }}>
+    //       VDI
+    //     </Link>
+    //   ),
+    // },
+    // {
+    //   key: "8",
+    //   icon: <FileSearchOutlined />,
+    //   label: (
+    //     <Link to="/siem" style={{ textDecoration: "none" }}>
+    //       SIEM
+    //     </Link>
+    //   ),
+    // },
+    // {
+    //   key: "9",
+    //   icon: <WifiOutlined />,
+    //   label: (
+    //     <Link to="/noc" style={{ textDecoration: "none" }}>
+    //       NOC
+    //     </Link>
+    //   ),
+    // },
+    // {
+    //   key: "10",
+    //   icon: <SyncOutlined />,
+    //   label: (
+    //     <Link to="/lifecyclemgmt" style={{ textDecoration: "none" }}>
+    //       Lifecycle Mgmt
+    //     </Link>
+    //   ),
+    // },
     {
       key: "11",
       icon: <TruckOutlined />,
@@ -212,33 +212,33 @@ const AppLayout = ({ children }) => {
         </Link>
       ),
     },
-    {
-      key: "12",
-      icon: <CheckCircleOutlined />,
-      label: (
-        <Link to="/compliance" style={{ textDecoration: "none" }}>
-          Compliance
-        </Link>
-      ),
-    },
-    {
-      key: "13",
-      icon: <FundOutlined />,
-      label: (
-        <Link to="/marketplace" style={{ textDecoration: "none" }}>
-          Marketplace
-        </Link>
-      ),
-    },
-    {
-      key: "14",
-      icon: <SettingOutlined />,
-      label: (
-        <Link to="/setting" style={{ textDecoration: "none" }}>
-          Settings
-        </Link>
-      ),
-    },
+    // {
+    //   key: "12",
+    //   icon: <CheckCircleOutlined />,
+    //   label: (
+    //     <Link to="/compliance" style={{ textDecoration: "none" }}>
+    //       Compliance
+    //     </Link>
+    //   ),
+    // },
+    // {
+    //   key: "13",
+    //   icon: <FundOutlined />,
+    //   label: (
+    //     <Link to="/marketplace" style={{ textDecoration: "none" }}>
+    //       Marketplace
+    //     </Link>
+    //   ),
+    // },
+    // {
+    //   key: "14",
+    //   icon: <SettingOutlined />,
+    //   label: (
+    //     <Link to="/setting" style={{ textDecoration: "none" }}>
+    //       Settings
+    //     </Link>
+    //   ),
+    // },
     {
       key: "15",
       icon: <UserOutlined />,

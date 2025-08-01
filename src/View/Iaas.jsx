@@ -34,7 +34,13 @@ function LicenseDetailsModalContent({ serverid }) {
       <div><b>License Code:</b> {license.license_code || <span style={{ color: '#aaa' }}>-</span>}</div>
       <div><b>Type:</b> {license.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
       <div><b>Period:</b> {license.license_period || <span style={{ color: '#aaa' }}>-</span>}</div>
-      <div><b>Status:</b> {license.license_status || <span style={{ color: '#aaa' }}>-</span>}</div>
+      <div><b>Status:</b> {(
+          license.license_status && license.license_status.toLowerCase() === 'activated'
+            ? <span style={{ color: 'green' }}>Active</span>
+            : license.license_status
+              ? <span style={{ color: 'red' }}>{license.license_status}</span>
+              : <span style={{ color: '#aaa' }}>-</span>
+        )}</div>
     </div>
   );
 }
@@ -91,7 +97,22 @@ const FlightDeckHostsTable = () => {
         if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
       })
-      .then(setData)
+      .then(async hosts => {
+        // For each host, fetch its license status so we can show it in the table
+        const hostsWithLicense = await Promise.all(hosts.map(async h => {
+          try {
+            const licRes = await fetch(`https://${hostIP}:5000/api/license-details/${h.serverid}`);
+            if (licRes.ok) {
+              const lic = await licRes.json();
+              h.license_status = lic.license_status || null;
+            }
+          } catch (_) {
+            // ignore errors, leave status undefined
+          }
+          return h;
+        }));
+        setData(hostsWithLicense);
+      })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -148,18 +169,27 @@ const FlightDeckHostsTable = () => {
       width: 110,
       align: 'center',
       render: (_, record) => (
-        <Button 
-          size="small" 
-          onClick={() => {
-            setModalRecord(record);
-            setModalVisible('license');
-          }} 
-          color='primary' variant='link'
-          style={{ width: '95px' }}
-          disabled={!record.licensecode}
-        >
-          {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
-        </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Button 
+            size="small" 
+            onClick={() => {
+              setModalRecord(record);
+              setModalVisible('license');
+            }} 
+            color='primary' variant='link'
+            style={{ width: '95px' }}
+            disabled={!record.licensecode}
+          >
+            {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
+          </Button>
+          {record.license_status ? (
+            <span style={{ color: record.license_status.toLowerCase() === 'activated' ? 'green' : 'red', fontSize: 12 }}>
+              {record.license_status.toLowerCase() === 'activated' ? 'Active' : record.license_status}
+            </span>
+          ) : (
+            <span style={{ color: '#999', fontSize: 12 }}>-</span>
+          )}
+        </div>
       )
     },
     {
@@ -176,12 +206,14 @@ const FlightDeckHostsTable = () => {
       align: 'center',
       width: 110,
       render: (_, record) => (
-        <Button size="small" onClick={() => {
-          setModalRecord(record);
-          setModalVisible('credential');
-        }} color='primary' variant='link' style={{ width: '95px' }}>
-          View
-        </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Button size="small" onClick={() => {
+            setModalRecord(record);
+            setModalVisible('credential');
+          }} color='primary' variant='link' style={{ width: '95px' }}>
+            View
+          </Button>
+        </div>
       )
     },
     {
@@ -288,7 +320,19 @@ const SquadronNodesTable = () => {
         if (!res.ok) throw new Error('Failed to fetch');
         return res.json();
       })
-      .then(setData)
+      .then(async nodes => {
+        const nodesWithLic = await Promise.all(nodes.map(async n => {
+          try {
+            const licRes = await fetch(`https://${hostIP}:5000/api/license-details/${n.serverid}`);
+            if (licRes.ok) {
+              const lic = await licRes.json();
+              n.license_status = lic.license_status || null;
+            }
+          } catch (_) {}
+          return n;
+        }));
+        setData(nodesWithLic);
+      })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -336,18 +380,27 @@ const SquadronNodesTable = () => {
       width: 110,
       align: 'center',
       render: (_, record) => (
-        <Button 
-          size="small" 
-          onClick={() => {
-            setModalRecord(record);
-            setModalVisible('license');
-          }} 
-          color='primary' variant='link'
-          style={{ width: '95px' }}
-          disabled={!record.licensecode}
-        >
-          {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
-        </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Button 
+            size="small" 
+            onClick={() => {
+              setModalRecord(record);
+              setModalVisible('license');
+            }} 
+            color='primary' variant='link'
+            style={{ width: '95px' }}
+            disabled={!record.licensecode}
+          >
+            {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
+          </Button>
+          {record.license_status ? (
+            <span style={{ color: record.license_status.toLowerCase() === 'activated' ? 'green' : 'red', fontSize: 12 }}>
+              {record.license_status.toLowerCase() === 'activated' ? 'Active' : record.license_status}
+            </span>
+          ) : (
+            <span style={{ color: '#999', fontSize: 12 }}>-</span>
+          )}
+        </div>
       )
     },
     {
@@ -356,12 +409,14 @@ const SquadronNodesTable = () => {
       align: 'center',
       width: 110,
       render: (_, record) => (
-        <Button size="small" onClick={() => {
-          setModalRecord(record);
-          setModalVisible('credential');
-        }} color='primary' variant='link' style={{ width: '95px' }}>
-          View
-        </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Button size="small" onClick={() => {
+            setModalRecord(record);
+            setModalVisible('credential');
+          }} color='primary' variant='link' style={{ width: '95px' }}>
+            View
+          </Button>
+        </div>
       )
     },
     {
@@ -460,12 +515,14 @@ const CloudDeploymentsTable = () => {
       key: 'credentials',
       align: 'center',
       render: (_, record) => (
-        <Button size="small" onClick={() => {
-          setModalCredentials(record.credentials);
-          setModalVisible(true);
-        }} color='primary' variant='link' style={{ width: '95px' }}>
-          View
-        </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Button size="small" onClick={() => {
+            setModalCredentials(record.credentials);
+            setModalVisible(true);
+          }} color='primary' variant='link' style={{ width: '95px' }}>
+            View
+          </Button>
+        </div>
       )
     },
     {
