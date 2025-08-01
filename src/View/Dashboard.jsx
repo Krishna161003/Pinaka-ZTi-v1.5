@@ -247,18 +247,24 @@ const Dashboard = () => {
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                   }}
                 >
-                  <h4 style={{ textAlign: 'center', marginBottom: 20, color: '#fff' }}>CPU Utilization</h4>
-                  <Area
-                    data={cpuHistory}
-                    xField="date"
-                    yField="cpu"
-                    height={240}
-                    width={320}
-                    areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
-                  />
+                  <div style={{ fontSize: 15, color: '#fff', fontWeight: 500, marginBottom: 8, color: '#dbeafe' }}>CPU Usage Trend</div>
+                  {/* Optionally, show current CPU usage above the chart */}
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 8 }}>
+                    Current: {cpuData.toFixed(1)}%
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <Area
+                      data={cpuHistory}
+                      xField="date"
+                      yField="cpu"
+                      height={240}
+                      width={320}
+                      areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
+                    />
+                  </div>
                 </div>
                 {/* Memory Utilization Card */}
                 <div
@@ -271,40 +277,36 @@ const Dashboard = () => {
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
                   }}
                 >
-                  <h4 style={{ textAlign: 'center', marginBottom: 20, color: '#fff' }}>Memory Utilization</h4>
-                  <Gauge
-                    style={{ marginBottom: -50 }}
-                    autoFit={false}
-                    width={320}
-                    height={260}
-                    data={{
-                      target: memoryData ?? 0,
-                      total: 100,
-                      name: 'Memory',
-                      thresholds: [50, 75, 100],
-                    }}
-                    scale={{
-                      color: {
-                        range: ['#62CFF4', '#2C67F2', '#00008B'],
-                      },
-                    }}
-                    statistic={{
-                      title: true,
-                      contentStyle: { fontSize: 15, fontWeight: 400 },
-                    }}
-                  />
-                  <div style={{
-                    marginTop: -70,
-                    textAlign: 'center',
-                    fontWeight: 600,
-                    fontSize: 16,
-                    color: '#fff',
-                  }}>
+                  <div style={{ fontSize: 15, color: '#dbeafe', fontWeight: 500, marginBottom: 8 }}>Memory Usage Trend</div>
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 8 }}>
                     Used: {usedMemory} MB / {totalMemory} MB<br />
                     Usage: {memoryData.toFixed(1)}%
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <Gauge
+                      style={{ marginBottom: -50 }}
+                      autoFit={false}
+                      width={320}
+                      height={260}
+                      data={{
+                        target: memoryData ?? 0,
+                        total: 100,
+                        name: 'Memory',
+                        thresholds: [50, 75, 100],
+                      }}
+                      scale={{
+                        color: {
+                          range: ['#62CFF4', '#2C67F2', '#00008B'],
+                        },
+                      }}
+                      statistic={{
+                        title: true,
+                        contentStyle: { fontSize: 15, fontWeight: 400 },
+                      }}
+                    />
                   </div>
                 </div>
               </Col>
