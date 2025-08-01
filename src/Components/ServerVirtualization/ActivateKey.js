@@ -92,11 +92,6 @@ const ActivateKey = ({ next, onValidationResult }) => {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%", marginBottom: "1.25%" }}>
-        <CloudOutlined />
-        &nbsp;&nbsp;{cloudName} Cloud
-      </h5>
-
       <div
         style={{
           display: "flex",
@@ -105,7 +100,7 @@ const ActivateKey = ({ next, onValidationResult }) => {
           marginBottom: "16px",
         }}
       >
-        <Breadcrumb>
+        {/* <Breadcrumb>
           <Breadcrumb.Item>
             <HomeOutlined />
           </Breadcrumb.Item>
@@ -113,7 +108,10 @@ const ActivateKey = ({ next, onValidationResult }) => {
           <Breadcrumb.Item>Validation</Breadcrumb.Item>
           <Breadcrumb.Item>System Interface</Breadcrumb.Item>
           <Breadcrumb.Item>License Activation</Breadcrumb.Item>
-        </Breadcrumb>
+        </Breadcrumb> */}
+        <h4 style={{marginBottom: "-16px", marginTop: "-13px"}}>
+          Cloud Name: <span style={{ color: "blue" }}>{cloudName}</span>
+        </h4>
         <Button
           type="primary"
           style={{ width: 75 }}
@@ -124,7 +122,7 @@ const ActivateKey = ({ next, onValidationResult }) => {
         </Button>
       </div>
 
-      <Divider />
+      <Divider style={{ marginBottom: "18px",marginTop: "28px" }} />
 
       <div>
         <label style={{ display: "block", marginBottom: "8px", fontWeight: 500 }}>

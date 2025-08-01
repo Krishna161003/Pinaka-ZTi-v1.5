@@ -40,7 +40,7 @@ const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
             });
 
             const result = response.data;
-            
+
             if (result.success) {
                 setData(prev => {
                     const newData = prev.map(row =>
@@ -119,7 +119,7 @@ const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
             key: 'result',
             render: (result) =>
                 result === 'Success' ? <Tag color="green">Success</Tag> :
-                result === 'Failed' ? <Tag color="red">Failed</Tag> : <Tag>Pending</Tag>
+                    result === 'Failed' ? <Tag color="red">Failed</Tag> : <Tag>Pending</Tag>
         },
         {
             title: 'Details',
@@ -142,26 +142,42 @@ const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 16 }}>
-                            <Button
-                                size="middle"
-                                style={{ width: "75px" }}
-                                type="primary"
-                                onClick={() => {
-                                    if (typeof onNext === 'function') {
-                                        const successfulNodes = data.filter(row => row.result === 'Success');
-                                        onNext(successfulNodes);
-                                    }
-                                }}
-                            >
-                                Next
-                            </Button>
-                        </div>
+                <Button
+                    size="middle"
+                    style={{ width: "75px" }}
+                    type="primary"
+                    onClick={() => {
+                        if (typeof onNext === 'function') {
+                            const successfulNodes = data.filter(row => row.result === 'Success');
+                            onNext(successfulNodes);
+                        }
+                    }}
+                >
+                    Next
+                </Button>
+            </div>
             <Table
                 columns={columns}
                 dataSource={data}
                 rowKey="ip"
                 pagination={false}
             />
+            <div style={{ marginTop: "16px", display: "flex", alignItems: "center" }}>
+                <span style={{ fontSize: "14px" }}>
+                    <strong>Note:</strong>
+                    <br />
+                    1. To obtain your license key, Access the page https://nodeip:1010 and copy the details from the table in the page and email them to
+                    <a href="mailto:support@pinakastra.cloud"> support@pinakastra.cloud</a> or contact us at
+                    <a href="tel:+919008488882"> +91 90084 88882</a>.
+                    <br />
+                    (OR)
+                    <br />
+                    2. If you have already purchased the license and completed the payment and you have the payment ID,
+                    visit <a href="https://pinakastra.com/generate-key" target="_blank" rel="noopener noreferrer">
+                        https://pinakastra.com/generate-key
+                    </a>, fill in the required details, and generate your activation key.
+                </span>
+            </div>
         </div>
     );
 };

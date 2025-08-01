@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Divider, Breadcrumb, Button, Spin, notification } from "antd";
+import { Divider, Button, Spin, notification } from "antd";
 import { HomeOutlined, CloudOutlined } from "@ant-design/icons";
 import axios from "axios";
 
@@ -45,7 +45,7 @@ const Validation = ({ nodes, onIbnUpdate, next, onValidationResult }) => {
       setError(errorMessage);
       console.error(err);
 
-      // 🚩 Show error using Ant Design Notification
+      // Show error using Ant Design Notification
       api.error({
         message: "Validation Error",
         description: errorMessage,
@@ -88,18 +88,18 @@ const Validation = ({ nodes, onIbnUpdate, next, onValidationResult }) => {
   return (
     <div style={{ padding: "20px" }}>
       {contextHolder}
-      <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%", marginBottom: "1.29%" }}>
-        <CloudOutlined />
-        &nbsp;&nbsp;{cloudName} Cloud
-      </h5>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px' }}>
-        <Breadcrumb style={{ margin: 0 }}>
+      
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        {/* <Breadcrumb style={{ margin: 0 }}>
           <Breadcrumb.Item>
             <HomeOutlined />
           </Breadcrumb.Item>
           <Breadcrumb.Item>Deployment Options</Breadcrumb.Item>
           <Breadcrumb.Item>Server Validation</Breadcrumb.Item>
-        </Breadcrumb>
+        </Breadcrumb> */}
+        <h4 style={{marginBottom: "-16px", marginTop: "-17px"}}>
+          Cloud Name: <span style={{ color: "blue" }}>{cloudName}</span>
+        </h4>
         <Button
           type="primary"
           style={{ width: 70, minWidth: 80, height: 36, marginLeft: 8, verticalAlign: 'middle' }}
@@ -114,7 +114,7 @@ const Validation = ({ nodes, onIbnUpdate, next, onValidationResult }) => {
         </Button>
       </div>
 
-      <Divider />
+      <Divider/>
 
       <div style={{ display: "flex", flex: "1", gap: "30px", padding: "20px" }}>
         {/* Button Column */}

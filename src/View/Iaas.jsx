@@ -193,7 +193,7 @@ const FlightDeckHostsTable = () => {
       )
     },
     {
-      title: 'Squadron Node',
+      title: 'Squadron',
       dataIndex: 'squadronNode',
       key: 'squadronNode',
       width: 100,

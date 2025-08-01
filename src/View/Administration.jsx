@@ -381,7 +381,7 @@ const checkEmailExists = async (email) => {
     <Layout1>
       <Layout>
         <Content style={{ margin: "16px 16px" }}>
-          <div
+          {/* <div
             style={{
               padding: 30,
               minHeight: "auto",
@@ -390,7 +390,7 @@ const checkEmailExists = async (email) => {
             }}
           >
             <h2>Administration</h2>
-          </div>
+          </div> */}
 
           <div
             style={{
@@ -398,7 +398,7 @@ const checkEmailExists = async (email) => {
               margin: "10px 0",
               minHeight: "auto",
               background: colorBgContainer,
-              borderRadius: borderRadiusLG,
+              // borderRadius: borderRadiusLG,
             }}
           >
             <h4>User Management</h4>

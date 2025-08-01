@@ -109,11 +109,6 @@ const DataTable = ({ onNodeSelect, next }) => {
   return (
     <div style={{ padding: "20px" }}>
       {contextHolder}
-      <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%", marginBottom: "1.23%" }}>
-        <CloudOutlined />
-        &nbsp;&nbsp;{cloudName} Cloud
-      </h5>
-
       {/* Flex container to align Breadcrumb and Button in same row */}
       <div
         style={{
@@ -123,15 +118,17 @@ const DataTable = ({ onNodeSelect, next }) => {
           // marginBottom: "16px",
         }}
       >
-        <Breadcrumb>
+        {/* <Breadcrumb>
           <Breadcrumb.Item>
             <HomeOutlined />
           </Breadcrumb.Item>
           <Breadcrumb.Item>Deployment Options</Breadcrumb.Item>
           <Breadcrumb.Item>Validation</Breadcrumb.Item>
           <Breadcrumb.Item>System Interface</Breadcrumb.Item>
-        </Breadcrumb>
-
+        </Breadcrumb> */}
+        <h4 style={{marginBottom: "-16px", marginTop: "3px"}}>
+          Cloud Name: <span style={{ color: "blue" }}>{cloudName}</span>
+        </h4>
         <Button
           size="middle"
           style={{ width: "75px" }}
@@ -142,7 +139,7 @@ const DataTable = ({ onNodeSelect, next }) => {
         </Button>
       </div>
 
-      <Divider />
+      <Divider style={{ marginBottom: "18px",marginTop: "28px" }} />
       <div style={{ display: "flex", gap: "40px", marginBottom: "16px", marginLeft: "3px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span>Number of Sockets:</span>

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Breadcrumb, Button, Modal, Input } from 'antd';
-import { HomeOutlined } from '@ant-design/icons';
+import { Button, Modal, Input } from 'antd';
 import axios from 'axios';
 import '../../Styles/DeploymentOptions.css';
 
@@ -74,14 +73,14 @@ const DeploymentOptions = ({ onStart }) => {
 
   return (
     <div>
-      <Breadcrumb style={{ margin: '16px 0' }}>
+      {/* <Breadcrumb style={{ margin: '16px 0' }}>
         <Breadcrumb.Item>
           <HomeOutlined />
         </Breadcrumb.Item>
         <Breadcrumb.Item>Deployment</Breadcrumb.Item>
-      </Breadcrumb>
+      </Breadcrumb> */}
       <div>
-        <h4>Deployment Model</h4>
+        {/* <h4>Deployment Model</h4> */}
         <div className="options-container">
           <div
             className={`option-box ${selectedOption === 'Server Virtualization' ? 'selected' : ''

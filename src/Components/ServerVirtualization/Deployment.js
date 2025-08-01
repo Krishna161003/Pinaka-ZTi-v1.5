@@ -691,11 +691,6 @@ const Deployment = ({ next }) => {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%", marginBottom: "1.25%" }}>
-        <CloudOutlined />
-        &nbsp;&nbsp;{cloudName} Cloud
-      </h5>
-
       <div
         style={{
           display: "flex",
@@ -704,7 +699,7 @@ const Deployment = ({ next }) => {
           marginBottom: "16px",
         }}
       >
-        <Breadcrumb>
+        {/* <Breadcrumb>
           <Breadcrumb.Item>
             <HomeOutlined />
           </Breadcrumb.Item>
@@ -713,10 +708,13 @@ const Deployment = ({ next }) => {
           <Breadcrumb.Item>System Interfaces</Breadcrumb.Item>
           <Breadcrumb.Item>License Activation</Breadcrumb.Item>
           <Breadcrumb.Item>Deployment</Breadcrumb.Item>
-        </Breadcrumb>
+        </Breadcrumb> */}
+        <h4 style={{marginBottom: "9px", marginTop: "3px"}}>
+          Cloud Name: <span style={{ color: "blue" }}>{cloudName}</span>
+        </h4>
       </div>
 
-      <Divider />
+      <Divider style={{ marginBottom: "18px",marginTop: "19px" }}/>
       <h4 style={{ userSelect: "none" }}>Network Configuration</h4>
       <div style={{ height: '830px' }}>
         <Spin
