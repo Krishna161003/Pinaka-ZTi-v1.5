@@ -235,14 +235,17 @@ const Dashboard = () => {
             </Row>
             {/* Second row: CPU and Memory cards side by side */}
             <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32 }}>
-              <Col xs={24} md={12} style={{ marginBottom: 24 }}>
+              <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-9px", gap: 24, width: '100%', boxSizing: 'border-box' }}>
                 {/* CPU Utilization Card */}
                 <div
                   style={{
                     background: '#fff',
+                    // borderRadius: '10px',
                     padding: '10px 10px',
-                    height: '100%',
-                    width: '100%',
+                    // minHeight: 0,
+                    height:'75%',
+                    width: '70%',
+                    maxWidth: 600,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
@@ -250,50 +253,51 @@ const Dashboard = () => {
                     boxSizing: 'border-box',
                   }}
                 >
-                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: -14, marginTop: 6, letterSpacing: 0.2 }}>CPU Usage Trend</div>
+                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600,marginBottom: -14,marginTop: 6, letterSpacing: 0.2 }}>CPU Usage Trend</div>
                   <Divider />
-                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6, marginTop: -16 }}>
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
                     Current: {cpuData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "120px", marginBottom: "100px" }}>
                     <Area
                       data={cpuHistory}
                       xField="date"
                       yField="cpu"
                       height={180}
                       width={260}
-                      autoFit={true}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                     />
                   </div>
                 </div>
-              </Col>
-              <Col xs={24} md={12} style={{ marginBottom: 24 }}>
                 {/* Memory Utilization Card */}
                 <div
                   style={{
                     background: '#fff',
+                    // borderRadius: '10px',
                     padding: '10px 10px',
                     minHeight: 50,
-                    height: '100%',
-                    width: '100%',
+                    height:'75%',
+                    width: '70%',
+                    maxWidth: 600,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
                     boxSizing: 'border-box',
+                    marginRight: "-12px"
                   }}
                 >
-                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: -14, marginTop: 6, letterSpacing: 0.2 }}>Memory Usage Trend</div>
+                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: -14,marginTop: 6, letterSpacing: 0.2 }}>Memory Usage Trend</div>
                   <Divider />
-                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6, marginTop: -16 }}>
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
                     Used: {usedMemory} MB / {totalMemory} MB<br />
                     Usage: {memoryData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+
+                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "120px", marginTop: -40 }}>
                     <Gauge
                       style={{ marginBottom: -30 }}
-                      autoFit={true}
+                      autoFit={false}
                       width={260}
                       height={250}
                       data={{
