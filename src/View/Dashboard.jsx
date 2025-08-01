@@ -238,19 +238,18 @@ const Dashboard = () => {
               <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-7px" }}>
                 <div
                   style={{
-                    background: '#181F2A', // dark card background
-                    borderRadius: '12px',   // rounded corners
+                    background: '#fff',
+                    // borderRadius: '10px',
                     padding: '24px 32px',
                     minHeight: 260,
                     width: '100%',
                     margin: '0 auto',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'row',
                     alignItems: 'flex-start',
                     justifyContent: 'center',
                     gap: 32,
-                    boxShadow: 'none',      // remove shadow
-                    border: 'none',         // remove border
                   }}
                 >
                   {/* CPU Utilization */}
