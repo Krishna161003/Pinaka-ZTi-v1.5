@@ -754,6 +754,17 @@ const Iaas = () => {
                   text-align: center;
                   margin: 0 !important;
                 }
+                /* Make the ink bar always full width of the tab */
+                .ant-tabs .ant-tabs-tab {
+                  position: relative;
+                  overflow: visible;
+                }
+                .ant-tabs .ant-tabs-ink-bar {
+                  left: 0 !important;
+                  width: 100% !important;
+                  min-width: unset !important;
+                  transform: none !important;
+                }
               `}</style>
             </div>
           </div>
