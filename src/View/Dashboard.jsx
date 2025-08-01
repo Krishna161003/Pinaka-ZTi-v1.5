@@ -241,8 +241,8 @@ const Dashboard = () => {
               </Col>
             </Row>
             {/* Host IP Dropdown */}
-            <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', margin: '0 0 16px 0' }}>
-              <span style={{ marginRight: 8, fontWeight: 500 }}>Host IP:</span>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', margin: '0 0 16px 0', marginTop: "10px" }}>
+              {/* <span style={{ marginRight: 8, fontWeight: 500 }}>Host IP:</span> */}
               <Select
                 style={{ width: 220 }}
                 value={selectedHostIP}
