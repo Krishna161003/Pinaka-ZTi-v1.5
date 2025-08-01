@@ -329,8 +329,9 @@ const AppLayout = ({ children }) => {
             }}
           />
           <div style={{ marginLeft: "auto", marginRight: 16 }}>
+            Welcome,&nbsp;
             <span style={{ color: "#1677ff" }}>
-              &nbsp; {userData.companyName}&nbsp;{" "}
+              {userData.companyName}
             </span>
           </div>
           <Dropdown

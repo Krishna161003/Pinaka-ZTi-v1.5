@@ -25,28 +25,28 @@ function LicenseDetailsModalContent({ serverid }) {
       .finally(() => setLoading(false));
   }, [serverid]);
 
-  if (!serverid) return <div style={{color:'#aaa'}}>No server ID selected.</div>;
+  if (!serverid) return <div style={{ color: '#aaa' }}>No server ID selected.</div>;
   if (loading) return <Spin tip="Loading license details..." />;
   if (error) return <Alert type="error" message={error} showIcon />;
-  if (!license) return <div style={{color:'#aaa'}}>No license data found.</div>;
+  if (!license) return <div style={{ color: '#aaa' }}>No license data found.</div>;
   return (
     <div>
       <div><b>License Code:</b> {license.license_code || <span style={{ color: '#aaa' }}>-</span>}</div>
       <div><b>Type:</b> {license.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
       <div><b>Period:</b> {license.license_period || <span style={{ color: '#aaa' }}>-</span>}</div>
       <div><b>Status:</b> {(
-          license.license_status && license.license_status.toLowerCase() === 'activated'
-            ? <span style={{ color: 'green' }}>Active</span>
-            : license.license_status
-              ? <span style={{ color: 'red' }}>{license.license_status}</span>
-              : <span style={{ color: '#aaa' }}>-</span>
-        )}</div>
+        license.license_status && license.license_status.toLowerCase() === 'activated'
+          ? <span style={{ color: 'green' }}>Active</span>
+          : license.license_status
+            ? <span style={{ color: 'red' }}>{license.license_status}</span>
+            : <span style={{ color: '#aaa' }}>-</span>
+      )}</div>
     </div>
   );
 }
 
 const { Content } = Layout;
-const hostIP=window.location.hostname;
+const hostIP = window.location.hostname;
 
 // Helper for column search (AntD Table)
 function getColumnSearchProps(dataIndex, placeholder) {
@@ -170,25 +170,25 @@ const FlightDeckHostsTable = () => {
       align: 'center',
       render: (_, record) => (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Button 
-            size="small" 
+          <Button
+            size="small"
             onClick={() => {
               setModalRecord(record);
               setModalVisible('license');
-            }} 
+            }}
             color='primary' variant='link'
             style={{ width: '95px' }}
             disabled={!record.licensecode}
           >
             {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
           </Button>
-          {record.license_status ? (
+          {/* {record.license_status ? (
             <span style={{ color: record.license_status.toLowerCase() === 'activated' ? 'green' : 'red', fontSize: 12 }}>
               {record.license_status.toLowerCase() === 'activated' ? 'Active' : record.license_status}
             </span>
           ) : (
             <span style={{ color: '#999', fontSize: 12 }}>-</span>
-          )}
+          )} */}
         </div>
       )
     },
@@ -220,7 +220,7 @@ const FlightDeckHostsTable = () => {
       title: 'Created At',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: val => val ? new Date(val).toISOString().slice(0,10) : '',
+      render: val => val ? new Date(val).toISOString().slice(0, 10) : '',
       width: 120,
       align: 'center',
 
@@ -238,6 +238,7 @@ const FlightDeckHostsTable = () => {
           pagination={false}
           bordered
           size="middle"
+            scroll={{ x: 'max-content' }}
         />
       </Spin>
       {/* Credential Modal */}
@@ -328,7 +329,7 @@ const SquadronNodesTable = () => {
               const lic = await licRes.json();
               n.license_status = lic.license_status || null;
             }
-          } catch (_) {}
+          } catch (_) { }
           return n;
         }));
         setData(nodesWithLic);
@@ -381,25 +382,25 @@ const SquadronNodesTable = () => {
       align: 'center',
       render: (_, record) => (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Button 
-            size="small" 
+          <Button
+            size="small"
             onClick={() => {
               setModalRecord(record);
               setModalVisible('license');
-            }} 
+            }}
             color='primary' variant='link'
             style={{ width: '95px' }}
             disabled={!record.licensecode}
           >
             {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
           </Button>
-          {record.license_status ? (
+          {/* {record.license_status ? (
             <span style={{ color: record.license_status.toLowerCase() === 'activated' ? 'green' : 'red', fontSize: 12 }}>
               {record.license_status.toLowerCase() === 'activated' ? 'Active' : record.license_status}
             </span>
           ) : (
             <span style={{ color: '#999', fontSize: 12 }}>-</span>
-          )}
+          )} */}
         </div>
       )
     },
@@ -423,7 +424,7 @@ const SquadronNodesTable = () => {
       title: 'Created At',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: val => val ? new Date(val).toISOString().slice(0,10) : '',
+      render: val => val ? new Date(val).toISOString().slice(0, 10) : '',
       width: 120,
       align: 'center',
 
@@ -441,6 +442,7 @@ const SquadronNodesTable = () => {
           pagination={false}
           bordered
           size="middle"
+            scroll={{ x: 'max-content' }}
         />
       </Spin>
       {/* Credential Modal */}
@@ -451,7 +453,48 @@ const SquadronNodesTable = () => {
         footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
         width={600}
       >
-        <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
+        <div>
+          <b>1. Flight Deck</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>{modalRecord?.credentialsUrl ? (
+              <a href={modalRecord.credentialsUrl} target="_blank" rel="noopener noreferrer">
+                {modalRecord.credentialsUrl}
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+          <b>2. Storage</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>{modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:8443/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:8443/
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+          <b>3. Monitoring</b>
+          <ul style={{ marginBottom: 8 }}>
+            <li>{modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:7000/
+              </a>
+            ) : modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:7000/
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+          <b>4. Diagnosis Dashboard</b>
+          <ul style={{ marginBottom: 0 }}>
+            <li>{modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:5601/
+              </a>
+            ) : modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}:5601/
+              </a>
+            ) : <span>No URL</span>}</li>
+          </ul>
+        </div>
       </Modal>
       {/* License Modal */}
       <Modal
@@ -529,7 +572,7 @@ const CloudDeploymentsTable = () => {
       title: 'Created At',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      render: val => val ? new Date(val).toISOString().slice(0,10) : '',
+      render: val => val ? new Date(val).toISOString().slice(0, 10) : '',
 
     }
   ];
@@ -545,6 +588,7 @@ const CloudDeploymentsTable = () => {
           pagination={false}
           bordered
           size="middle"
+            scroll={{ x: 'max-content' }}
         />
       </Spin>
       <Modal
@@ -601,7 +645,7 @@ const Iaas = () => {
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
-  
+
   // React Router hooks
   const location = useLocation();
   const navigate = useNavigate();
