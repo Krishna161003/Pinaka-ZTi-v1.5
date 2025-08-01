@@ -255,12 +255,12 @@ const Dashboard = () => {
                   <div style={{ fontSize: 14, color: '#333', marginBottom: 6 }}>
                     Current: {cpuData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "100px" }}>
                     <Area
                       data={cpuHistory}
                       xField="date"
                       yField="cpu"
-                      height={160}
+                      height={230}
                       width={260}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                     />
@@ -286,12 +286,12 @@ const Dashboard = () => {
                     Used: {usedMemory} MB / {totalMemory} MB<br />
                     Usage: {memoryData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "100px" }}>
                     <Gauge
                       style={{ marginBottom: -30 }}
                       autoFit={false}
                       width={260}
-                      height={160}
+                      height={260}
                       data={{
                         target: memoryData ?? 0,
                         total: 100,
