@@ -264,7 +264,8 @@ const FlightDeckHostsTable = () => {
         open={modalVisible === 'license'}
         onCancel={() => setModalVisible(null)}
         title="License Details"
-        footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
+        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
+        width={400}
       >
         <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
       </Modal>
@@ -392,7 +393,7 @@ const SquadronNodesTable = () => {
         open={modalVisible === 'credential'}
         onCancel={() => setModalVisible(null)}
         title="Squadron Node Credentials"
-        footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
+        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
         width={600}
       >
         <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
@@ -402,7 +403,8 @@ const SquadronNodesTable = () => {
         open={modalVisible === 'license'}
         onCancel={() => setModalVisible(null)}
         title="License Details"
-        footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
+        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
+        width={400}
       >
         <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
       </Modal>
@@ -492,7 +494,7 @@ const CloudDeploymentsTable = () => {
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         title="Cloud Credentials"
-        footer={<Button onClick={() => setModalVisible(false)}>Close</Button>}
+        footer={<Button onClick={() => setModalVisible(false)} style={{ width: '95px' }}>Close</Button>}
       >
 
         <div>
