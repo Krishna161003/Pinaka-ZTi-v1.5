@@ -724,17 +724,17 @@ const Iaas = () => {
                 centered
                 items={[
                   {
-                    label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Cloud</span>,
+                    label: <span className="tab-label">Cloud</span>,
                     key: '1',
                     children: (<CloudDeploymentsTable />)
                   },
                   {
-                    label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Flight Deck</span>,
+                    label: <span className="tab-label">Flight Deck</span>,
                     key: '2',
                     children: (<FlightDeckHostsTable />)
                   },
                   {
-                    label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Squadron</span>,
+                    label: <span className="tab-label">Squadron</span>,
                     key: '3',
                     children: (<SquadronNodesTable />)
                   }
@@ -751,15 +751,42 @@ const Iaas = () => {
                 }
                 /* Ensure consistent tab layout */
                 .ant-tabs-nav {
-                  position: relative;
-                  display: flex;
-                  flex: 1;
+                  width: 100%;
                 }
                 .ant-tabs-nav-list {
+                  width: 100%;
+                  display: flex !important;
+                }
+                .ant-tabs-tab {
+                  flex: 1 1 0;
+                  justify-content: center;
+                  text-align: center;
+                  margin: 0 !important;
+                }
+                /* Custom label wrapper for ink bar */
+                .ant-tabs-tab .tab-label {
+                  display: inline-block;
                   position: relative;
-                  display: flex;
-                  flex: 1;
+                  z-index: 1;
+                  padding: 0 16px;
+                }
+                .ant-tabs-ink-bar {
+                  left: 0 !important;
+                  width: 0 !important;
                   transition: none !important;
+                }
+                .ant-tabs-tab-active .tab-label::after {
+                  content: '';
+                  display: block;
+                  margin: 0 auto;
+                  height: 2px;
+                  width: 100%;
+                  background: #1890ff;
+                  border-radius: 2px;
+                  position: absolute;
+                  left: 0;
+                  right: 0;
+                  bottom: -2px;
                 }
               `}</style>
             </div>
