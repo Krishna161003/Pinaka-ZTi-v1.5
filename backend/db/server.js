@@ -373,6 +373,27 @@ db.connect((err) => {
 });
 
 
+// Helper to get the latest in-progress deployment for a user
+app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
+  const { user_id } = req.params;
+  const sql = `
+    SELECT * FROM deployment_activity_log 
+    WHERE user_id = ? AND status = 'progress' 
+    ORDER BY created_at DESC 
+    LIMIT 1
+  `;
+  db.query(sql, [user_id], (err, results) => {
+    if (err) {
+      console.error('Error fetching in-progress deployment:', err);
+      return res.status(500).json({ error: 'Failed to fetch deployment status' });
+    }
+    res.json({
+      inProgress: results.length > 0,
+      log: results[0] || null
+    });
+  });
+});
+
 // Insert new deployment activity log
 const { nanoid } = require('nanoid');
 
@@ -381,42 +402,84 @@ app.post('/api/deployment-activity-log', (req, res) => {
   if (!user_id || !username || !cloudname || !serverip) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  const status = 'progress';
-  const type = 'host';
-  // For host type, use 'FD-' + 6-char nanoid; for others, use regular nanoid
-  let serverid;
-  if (type === 'host') {
-    const { customAlphabet } = require('nanoid');
-    const nanoid6 = customAlphabet('ABCDEVSR0123456789abcdefgzkh', 6);
-    serverid = 'FD-' + nanoid6();
-  } else {
-    serverid = nanoid();
-  }
-  const sql = `
-    INSERT INTO deployment_activity_log
-      (serverid, user_id, username, cloudname, serverip, status, type, server_vip, Management, External_Traffic, Storage, VXLAN)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+
+  // First, check if there's already an in-progress deployment for this user
+  const checkSql = `
+    SELECT serverid FROM deployment_activity_log 
+    WHERE user_id = ? AND status = 'progress' AND cloudname = ? AND serverip = ?
+    LIMIT 1
   `;
-  db.query(sql, [serverid, user_id, username, cloudname, serverip, status, type, vip, Management || null, External_Traffic || null, Storage || null, VXLAN || null], (err, result) => {
-    if (err) {
-      console.error('Error inserting deployment activity log:', err);
-      return res.status(500).json({ error: 'Failed to insert deployment activity log' });
+  
+  db.query(checkSql, [user_id, cloudname, serverip], (checkErr, results) => {
+    if (checkErr) {
+      console.error('Error checking for existing deployment:', checkErr);
+      return res.status(500).json({ error: 'Failed to check for existing deployment' });
     }
-    // Insert license details if provided
-    const { license_code, license_type, license_period } = req.body;
-    if (license_code) {
-      const licenseInsertSQL = `INSERT INTO License (license_code, license_type, license_period, license_status, server_id) VALUES (?, ?, ?, 'validated', ?)
-        ON DUPLICATE KEY UPDATE license_type=VALUES(license_type), license_period=VALUES(license_period), server_id=VALUES(server_id)`;
-      db.query(licenseInsertSQL, [license_code, license_type, license_period, serverid], (licErr) => {
-        if (licErr) {
-          console.error('Error inserting/updating license:', licErr);
-          // Continue anyway, but log error
-        }
-        res.status(200).json({ message: 'Deployment activity log and license created', serverid });
+
+    // If an in-progress deployment exists, return its serverid without creating a new one
+    if (results && results.length > 0) {
+      const existingServerId = results[0].serverid;
+      return res.status(200).json({ 
+        message: 'Using existing deployment', 
+        serverid: existingServerid,
+        existing: true
       });
-    } else {
-      res.status(200).json({ message: 'Deployment activity log created', serverid });
     }
+
+    // No existing in-progress deployment found, create a new one
+    const status = 'progress';
+    const type = 'host';
+    // For host type, use 'FD-' + 6-char nanoid; for others, use regular nanoid
+    let serverid;
+    if (type === 'host') {
+      const { customAlphabet } = require('nanoid');
+      const nanoid6 = customAlphabet('ABCDEVSR0123456789abcdefgzkh', 6);
+      serverid = 'FD-' + nanoid6();
+    } else {
+      serverid = nanoid();
+    }
+    
+    const sql = `
+      INSERT INTO deployment_activity_log
+        (serverid, user_id, username, cloudname, serverip, status, type, server_vip, Management, External_Traffic, Storage, VXLAN)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    db.query(sql, [serverid, user_id, username, cloudname, serverip, status, type, vip, Management || null, External_Traffic || null, Storage || null, VXLAN || null], (err, result) => {
+      if (err) {
+        console.error('Error inserting deployment activity log:', err);
+        return res.status(500).json({ error: 'Failed to insert deployment activity log' });
+      }
+      // Insert license details if provided
+      const { license_code, license_type, license_period } = req.body;
+      if (license_code) {
+        const licenseInsertSQL = `
+          INSERT INTO License (license_code, license_type, license_period, license_status, server_id) 
+          VALUES (?, ?, ?, 'validated', ?)
+          ON DUPLICATE KEY UPDATE 
+            license_type=VALUES(license_type), 
+            license_period=VALUES(license_period), 
+            server_id=VALUES(server_id)
+        `;
+        db.query(licenseInsertSQL, [license_code, license_type, license_period, serverid], (licErr) => {
+          if (licErr) {
+            console.error('Error inserting/updating license:', licErr);
+            // Continue anyway, but log error
+          }
+          res.status(200).json({ 
+            message: 'Deployment activity log and license created', 
+            serverid,
+            existing: false
+          });
+        });
+      } else {
+        res.status(200).json({ 
+          message: 'Deployment activity log created', 
+          serverid,
+          existing: false
+        });
+      }
+    });
   });
 });
 

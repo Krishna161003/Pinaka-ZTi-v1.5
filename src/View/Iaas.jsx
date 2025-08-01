@@ -143,14 +143,24 @@ const FlightDeckHostsTable = () => {
       sorter: (a, b) => (a.role || '').localeCompare(b.role || ''),
     },
     {
-      title: 'License Code',
-      dataIndex: 'licensecode',
-      key: 'licensecode',
-      width: 140,
+      title: 'License',
+      key: 'license',
+      width: 110,
       align: 'center',
-      ...getColumnSearchProps('licensecode', 'License Code'),
-      sorter: (a, b) => (a.licensecode || '').localeCompare(b.licensecode || ''),
-      render: val => val ? val : <span style={{ color: '#aaa' }}>-</span>
+      render: (_, record) => (
+        <Button 
+          size="small" 
+          onClick={() => {
+            setModalRecord(record);
+            setModalVisible('license');
+          }} 
+          type="primary"
+          style={{ width: '95px' }}
+          disabled={!record.licensecode}
+        >
+          {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
+        </Button>
+      )
     },
     {
       title: 'Squadron Node',
@@ -325,14 +335,24 @@ const SquadronNodesTable = () => {
       sorter: (a, b) => (a.role || '').localeCompare(b.role || ''),
     },
     {
-      title: 'License Code',
-      dataIndex: 'licensecode',
-      key: 'licensecode',
-      width: 140,
+      title: 'License',
+      key: 'license',
+      width: 110,
       align: 'center',
-      ...getColumnSearchProps('licensecode', 'License Code'),
-      sorter: (a, b) => (a.licensecode || '').localeCompare(b.licensecode || ''),
-      render: val => val ? val : <span style={{ color: '#aaa' }}>-</span>
+      render: (_, record) => (
+        <Button 
+          size="small" 
+          onClick={() => {
+            setModalRecord(record);
+            setModalVisible('license');
+          }} 
+          type="primary"
+          style={{ width: '95px' }}
+          disabled={!record.licensecode}
+        >
+          {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
+        </Button>
+      )
     },
     {
       title: 'Credential',

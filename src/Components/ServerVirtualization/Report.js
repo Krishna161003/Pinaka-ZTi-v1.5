@@ -54,21 +54,40 @@ const Report = ({ ibn, onDeploymentComplete }) => {
 
     // Helper to log deployment start
     const logDeploymentStart = async () => {
+      // Prevent multiple concurrent calls
+      if (logStartedRef.current) {
+        console.log('Log deployment already started, skipping duplicate call');
+        return;
+      }
+      logStartedRef.current = true;
+
       const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
       const userData = loginDetails?.data;
       const user_id = userData?.id;
       const username = userData?.companyName;
       const server_ip = sessionStorage.getItem('server_ip');
+      
       if (!user_id || !username || !cloudName || !server_ip) {
         console.warn('Missing required fields for deployment log', { user_id, username, cloudName, hostIP, server_ip });
+        logStartedRef.current = false;
         return;
       }
-      if (serveridRef.current) {
-        console.warn('serveridRef.current already set, skipping log');
-        return;
-      }
+
       try {
-        console.log('POSTing deployment activity log', { user_id, username, cloudName, server_ip });
+        // First, check for existing in-progress deployment
+        const checkRes = await fetch(`https://${hostIP}:5000/api/deployment-activity-log/latest-in-progress/${user_id}`);
+        const checkData = await checkRes.json();
+        
+        if (checkData.inProgress && checkData.log) {
+          console.log('Found existing in-progress deployment:', checkData.log.serverid);
+          serveridRef.current = checkData.log.serverid;
+          sessionStorage.setItem('currentServerid', checkData.log.serverid);
+          logStartedRef.current = false;
+          return;
+        }
+
+        // No existing deployment found, create a new one
+        console.log('Creating new deployment activity log', { user_id, username, cloudName, server_ip });
         const res = await fetch(`https://${hostIP}:5000/api/deployment-activity-log`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -76,7 +95,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
             user_id,
             username,
             cloudname: cloudName,
-            serverip: sessionStorage.getItem('server_ip') || null,
+            serverip: server_ip,
             license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
             license_type: JSON.parse(sessionStorage.getItem('licenseStatus'))?.type || null,
             license_period: JSON.parse(sessionStorage.getItem('licenseStatus'))?.period || null,
@@ -87,14 +106,18 @@ const Report = ({ ibn, onDeploymentComplete }) => {
             VXLAN: sessionStorage.getItem('VXLAN') || null
           })
         });
+        
         const data = await res.json();
-        // console.log('Deployment activity log response:', data);
+        console.log('Deployment activity log response:', data);
+        
         if (data.serverid) {
           serveridRef.current = data.serverid;
           sessionStorage.setItem('currentServerid', data.serverid);
         }
       } catch (e) {
-        console.error('Error sending deployment log:', e);
+        console.error('Error in deployment logging:', e);
+      } finally {
+        logStartedRef.current = false;
       }
     };
 
