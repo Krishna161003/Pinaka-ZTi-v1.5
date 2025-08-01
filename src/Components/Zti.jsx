@@ -10,7 +10,7 @@ const style = {
   padding: '36px 20px',
   marginTop: '19px',
   marginRight: '25px',
-  borderRadius: '10px',
+  // borderRadius: '10px',
   cursor: 'pointer',
   boxShadow: '10px',
 };
@@ -149,8 +149,10 @@ export default function Zti({ children }) {
           style={{
             padding: 30,
             minHeight: "auto",
+            width: "99.5%",
+            marginLeft: "4px",
             background: colorBgContainer,
-            borderRadius: borderRadiusLG,
+            // borderRadius: borderRadiusLG,
           }}
         >
           {children}

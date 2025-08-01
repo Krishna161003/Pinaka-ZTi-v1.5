@@ -12,7 +12,7 @@ const style = {
   padding: '16px 20px', // Reduced vertical padding for shorter Col height
   marginTop: '19px',
   marginRight: '25px',
-  borderRadius: '10px',
+  // borderRadius: '10px',
   cursor: 'pointer',
   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.09)',
   transition: 'all 0.3s ease',
@@ -235,11 +235,11 @@ const Dashboard = () => {
             </Row>
             {/* Second row: CPU and Memory cards side by side */}
             <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32 }}>
-              <Col span={23} style={{ display: 'flex', justifyContent: 'center' }}>
+              <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-7px" }}>
                 <div
                   style={{
                     background: '#fff',
-                    borderRadius: '10px',
+                    // borderRadius: '10px',
                     padding: '24px 32px',
                     minHeight: 260,
                     width: '100%',
@@ -281,7 +281,7 @@ const Dashboard = () => {
                       }}
                       scale={{
                         color: {
-                          range: ['green', '#FAAD14', '#F4664A'],
+                          range: ['#62CFF4', '#2C67F2', '#00008B'],
                         },
                       }}
                       statistic={{

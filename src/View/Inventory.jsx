@@ -15,7 +15,7 @@ const style = {
   padding: '16px 20px', // Reduced vertical padding for shorter Col height
   marginTop: '19px',
   marginRight: '25px',
-  borderRadius: '10px',
+  // borderRadius: '10px',
   cursor: 'pointer',
   boxShadow: '10px',
 };
@@ -318,7 +318,7 @@ const Inventory = () => {
                 padding: 30,
                 minHeight: "auto",
                 background: colorBgContainer,
-                borderRadius: borderRadiusLG,
+                // borderRadius: borderRadiusLG,
                 marginLeft: "20px",
                 marginRight: "17px",
               }}

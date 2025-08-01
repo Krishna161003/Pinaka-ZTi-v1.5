@@ -699,7 +699,7 @@ const Iaas = () => {
               padding: 30,
               minHeight: "auto",
               background: colorBgContainer,
-              borderRadius: borderRadiusLG,
+              // borderRadius: borderRadiusLG,
             }}
           >
             <h2 style={{ marginTop: '0px' }}>Infrastructure as a Service (IaaS)</h2>
@@ -711,7 +711,7 @@ const Iaas = () => {
               padding: 30,
               minHeight: "auto",
               background: colorBgContainer,
-              borderRadius: borderRadiusLG,
+              // borderRadius: borderRadiusLG,
             }}
           >
             <div style={{ width: '100%' }}>
