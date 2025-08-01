@@ -197,19 +197,7 @@ const Dashboard = () => {
       <Layout>
         <Content>
           <div>
-            {/* Host IP Dropdown */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', margin: '0 0 16px 0' }}>
-              <span style={{ marginRight: 8, fontWeight: 500 }}>Host IP:</span>
-              <Select
-                style={{ width: 220 }}
-                value={selectedHostIP}
-                onChange={setSelectedHostIP}
-                options={hostIpOptions.map(ip => ({ label: ip, value: ip }))}
-                showSearch
-                optionFilterProp="children"
-                filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())}
-              />
-            </div>
+            
             {/* First row: summary cards */}
             <Row gutter={16} justify="space-between" style={{ marginLeft: "20px" }}>
               <Col className="gutter-row" span={7} style={hoveredCard === 'cloud' ? hoverStyle : style}
@@ -252,6 +240,19 @@ const Dashboard = () => {
                 </div>
               </Col>
             </Row>
+            {/* Host IP Dropdown */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', margin: '0 0 16px 0' }}>
+              <span style={{ marginRight: 8, fontWeight: 500 }}>Host IP:</span>
+              <Select
+                style={{ width: 220 }}
+                value={selectedHostIP}
+                onChange={setSelectedHostIP}
+                options={hostIpOptions.map(ip => ({ label: ip, value: ip }))}
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())}
+              />
+            </div>
             {/* Second row: CPU and Memory cards side by side */}
             <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32 }}>
               <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-9px", gap: 24, width: '100%', boxSizing: 'border-box' }}>
