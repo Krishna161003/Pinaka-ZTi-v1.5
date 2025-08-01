@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Layout1 from "../Components/layout";
-import { theme, Layout, Spin, Row, Col } from "antd";
+imimport { theme, Layout, Spin, Row, Col } from "antd";
 import { useNavigate } from "react-router-dom";
 import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
@@ -254,13 +254,12 @@ const Dashboard = () => {
                   <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: 6, letterSpacing: 0.2 }}>CPU Usage Trend</div>
                   <div style={{ fontSize: 14, color: '#333', marginBottom: 6 }}>
                     Current: {cpuData.toFixed(1)}%
-                  </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "100px" }}>
+                  </div>                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center' }}>
                     <Area
                       data={cpuHistory}
                       xField="date"
                       yField="cpu"
-                      height={230}
+                      height={160}
                       width={260}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                     />
@@ -286,21 +285,14 @@ const Dashboard = () => {
                     Used: {usedMemory} MB / {totalMemory} MB<br />
                     Usage: {memoryData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "100px" }}>
+                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center' }}>
                     <Gauge
                       style={{ marginBottom: -30 }}
                       autoFit={false}
                       width={260}
-                      height={260}
-                      data={{
-                        target: memoryData ?? 0,
-                        total: 100,
-                        name: 'Memory',
-                        thresholds: [50, 75, 100],
-                      }}
-                      scale={{
-                        color: {
-                          range: ['#62CFF4', '#2C67F2', '#00008B'],
+                      height={160}
+
+                   range: ['#62CFF4', '#2C67F2', '#00008B'],
                         },
                       }}
                       statistic={{
