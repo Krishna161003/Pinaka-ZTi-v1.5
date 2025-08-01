@@ -754,10 +754,6 @@ const Iaas = () => {
                   text-align: center;
                   margin: 0 !important;
                 }
-                /* Fix: Make the highlight/ink bar always full width */
-                .ant-tabs-ink-bar {
-                  display: none !important;
-                }
               `}</style>
             </div>
           </div>
