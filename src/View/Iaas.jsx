@@ -721,6 +721,7 @@ const Iaas = () => {
                 style={{ width: '100%' }}
                 tabBarStyle={{ width: '100%' }}
                 moreIcon={null}
+                centered
                 items={[
                   {
                     label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Cloud</span>,
@@ -741,19 +742,6 @@ const Iaas = () => {
               />
               {/* Custom style for AntD tabs to make tabs fill and center */}
               <style>{`
-                .ant-tabs-nav {
-                  width: 100%;
-                }
-                .ant-tabs-nav-list {
-                  width: 100%;
-                  display: flex !important;
-                }
-                .ant-tabs-tab {
-                  flex: 1 1 0;
-                  justify-content: center;
-                  text-align: center;
-                  margin: 0 !important;
-                }
                 /* Fix ink bar positioning to prevent shifting */
                 .ant-tabs-ink-bar {
                   transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1) !important;
