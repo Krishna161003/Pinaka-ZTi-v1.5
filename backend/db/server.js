@@ -374,13 +374,12 @@ db.connect((err) => {
 
 
 // Helper to get the latest in-progress deployment for a user
-// Add this endpoint to check for in-progress deployments
 app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
   const { user_id } = req.params;
   const sql = `
     SELECT * FROM deployment_activity_log 
     WHERE user_id = ? AND status = 'progress' 
-    ORDER BY datetime DESC 
+    ORDER BY created_at DESC 
     LIMIT 1
   `;
   db.query(sql, [user_id], (err, results) => {
@@ -422,7 +421,7 @@ app.post('/api/deployment-activity-log', (req, res) => {
       const existingServerId = results[0].serverid;
       return res.status(200).json({ 
         message: 'Using existing deployment', 
-        serverid: existingServerid,
+        serverid: existingServerId,
         existing: true
       });
     }

@@ -103,17 +103,17 @@ const FlightDeckHostsTable = () => {
       key: 'sno',
       width: 60,
       align: 'center',
-      sorter: (a, b) => a.sno - b.sno,
+
     },
     {
       title: 'Serverid',
       dataIndex: 'serverid',
       key: 'serverid',
-      width: 210,
+      width: 120,
       ellipsis: true,
       align: 'center',
       ...getColumnSearchProps('serverid', 'Server ID'),
-      sorter: (a, b) => a.serverid.localeCompare(b.serverid),
+
     },
     {
       title: 'Serverip',
@@ -122,7 +122,7 @@ const FlightDeckHostsTable = () => {
       width: 120,
       align: 'center',
       ...getColumnSearchProps('serverip', 'Server IP'),
-      sorter: (a, b) => a.serverip.localeCompare(b.serverip),
+
     },
     {
       title: 'VIP',
@@ -131,7 +131,7 @@ const FlightDeckHostsTable = () => {
       width: 120,
       align: 'center',
       ...getColumnSearchProps('vip', 'VIP'),
-      sorter: (a, b) => (a.vip || '').localeCompare(b.vip || ''),
+
     },
     {
       title: 'Role',
@@ -140,7 +140,7 @@ const FlightDeckHostsTable = () => {
       width: 100,
       align: 'center',
       ...getColumnSearchProps('role', 'Role'),
-      sorter: (a, b) => (a.role || '').localeCompare(b.role || ''),
+
     },
     {
       title: 'License',
@@ -168,7 +168,7 @@ const FlightDeckHostsTable = () => {
       key: 'squadronNode',
       width: 100,
       align: 'center',
-      sorter: (a, b) => a.squadronNode - b.squadronNode,
+
     },
     {
       title: 'Credential',
@@ -191,7 +191,7 @@ const FlightDeckHostsTable = () => {
       render: val => val ? new Date(val).toISOString().slice(0,10) : '',
       width: 120,
       align: 'center',
-      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+
     }
   ];
 
@@ -213,8 +213,8 @@ const FlightDeckHostsTable = () => {
         open={modalVisible === 'credential'}
         onCancel={() => setModalVisible(null)}
         title="Host Credentials"
-        footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
-        width={600}
+        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }} >Close</Button>}
+        width={400}
       >
         <div>
           <b>1. Flight Deck</b>
@@ -267,10 +267,10 @@ const FlightDeckHostsTable = () => {
         footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
       >
         <div>
-          <div><b>License Code:</b> {modalRecord?.licensecode || <span style={{ color: '#aaa' }}>-</span>}</div>
-          {modalRecord?.licenseType && <div><b>Type:</b> {modalRecord.licenseType}</div>}
-          {modalRecord?.licensePeriod && <div><b>Period:</b> {modalRecord.licensePeriod}</div>}
-          {/* Add more license fields if available */}
+          <div><b>License Code:</b> {modalRecord?.license_code || <span style={{ color: '#aaa' }}>-</span>}</div>
+          <div><b>Type:</b> {modalRecord?.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
+          <div><b>Period:</b> {modalRecord?.license_period || <span style={{ color: '#aaa' }}>-</span>}</div>
+          <div><b>Status:</b> {modalRecord?.license_status || <span style={{ color: '#aaa' }}>-</span>}</div>
         </div>
       </Modal>
     </div>
@@ -304,17 +304,17 @@ const SquadronNodesTable = () => {
       key: 'sno',
       width: 60,
       align: 'center',
-      sorter: (a, b) => a.sno - b.sno,
+
     },
     {
       title: 'Server ID',
       dataIndex: 'serverid',
       key: 'serverid',
-      width: 210,
+      width: 120,
       ellipsis: true,
       align: 'center',
       ...getColumnSearchProps('serverid', 'Server ID'),
-      sorter: (a, b) => a.serverid.localeCompare(b.serverid),
+
     },
     {
       title: 'Server IP',
@@ -323,7 +323,7 @@ const SquadronNodesTable = () => {
       width: 120,
       align: 'center',
       ...getColumnSearchProps('serverip', 'Server IP'),
-      sorter: (a, b) => a.serverip.localeCompare(b.serverip),
+
     },
     {
       title: 'Role',
@@ -332,7 +332,7 @@ const SquadronNodesTable = () => {
       width: 100,
       align: 'center',
       ...getColumnSearchProps('role', 'Role'),
-      sorter: (a, b) => (a.role || '').localeCompare(b.role || ''),
+
     },
     {
       title: 'License',
@@ -375,7 +375,7 @@ const SquadronNodesTable = () => {
       render: val => val ? new Date(val).toISOString().slice(0,10) : '',
       width: 120,
       align: 'center',
-      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+
     }
   ];
 
@@ -410,10 +410,10 @@ const SquadronNodesTable = () => {
         footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
       >
         <div>
-          <div><b>License Code:</b> {modalRecord?.licensecode || <span style={{ color: '#aaa' }}>-</span>}</div>
-          {modalRecord?.licenseType && <div><b>Type:</b> {modalRecord.licenseType}</div>}
-          {modalRecord?.licensePeriod && <div><b>Period:</b> {modalRecord.licensePeriod}</div>}
-          {/* Add more license fields if available */}
+          <div><b>License Code:</b> {modalRecord?.license_code || <span style={{ color: '#aaa' }}>-</span>}</div>
+          <div><b>Type:</b> {modalRecord?.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
+          <div><b>Period:</b> {modalRecord?.license_period || <span style={{ color: '#aaa' }}>-</span>}</div>
+          <div><b>Status:</b> {modalRecord?.license_status || <span style={{ color: '#aaa' }}>-</span>}</div>
         </div>
       </Modal>
     </div>
@@ -447,21 +447,21 @@ const CloudDeploymentsTable = () => {
       key: 'sno',
       width: 60,
       align: 'center',
-      sorter: (a, b) => a.sno - b.sno,
+
     },
     {
       title: 'Cloud Name',
       dataIndex: 'cloudName',
       key: 'cloudName',
       ...getColumnSearchProps('cloudName', 'Cloud Name'),
-      sorter: (a, b) => a.cloudName.localeCompare(b.cloudName),
+
     },
     {
       title: 'Number of Nodes',
       dataIndex: 'numberOfNodes',
       key: 'numberOfNodes',
       align: 'center',
-      sorter: (a, b) => a.numberOfNodes - b.numberOfNodes,
+
     },
     {
       title: 'Credentials',
@@ -481,7 +481,7 @@ const CloudDeploymentsTable = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: val => val ? new Date(val).toISOString().slice(0,10) : '',
-      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+
     }
   ];
 
