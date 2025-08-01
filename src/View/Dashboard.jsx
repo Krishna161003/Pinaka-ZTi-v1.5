@@ -235,78 +235,83 @@ const Dashboard = () => {
             </Row>
             {/* Second row: CPU and Memory cards side by side */}
             <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32 }}>
-              <Col xs={24} md={12}>
+              <Col xs={24} md={12} style={{ marginBottom: 24 }}>
                 {/* CPU Utilization Card */}
                 <div
                   style={{
                     background: '#fff',
-                    borderRadius: '10px',
-                    padding: '24px 32px',
-                    minHeight: 260,
+                    padding: '10px 10px',
+                    height: '100%',
                     width: '100%',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
+                    boxSizing: 'border-box',
                   }}
                 >
-                  <h4 style={{ textAlign: 'center', marginBottom: 20 }}>CPU Utilization</h4>
-                  <Area
-                    data={cpuHistory}
-                    xField="date"
-                    yField="cpu"
-                    height={240}
-                    width={320}
-                    areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
-                  />
+                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: -14, marginTop: 6, letterSpacing: 0.2 }}>CPU Usage Trend</div>
+                  <Divider />
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6, marginTop: -16 }}>
+                    Current: {cpuData.toFixed(1)}%
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <Area
+                      data={cpuHistory}
+                      xField="date"
+                      yField="cpu"
+                      height={180}
+                      width={260}
+                      autoFit={true}
+                      areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
+                    />
+                  </div>
                 </div>
               </Col>
-              <Col xs={24} md={12}>
+              <Col xs={24} md={12} style={{ marginBottom: 24 }}>
                 {/* Memory Utilization Card */}
                 <div
                   style={{
                     background: '#fff',
-                    borderRadius: '10px',
-                    padding: '24px 32px',
-                    minHeight: 260,
+                    padding: '10px 10px',
+                    minHeight: 50,
+                    height: '100%',
                     width: '100%',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
-                    alignItems: 'center',
+                    alignItems: 'flex-start',
+                    boxSizing: 'border-box',
                   }}
                 >
-                  <h4 style={{ textAlign: 'center', marginBottom: 20 }}>Memory Utilization</h4>
-                  <Gauge
-                    style={{ marginBottom: -50 }}
-                    autoFit={false}
-                    width={320}
-                    height={260}
-                    data={{
-                      target: memoryData ?? 0,
-                      total: 100,
-                      name: 'Memory',
-                      thresholds: [50, 75, 100],
-                    }}
-                    scale={{
-                      color: {
-                        range: ['#62CFF4', '#2C67F2', '#00008B'],
-                      },
-                    }}
-                    statistic={{
-                      title: true,
-                      contentStyle: { fontSize: 15, fontWeight: 400 },
-                    }}
-                  />
-                  <div style={{
-                    marginTop: -70,
-                    textAlign: 'center',
-                    fontWeight: 600,
-                    fontSize: 16,
-                    color: '#333',
-                  }}>
+                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: -14, marginTop: 6, letterSpacing: 0.2 }}>Memory Usage Trend</div>
+                  <Divider />
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6, marginTop: -16 }}>
                     Used: {usedMemory} MB / {totalMemory} MB<br />
                     Usage: {memoryData.toFixed(1)}%
+                  </div>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <Gauge
+                      style={{ marginBottom: -30 }}
+                      autoFit={true}
+                      width={260}
+                      height={250}
+                      data={{
+                        target: memoryData ?? 0,
+                        total: 100,
+                        name: 'Memory',
+                        thresholds: [50, 75, 100],
+                      }}
+                      scale={{
+                        color: {
+                          range: ['#62CFF4', '#2C67F2', '#00008B'],
+                        },
+                      }}
+                      statistic={{
+                        title: true,
+                        contentStyle: { fontSize: 15, fontWeight: 400 },
+                      }}
+                    />
                   </div>
                 </div>
               </Col>
