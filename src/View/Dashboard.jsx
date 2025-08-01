@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Layout1 from "../Components/layout";
-import { theme, Layout, Spin, Row, Col } from "antd";
+import { theme, Layout, Spin, Row, Col, Divider } from "antd";
 import { useNavigate } from "react-router-dom";
 import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
@@ -235,16 +235,17 @@ const Dashboard = () => {
             </Row>
             {/* Second row: CPU and Memory cards side by side */}
             <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32 }}>
-              <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-7px", gap: 24, width: '100%', boxSizing: 'border-box' }}>
+              <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-9px", gap: 24, width: '100%', boxSizing: 'border-box' }}>
                 {/* CPU Utilization Card */}
                 <div
                   style={{
                     background: '#fff',
-                    borderRadius: '10px',
+                    // borderRadius: '10px',
                     padding: '10px 10px',
-                    minHeight: 100,
-                    width: '40%',
-                    maxWidth: 400,
+                    // minHeight: 0,
+                    height:'75%',
+                    width: '70%',
+                    maxWidth: 600,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
@@ -252,16 +253,17 @@ const Dashboard = () => {
                     boxSizing: 'border-box',
                   }}
                 >
-                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: 6, letterSpacing: 0.2 }}>CPU Usage Trend</div>
-                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6 }}>
+                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600,marginBottom: -14,marginTop: 6, letterSpacing: 0.2 }}>CPU Usage Trend</div>
+                  <Divider />
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
                     Current: {cpuData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "100px" }}>
+                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "120px", marginBottom: "100px" }}>
                     <Area
                       data={cpuHistory}
                       xField="date"
                       yField="cpu"
-                      height={230}
+                      height={180}
                       width={260}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                     />
@@ -271,29 +273,33 @@ const Dashboard = () => {
                 <div
                   style={{
                     background: '#fff',
-                    borderRadius: '10px',
+                    // borderRadius: '10px',
                     padding: '10px 10px',
-                    minHeight: 100,
-                    width: '40%',
-                    maxWidth: 400,
+                    minHeight: 50,
+                    height:'75%',
+                    width: '70%',
+                    maxWidth: 600,
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
                     boxSizing: 'border-box',
+                    marginRight: "-12px"
                   }}
                 >
-                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: 6, letterSpacing: 0.2 }}>Memory Usage Trend</div>
-                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6 }}>
+                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: -14,marginTop: 6, letterSpacing: 0.2 }}>Memory Usage Trend</div>
+                  <Divider />
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
                     Used: {usedMemory} MB / {totalMemory} MB<br />
                     Usage: {memoryData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "100px" }}>
+
+                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "120px", marginTop: -40 }}>
                     <Gauge
                       style={{ marginBottom: -30 }}
                       autoFit={false}
                       width={260}
-                      height={260}
+                      height={250}
                       data={{
                         target: memoryData ?? 0,
                         total: 100,
