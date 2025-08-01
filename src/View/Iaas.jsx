@@ -754,6 +754,25 @@ const Iaas = () => {
                   text-align: center;
                   margin: 0 !important;
                 }
+                /* Fix ink bar positioning to prevent shifting */
+                .ant-tabs-ink-bar {
+                  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1) !important;
+                }
+                .ant-tabs-tab-active {
+                  position: relative;
+                }
+                /* Ensure consistent tab layout */
+                .ant-tabs-nav {
+                  position: relative;
+                  display: flex;
+                  flex: 1;
+                }
+                .ant-tabs-nav-list {
+                  position: relative;
+                  display: flex;
+                  flex: 1;
+                  transition: none !important;
+                }
               `}</style>
             </div>
           </div>
