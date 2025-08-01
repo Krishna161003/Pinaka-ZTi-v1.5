@@ -266,12 +266,7 @@ const FlightDeckHostsTable = () => {
         title="License Details"
         footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
       >
-        <div>
-          <div><b>License Code:</b> {modalRecord?.license_code || <span style={{ color: '#aaa' }}>-</span>}</div>
-          <div><b>Type:</b> {modalRecord?.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
-          <div><b>Period:</b> {modalRecord?.license_period || <span style={{ color: '#aaa' }}>-</span>}</div>
-          <div><b>Status:</b> {modalRecord?.license_status || <span style={{ color: '#aaa' }}>-</span>}</div>
-        </div>
+        <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
       </Modal>
     </div>
   );
@@ -409,12 +404,7 @@ const SquadronNodesTable = () => {
         title="License Details"
         footer={<Button onClick={() => setModalVisible(null)}>Close</Button>}
       >
-        <div>
-          <div><b>License Code:</b> {modalRecord?.license_code || <span style={{ color: '#aaa' }}>-</span>}</div>
-          <div><b>Type:</b> {modalRecord?.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
-          <div><b>Period:</b> {modalRecord?.license_period || <span style={{ color: '#aaa' }}>-</span>}</div>
-          <div><b>Status:</b> {modalRecord?.license_status || <span style={{ color: '#aaa' }}>-</span>}</div>
-        </div>
+        <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
       </Modal>
     </div>
   );
