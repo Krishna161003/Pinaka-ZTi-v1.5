@@ -235,33 +235,33 @@ const Dashboard = () => {
             </Row>
             {/* Second row: CPU and Memory cards side by side */}
             <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32 }}>
-              <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-7px", gap: 24, width: '100%', boxSizing: 'border-box' }}>
+              <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-7px", gap: 24 }}>
                 {/* CPU Utilization Card */}
                 <div
                   style={{
                     background: '#fff',
                     borderRadius: '10px',
-                    padding: '18px 20px',
-                    minHeight: 220,
+                    padding: '24px 32px',
+                    minHeight: 260,
                     width: '50%',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
-                    boxSizing: 'border-box',
                   }}
                 >
-                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: 6, letterSpacing: 0.2 }}>CPU Usage Trend</div>
-                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6 }}>
+                  <div style={{ fontSize: 15, color: '#fff', fontWeight: 500, marginBottom: 8, color: '#dbeafe' }}>CPU Usage Trend</div>
+                  {/* Optionally, show current CPU usage above the chart */}
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 8 }}>
                     Current: {cpuData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
                     <Area
                       data={cpuHistory}
                       xField="date"
                       yField="cpu"
-                      height={160}
-                      width={260}
+                      height={240}
+                      width={320}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                     />
                   </div>
@@ -271,27 +271,26 @@ const Dashboard = () => {
                   style={{
                     background: '#fff',
                     borderRadius: '10px',
-                    padding: '18px 20px',
-                    minHeight: 220,
+                    padding: '24px 32px',
+                    minHeight: 260,
                     width: '50%',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'flex-start',
-                    boxSizing: 'border-box',
                   }}
                 >
-                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: 6, letterSpacing: 0.2 }}>Memory Usage Trend</div>
-                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6 }}>
+                  <div style={{ fontSize: 15, color: '#dbeafe', fontWeight: 500, marginBottom: 8 }}>Memory Usage Trend</div>
+                  <div style={{ fontSize: 14, color: '#333', marginBottom: 8 }}>
                     Used: {usedMemory} MB / {totalMemory} MB<br />
                     Usage: {memoryData.toFixed(1)}%
                   </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
                     <Gauge
-                      style={{ marginBottom: -30 }}
+                      style={{ marginBottom: -50 }}
                       autoFit={false}
-                      width={260}
-                      height={160}
+                      width={320}
+                      height={260}
                       data={{
                         target: memoryData ?? 0,
                         total: 100,
