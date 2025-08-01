@@ -721,20 +721,19 @@ const Iaas = () => {
                 style={{ width: '100%' }}
                 tabBarStyle={{ width: '100%' }}
                 moreIcon={null}
-                centered
                 items={[
                   {
-                    label: <span className="tab-label">Cloud</span>,
+                    label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Cloud</span>,
                     key: '1',
                     children: (<CloudDeploymentsTable />)
                   },
                   {
-                    label: <span className="tab-label">Flight Deck</span>,
+                    label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Flight Deck</span>,
                     key: '2',
                     children: (<FlightDeckHostsTable />)
                   },
                   {
-                    label: <span className="tab-label">Squadron</span>,
+                    label: <span style={{ width: '100%', display: 'block', textAlign: 'center' }}>Squadron</span>,
                     key: '3',
                     children: (<SquadronNodesTable />)
                   }
@@ -742,14 +741,6 @@ const Iaas = () => {
               />
               {/* Custom style for AntD tabs to make tabs fill and center */}
               <style>{`
-                /* Fix ink bar positioning to prevent shifting */
-                .ant-tabs-ink-bar {
-                  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1) !important;
-                }
-                .ant-tabs-tab-active {
-                  position: relative;
-                }
-                /* Ensure consistent tab layout */
                 .ant-tabs-nav {
                   width: 100%;
                 }
@@ -763,34 +754,9 @@ const Iaas = () => {
                   text-align: center;
                   margin: 0 !important;
                 }
-                /* Custom label wrapper for ink bar */
-                .ant-tabs-tab .tab-label {
-                  display: inline-block;
-                  position: relative;
-                  z-index: 1;
-                  padding: 0 16px;
-                }
+                /* Fix: Make the highlight/ink bar always full width */
                 .ant-tabs-ink-bar {
-                  left: 0 !important;
-                  width: 0 !important;
-                  transition: none !important;
-                }
-                .ant-tabs-tab-active .tab-label::after {
-                  content: '';
-                  display: block;
-                  margin: 0 auto;
-                  height: 2px;
-                  width: 100%;
-                  background: #1890ff;
-                  border-radius: 2px;
-                  position: absolute;
-                  left: 0;
-                  right: 0;
-                  bottom: -2px;
-                }
-                .ant-tabs-tab-active .tab-label {
-                  color: #1890ff !important;
-                  font-weight: 500;
+                  display: none !important;
                 }
               `}</style>
             </div>
