@@ -788,6 +788,10 @@ const Iaas = () => {
                   right: 0;
                   bottom: -2px;
                 }
+                .ant-tabs-tab-active .tab-label {
+                  color: #1890ff !important;
+                  font-weight: 500;
+                }
               `}</style>
             </div>
           </div>
