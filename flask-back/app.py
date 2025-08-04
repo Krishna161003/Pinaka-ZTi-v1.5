@@ -999,6 +999,73 @@ def system_utilization_history():
             "memory_history": [],
             "error": str(e)
         })
+def get_available_interfaces():
+    try:
+        with open('/proc/net/dev', 'r') as f:
+            lines = f.readlines()[2:]  # Skip headers
+            interfaces = [line.strip().split(':')[0].strip() for line in lines]
+            return interfaces
+    except Exception:
+        return []
+
+def get_bandwidth(interface):
+    try:
+        with open('/proc/net/dev', 'r') as f:
+            lines = f.readlines()
+        for line in lines:
+            if interface in line:
+                data = line.split()
+                rx_bytes = int(data[1])
+                tx_bytes = int(data[9])
+                return rx_bytes, tx_bytes
+        return None, None
+    except Exception:
+        return None, None
+
+def get_latency(host="8.8.8.8", count=3):
+    try:
+        output = subprocess.check_output(["ping", "-c", str(count), host], stderr=subprocess.DEVNULL).decode()
+        match = re.search(r"min/avg/max/mdev = [\d\.]+/([\d\.]+)/", output)
+        if match:
+            return float(match.group(1))
+    except Exception:
+        pass
+    return None
+
+@app.route("/interfaces", methods=["GET"])
+def interfaces():
+    iface_list = get_available_interfaces()
+    return jsonify([{"label": iface, "value": iface} for iface in iface_list])
+
+@app.route("/network-health", methods=["GET"])
+def network_health():
+    interfaces = get_available_interfaces()
+    interface = request.args.get("interface")
+    
+    if not interface:
+        if interfaces:
+            interface = interfaces[0]
+        else:
+            return jsonify({"error": "No network interfaces available"}), 500
+
+    ping_host = request.args.get("ping_host", "8.8.8.8")
+
+    rx1, tx1 = get_bandwidth(interface)
+    time.sleep(1)
+    rx2, tx2 = get_bandwidth(interface)
+
+    if None in (rx1, tx1, rx2, tx2):
+        return jsonify({"error": f"Failed to read bandwidth data for interface {interface}"}), 500
+
+    bandwidth_rx_kbps = (rx2 - rx1) / 1024
+    bandwidth_tx_kbps = (tx2 - tx1) / 1024
+    latency_ms = get_latency(ping_host)
+
+    return jsonify({
+        "time": time.strftime("%H:%M"),
+        "bandwidth_kbps": round(bandwidth_rx_kbps + bandwidth_tx_kbps, 2),
+        "latency_ms": round(latency_ms, 2) if latency_ms is not None else None
+    })
 
         
 # ------------------- System Utilization Endpoint ends -------------------

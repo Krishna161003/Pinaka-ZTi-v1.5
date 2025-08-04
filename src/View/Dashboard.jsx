@@ -54,6 +54,9 @@ const Dashboard = () => {
   // --- CPU & Memory Utilization State ---
   const [cpuData, setCpuData] = useState(0);
   const [cpuHistory, setCpuHistory] = useState([]);
+  const [interfaces, setInterfaces] = useState([]);
+  const [selectedInterface, setSelectedInterface] = useState("eth0");
+  const [chartData, setChartData] = useState([]);
   const [memoryData, setMemoryData] = useState(0);
   const [totalMemory, setTotalMemory] = useState(0);
   const [usedMemory, setUsedMemory] = useState(0);
@@ -147,6 +150,25 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [selectedHostIP]);
 
+  useEffect(() => {
+    fetch(`https://${selectedHostIP}:2020/interfaces`)
+      .then(res => res.json())
+      .then(data => {
+        setInterfaces(data);
+        setSelectedInterface(data[0]?.value);
+      });
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const res = await fetch(`https://${selectedHostIP}:2020/network-health?interface=${selectedInterface}`);
+      const json = await res.json();
+      setChartData(prev => [...prev.slice(-29), json]); // last 30
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 5000); // every 5s
+    return () => clearInterval(interval);
+  }, [selectedInterface]);
 
 
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -458,28 +480,15 @@ const Dashboard = () => {
                     </div>
                   </div>
                 </Col>
-                <Col className="gutter-row" span={7} style={performancewidgetStyle}>
+                <Col className="gutter-row" span={7} style={{ padding: "10px", background: "#fff" }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                      <span
-                        style={{
-                          fontSize: "18px",
-                          fontWeight: "500",
-                          marginLeft: "1px",
-                          userSelect: "none"
-                        }}
-                      >
-                        Bandwidth Latency
-                      </span>
+                      <span style={{ fontSize: "18px", fontWeight: "500", userSelect: "none" }}>Bandwidth Latency</span>
                       <Select
-                        style={{ width: 80 }}
-                        defaultValue="eth0"
-                        options={[
-                          { label: 'eth0', value: 'eth0' },
-                          { label: 'eth1', value: 'eth1' },
-                          { label: 'wlan0', value: 'wlan0' },
-                          { label: 'lo', value: 'lo' }
-                        ]}
+                        style={{ width: 100 }}
+                        value={selectedInterface}
+                        options={interfaces}
+                        onChange={setSelectedInterface}
                         size="small"
                       />
                     </div>
@@ -487,13 +496,13 @@ const Dashboard = () => {
                   </div>
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
                     <Area
-                      data={cpuHistory}
-                      height={100}
-                      width={250}
-                      xField="date"
-                      yField="cpu"
+                      data={chartData}
+                      xField="time"
+                      yField="bandwidth_kbps"
                       smooth={true}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
+                      xAxis={false}
+                      yAxis={false}
                       // tooltip={false}
                     />
                   </div>
@@ -619,7 +628,8 @@ const Dashboard = () => {
                       padding: "10px 20px",
                       height: "20px",
                       fontSize: "18px",
-                      fontWeight: "500",                    }}
+                      fontWeight: "500",
+                    }}
                   >
                     <span style={{ userSelect: "none" }}>DOWN</span>
                     <span
