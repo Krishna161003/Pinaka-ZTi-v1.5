@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
 import Layout1 from "../Components/layout";
-import { theme, Layout, Spin, Row, Col, Divider, Select } from "antd";
+import { theme, Layout, Spin, Row, Col, Divider, Select, Table, Badge, Input } from "antd";
 import { useNavigate } from "react-router-dom";
 import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
 import cloud from "../Images/cloud-computing_660475.png";
 import squad from "../Images/database_2231963.png";
 import { Area, Column, Gauge } from '@ant-design/plots';
+
 const style = {
   background: '#fff',
   padding: '16px 20px', // Reduced vertical padding for shorter Col height
@@ -14,8 +15,31 @@ const style = {
   marginRight: '25px',
   // borderRadius: '10px',
   cursor: 'pointer',
-  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.09)',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
   transition: 'all 0.3s ease',
+};
+
+const performancewidgetStyle = {
+  background: '#fff',
+  padding: '16px 20px', // Reduced vertical padding for shorter Col height
+  marginTop: '19px',
+  marginRight: '25px',
+  // borderRadius: '10px',
+  cursor: 'pointer',
+  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+  transition: 'all 0.3s ease',
+};
+
+const dockerwidgetStyle = {
+  background: '#fff',
+  padding: '16px 20px', // Reduced vertical padding for shorter Col height
+  marginTop: '4px',
+  marginRight: '25px',
+  // borderRadius: '10px',
+  cursor: 'pointer',
+  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+  transition: 'all 0.3s ease',
+  height: '50px',
 };
 
 const hoverStyle = {
@@ -43,13 +67,14 @@ const Dashboard = () => {
   ];
   const [selectedHostIP, setSelectedHostIP] = useState(window.location.hostname);
 
-  // Fetch CPU time series for Area chart
+  // Fetch CPU and Memory time series for Area charts
+  const [memoryHistory, setMemoryHistory] = useState([]);
   useEffect(() => {
-    async function fetchCpuHistory() {
+    async function fetchHistory() {
       try {
         const res = await fetch(`https://${selectedHostIP}:2020/system-utilization-history`);
         const data = await res.json();
-        // console.log('Fetched CPU history:', data);
+        // console.log('Fetched history:', data);
         if (data && Array.isArray(data.cpu_history)) {
           setCpuHistory(
             data.cpu_history.map(item => {
@@ -63,12 +88,26 @@ const Dashboard = () => {
         } else {
           setCpuHistory([]);
         }
+        if (data && Array.isArray(data.memory_history)) {
+          setMemoryHistory(
+            data.memory_history.map(item => {
+              const memVal = typeof item.memory === 'number' && !isNaN(item.memory) ? item.memory : 0;
+              return {
+                date: new Date(item.timestamp * 1000),
+                memory: memVal
+              };
+            })
+          );
+        } else {
+          setMemoryHistory([]);
+        }
       } catch (err) {
         setCpuHistory([]);
+        setMemoryHistory([]);
       }
     }
-    fetchCpuHistory();
-    const interval = setInterval(fetchCpuHistory, 10000);
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 10000);
     return () => clearInterval(interval);
   }, [selectedHostIP]);
 
@@ -119,6 +158,90 @@ const Dashboard = () => {
   });
   // State for hover effects
   const [hoveredCard, setHoveredCard] = useState(null);
+
+  // Docker containers state
+  const dockerContainers = [
+    {
+      dockerId: 'c8f9a2b1d3e4',
+      containerName: 'openstack-nova-compute',
+      status: 'UP'
+    },
+    {
+      dockerId: 'a7b8c9d0e1f2',
+      containerName: 'openstack-neutron-server',
+      status: 'UP'
+    },
+    {
+      dockerId: 'f3e4d5c6b7a8',
+      containerName: 'openstack-keystone',
+      status: 'DOWN'
+    },
+    {
+      dockerId: 'b9a8c7d6e5f4',
+      containerName: 'openstack-glance-api',
+      status: 'UP'
+    },
+    {
+      dockerId: 'e2f1d0c9b8a7',
+      containerName: 'openstack-cinder-volume',
+      status: 'UP'
+    },
+    {
+      dockerId: 'd6c5b4a3f2e1',
+      containerName: 'openstack-horizon',
+      status: 'DOWN'
+    },
+    {
+      dockerId: 'g7h8i9j0k1l2',
+      containerName: 'openstack-heat-engine',
+      status: 'UP'
+    },
+    {
+      dockerId: 'm3n4o5p6q7r8',
+      containerName: 'openstack-swift-proxy',
+      status: 'UP'
+    }
+  ];
+
+  const [filteredContainers, setFilteredContainers] = useState(dockerContainers);
+
+  // Docker table columns
+  const dockerColumns = [
+    {
+      title: 'Docker ID',
+      dataIndex: 'dockerId',
+      key: 'dockerId',
+      width: '25%',
+      render: (text) => (
+        <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>
+          {text}
+        </span>
+      )
+    },
+    {
+      title: 'Container Name',
+      dataIndex: 'containerName',
+      key: 'containerName',
+      width: '50%',
+      render: (text) => (
+        <span style={{ fontWeight: '500' }}>
+          {text}
+        </span>
+      )
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: '25%',
+      render: (status) => (
+        <Badge
+          status={status === 'UP' ? 'success' : 'error'}
+          text={status}
+        />
+      )
+    }
+  ];
 
   const navigate = useNavigate();
   const storedData = JSON.parse(sessionStorage.getItem("loginDetails")) || {};
@@ -197,7 +320,6 @@ const Dashboard = () => {
       <Layout>
         <Content>
           <div>
-            
             {/* First row: summary cards */}
             <Row gutter={16} justify="space-between" style={{ marginLeft: "20px" }}>
               <Col className="gutter-row" span={7} style={hoveredCard === 'cloud' ? hoverStyle : style}
@@ -241,8 +363,8 @@ const Dashboard = () => {
               </Col>
             </Row>
             {/* Host IP Dropdown */}
-            <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', margin: '0 0 16px 0', marginTop: "10px" }}>
-              {/* <span style={{ marginRight: 8, fontWeight: 500 }}>Host IP:</span> */}
+            <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', margin: '17px 0 15px 18px', marginTop: "10px" }}>
+              <span style={{ marginRight: 8, fontWeight: 500, userSelect: "none" }}>Host:</span>
               <Select
                 style={{ width: 220 }}
                 value={selectedHostIP}
@@ -253,99 +375,369 @@ const Dashboard = () => {
                 filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())}
               />
             </div>
-            {/* Second row: CPU and Memory cards side by side */}
-            <Row gutter={32} justify="center" style={{ marginTop: 28, marginBottom: 32 }}>
-              <Col span={23} style={{ display: 'flex', justifyContent: 'center', marginLeft: "-9px", gap: 24, width: '100%', boxSizing: 'border-box' }}>
-                {/* CPU Utilization Card */}
-                <div
-                  style={{
-                    background: '#fff',
-                    // borderRadius: '10px',
-                    padding: '10px 10px',
-                    // minHeight: 0,
-                    height:'75%',
-                    width: '70%',
-                    maxWidth: 600,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    boxSizing: 'border-box',
-                  }}
+            {/* Performance Section Header */}
+            <div
+              style={{
+                marginTop: 10,
+                padding: 30,
+                minHeight: "auto",
+                background: colorBgContainer,
+                // borderRadius: borderRadiusLG,
+                marginLeft: "20px",
+                marginRight: "17px",
+              }}
+            >
+              <h4 style={{ userSelect: "none", marginTop: "-16px" }} >Performance</h4>
+              <Divider style={{ margin: "-16px 0 0 0" }} />
+              <Row gutter={24} justify="start" style={{ marginLeft: "2px" }}>
+                <Col
+                  className="gutter-row"
+                  span={7} // Each column takes up 7 spans, so 3 columns will total 21 spans
+                  style={performancewidgetStyle}
                 >
-                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600,marginBottom: -14,marginTop: 6, letterSpacing: 0.2 }}>CPU Usage Trend</div>
-                  <Divider />
-                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
-                    Current: {cpuData.toFixed(1)}%
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: "500",
+                        marginLeft: "1px",
+                        userSelect: "none",
+                        display: "block",
+                        marginBottom: "8px"
+                      }}
+                    >
+                      Status
+                    </span>
+                    <Divider style={{ margin: "0 0 16px 0" }} />
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '80px',
+                      fontSize: '24px',
+                      fontWeight: 'bold',
+                      color: '#52c41a',
+                      backgroundColor: '#f6ffed',
+                      border: '1px solid #b7eb8f',
+                      borderRadius: '6px',
+                      textAlign: 'center'
+                    }}>
+                      UP
+                    </div>
                   </div>
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "120px", marginBottom: "100px" }}>
+                </Col>
+                <Col className="gutter-row" span={7} style={performancewidgetStyle}>
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: "500",
+                        marginLeft: "1px",
+                        userSelect: "none",
+                        display: "block",
+                        marginBottom: "8px"
+                      }}
+                    >
+                      Health Check
+                    </span>
+                    <Divider style={{ margin: "0 0 16px 0" }} />
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '80px',
+                      fontSize: '24px',
+                      fontWeight: 'bold',
+                      color: '#faad14',
+                      backgroundColor: '#fffbe6',
+                      border: '1px solid #ffd591',
+                      borderRadius: '6px',
+                      textAlign: 'center'
+                    }}>
+                      WARNING
+                    </div>
+                  </div>
+                </Col>
+                <Col className="gutter-row" span={7} style={performancewidgetStyle}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <span
+                        style={{
+                          fontSize: "18px",
+                          fontWeight: "500",
+                          marginLeft: "1px",
+                          userSelect: "none"
+                        }}
+                      >
+                        Bandwidth Latency
+                      </span>
+                      <Select
+                        style={{ width: 80 }}
+                        defaultValue="eth0"
+                        options={[
+                          { label: 'eth0', value: 'eth0' },
+                          { label: 'eth1', value: 'eth1' },
+                          { label: 'wlan0', value: 'wlan0' },
+                          { label: 'lo', value: 'lo' }
+                        ]}
+                        size="small"
+                      />
+                    </div>
+                    <Divider style={{ margin: "0 0 16px 0" }} />
+                  </div>
+                  <div style={{ height: 70, margin: '0 0 10px 0' }}>
                     <Area
                       data={cpuHistory}
+                      height={90}
+                      width={230}
                       xField="date"
                       yField="cpu"
-                      height={180}
-                      width={260}
+                      smooth={true}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
+                      tooltip={false}
                     />
                   </div>
-                </div>
-                {/* Memory Utilization Card */}
-                <div
-                  style={{
-                    background: '#fff',
-                    // borderRadius: '10px',
-                    padding: '10px 10px',
-                    minHeight: 50,
-                    height:'75%',
-                    width: '70%',
-                    maxWidth: 600,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.09)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    boxSizing: 'border-box',
-                    marginRight: "-12px"
-                  }}
+                </Col>
+              </Row>
+              <Row gutter={24} justify="start" style={{ marginTop: 24, marginLeft: "2px" }}>
+                <Col
+                  className="gutter-row"
+                  span={11} // Each column takes up 7 spans
+                  style={performancewidgetStyle}
                 >
-                  <div style={{ fontSize: 17, color: '#1890ff', fontWeight: 600, marginBottom: -14,marginTop: 6, letterSpacing: 0.2 }}>Memory Usage Trend</div>
-                  <Divider />
-                  <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
-                    Used: {usedMemory} MB / {totalMemory} MB<br />
-                    Usage: {memoryData.toFixed(1)}%
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: "500",
+                        marginLeft: "1px",
+                        userSelect: "none",
+                        display: "block",
+                        marginBottom: "8px"
+                      }}
+                    >
+                      CPU Usage Trend
+                    </span>
+                    <Divider style={{ margin: "0 0 16px 0" }} />
+                    <div style={{ height: '100px' }}>
+                      <Area
+                        data={cpuHistory}
+                        xField="date"
+                        yField="cpu"
+                        height={90}
+                        smooth={true}
+                        areaStyle={{ fill: 'l(270) 0:#1890ff 0.5:#e6f7ff 1:#ffffff' }}
+                        line={{ color: '#1890ff' }}
+                        xAxis={{
+                          type: 'time',
+                          tickCount: 5,
+                          label: { style: { fontSize: 10 } }
+                        }}
+                        yAxis={{
+                          min: 0,
+                          max: 100,
+                          tickCount: 4,
+                          label: { style: { fontSize: 10 } }
+                        }}
+                        tooltip={{
+                          formatter: (datum) => {
+                            return {
+                              name: 'CPU Usage',
+                              value: `${datum.cpu.toFixed(1)}%`
+                            };
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
+                </Col>
+                <Col
+                  className="gutter-row"
+                  span={11} // Each column takes up 7 spans
+                  style={performancewidgetStyle}
+                >
+                  <div>
+                    <span
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: "500",
+                        marginLeft: "1px",
+                        userSelect: "none",
+                        display: "block",
+                        marginBottom: "8px"
+                      }}
+                    >
+                      Memory Usage Trend
+                    </span>
+                    <Divider style={{ margin: "0 0 16px 0" }} />
+                    <div style={{ height: '80px' }}>
+                      <Area
+                        data={memoryHistory}
+                        xField="date"
+                        yField="memory"
+                        height={90}
+                        smooth={true}
+                        areaStyle={{ fill: 'l(270) 0:#52c41a 0.5:#f6ffed 1:#ffffff' }}
+                        line={{ color: '#52c41a' }}
+                        xAxis={{
+                          type: 'time',
+                          tickCount: 5,
+                          label: { style: { fontSize: 10 } }
+                        }}
+                        yAxis={{
+                          min: 0,
+                          max: 100,
+                          tickCount: 4,
+                          label: { style: { fontSize: 10 } }
+                        }}
+                        tooltip={{
+                          formatter: (datum) => {
+                            return {
+                              name: 'Memory Usage',
+                              value: datum && typeof datum.memory === 'number' && !isNaN(datum.memory)
+                                ? `${datum.memory.toFixed(1)}%`
+                                : '0.0%'
+                            };
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+            <div
+              style={{
+                marginTop: 10,
+                padding: 30,
+                minHeight: "auto",
+                background: colorBgContainer,
+                // borderRadius: borderRadiusLG,
+                marginLeft: "20px",
+                marginRight: "17px",
+              }}
+            >
+              <h4 style={{ userSelect: "none", marginTop: "-16px" }} >Docker Service Status</h4>
+              <Divider style={{ margin: "-16px 0 16px 0" }} />
+              <Row
+                gutter={16}
+                justify="space-between"
+                style={{ marginBottom: "17px", marginLeft: "2px" }}
+              >
+                <Col className="gutter-row" span={7} style={dockerwidgetStyle}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 20px",
+                      height: "20px", // Reduced height
+                      fontSize: "18px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    <span style={{ userSelect: "none" }}>UP</span>
+                    <span
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: "bold",
+                        color: "#52c41a",
+                        userSelect: "none",
+                      }}
+                    >
+                      5
+                    </span>
+                  </div>
+                </Col>
 
-                  <div style={{ width: '95%', display: 'flex', justifyContent: 'center', marginLeft: "120px", marginTop: -40 }}>
-                    <Gauge
-                      style={{ marginBottom: -30 }}
-                      autoFit={false}
-                      width={260}
-                      height={260}
-                      data={{
-                        target: memoryData ?? 0,
-                        total: 100,
-                        name: 'Memory',
-                        thresholds: [50, 75, 100],
+                <Col className="gutter-row" span={7} style={dockerwidgetStyle}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 20px",
+                      height: "20px",
+                      fontSize: "18px",
+                      fontWeight: "500",                    }}
+                  >
+                    <span style={{ userSelect: "none" }}>DOWN</span>
+                    <span
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: "bold",
+                        color: "#cf1322",
+                        userSelect: "none",
                       }}
-                      scale={{
-                        color: {
-                          range: ['#62CFF4', '#2C67F2', '#00008B'],
-                        },
-                      }}
-                      statistic={{
-                        title: true,
-                        contentStyle: { fontSize: 15, fontWeight: 400 },
-                      }}
-                    />
+                    >
+                      2
+                    </span>
                   </div>
-                </div>
-              </Col>
-            </Row>
-            {/* Password Update Modal Form */}
-            <PasswordUpdateForm
-              isModalVisible={isModalVisible}
-              setIsModalVisible={setIsModalVisible}
-            />
+                </Col>
+
+                <Col className="gutter-row" span={7} style={dockerwidgetStyle}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 20px",
+                      height: "20px",
+                      fontSize: "18px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    <span style={{ userSelect: "none" }}>Total</span>
+                    <span
+                      style={{
+                        fontSize: "20px",
+                        fontWeight: "bold",
+                        color: "rgb(30, 42, 209)",
+                        userSelect: "none",
+                      }}
+                    >
+                      7
+                    </span>
+                  </div>
+                </Col>
+              </Row>
+
+              {/* Search Input */}
+              <Input.Search
+                placeholder="Search containers..."
+                style={{ marginBottom: 16, width: 300 }}
+                onChange={(e) => {
+                  const value = e.target.value.toLowerCase();
+                  const filtered = dockerContainers.filter(container =>
+                    container.dockerId.toLowerCase().includes(value) ||
+                    container.containerName.toLowerCase().includes(value) ||
+                    container.status.toLowerCase().includes(value)
+                  );
+                  setFilteredContainers(filtered);
+                }}
+              />
+
+              {/* Docker Containers Table */}
+              <Table
+                dataSource={filteredContainers}
+                columns={dockerColumns}
+                pagination={{
+                  pageSize: 5,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} containers`,
+                }}
+                rowKey="dockerId"
+                size="middle"
+              />
+            </div>
+
           </div>
+          {/* Password Update Modal Form */}
+          <PasswordUpdateForm
+            isModalVisible={isModalVisible}
+            setIsModalVisible={setIsModalVisible}
+          />
         </Content>
 
       </Layout>

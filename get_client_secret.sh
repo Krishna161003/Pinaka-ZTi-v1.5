@@ -37,15 +37,18 @@ if [[ -z "$ACCESS_TOKEN" || "$ACCESS_TOKEN" == "null" ]]; then
     exit 1
 fi
 
-# Step 3: Retrieve the client secret for 'admin-client'
-CLIENT_SECRET=$(curl -k -s -X GET "https://${KEYCLOAK_HOST}/admin/realms/$REALM/clients" \
-    -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r ".[] | select(.clientId==\"$CLIENT_ID\") | .secret")
+# Step 3: Get the client UUID
+CLIENTS_RESPONSE=$(curl -k -s -X GET "https://${KEYCLOAK_HOST}/admin/realms/$REALM/clients?clientId=$CLIENT_ID" \
+    -H "Authorization: Bearer $ACCESS_TOKEN")
 
-# Check if CLIENT_SECRET is not empty
-if [[ -z "$CLIENT_SECRET" || "$CLIENT_SECRET" == "null" ]]; then
-    echo "Failed to retrieve client secret. Exiting."
-    exit 1
-fi
+echo "Client list response: $CLIENTS_RESPONSE"
+
+CLIENT_UUID=$(echo "$CLIENTS_RESPONSE" | jq -r '.[0].id')
+
+# Step 4: Get the secret from the UUID
+CLIENT_SECRET=$(curl -k -s -X GET "https://${KEYCLOAK_HOST}/admin/realms/$REALM/clients/$CLIENT_UUID/client-secret" \
+    -H "Authorization: Bearer $ACCESS_TOKEN" | jq -r .value)
+
 
 # Step 4: Append required values to the .env file
 echo "REACT_APP_CLIENT_SECRET=\"$CLIENT_SECRET\"" >> $ENV_FILE

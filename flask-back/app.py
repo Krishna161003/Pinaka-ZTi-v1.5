@@ -14,8 +14,9 @@ import netifaces
 import logging
 from collections import deque
 
-# Store last 60 seconds of CPU usage
+# Store last 60 seconds of CPU and Memory usage
 timestamped_cpu_history = deque(maxlen=60)
+timestamped_memory_history = deque(maxlen=60)
 
 def add_cpu_history(cpu_percent):
     timestamped_cpu_history.append({
@@ -23,8 +24,17 @@ def add_cpu_history(cpu_percent):
         "cpu": cpu_percent
     })
 
+def add_memory_history(mem_percent):
+    timestamped_memory_history.append({
+        "timestamp": int(time.time()),
+        "memory": mem_percent
+    })
+
 def get_cpu_history():
     return list(timestamped_cpu_history)
+
+def get_memory_history():
+    return list(timestamped_memory_history)
 
 app = Flask(__name__)
 CORS(app)
@@ -955,8 +965,9 @@ def system_utilization():
         mem_percent = mem.percent
         total_mem_mb = int(mem.total / (1024*1024))
         used_mem_mb = int(mem.used / (1024*1024))
-        # Add to history buffer
+        # Add to history buffers
         add_cpu_history(cpu_percent)
+        add_memory_history(mem_percent)
         return jsonify({
             "cpu": cpu_percent,
             "memory": mem_percent,
@@ -976,11 +987,18 @@ def system_utilization():
 @app.route('/system-utilization-history', methods=['GET'])
 def system_utilization_history():
     try:
-        # Return the last 60 seconds of CPU usage
-        history = get_cpu_history()
-        return jsonify({"cpu_history": history})
+        cpu_history = get_cpu_history()
+        memory_history = get_memory_history()
+        return jsonify({
+            "cpu_history": cpu_history,
+            "memory_history": memory_history
+        })
     except Exception as e:
-        return jsonify({"cpu_history": [], "error": str(e)})
+        return jsonify({
+            "cpu_history": [],
+            "memory_history": [],
+            "error": str(e)
+        })
 
         
 # ------------------- System Utilization Endpoint ends -------------------

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout1 from '../Components/layout';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Layout, Row, Col, Tabs, Table, theme, Button, Tag, message, Popconfirm } from 'antd';
+import { Layout, Row, Col, Tabs, Table, theme, Button, Tag, Badge, message, Popconfirm } from 'antd';
 import upImage from '../Images/up_15362984.png';
 import downImage from '../Images/down_15362973.png';
 import node from '../Images/database_666406.png';
@@ -348,9 +348,10 @@ const Inventory = () => {
                               key: 'status',
                               width: '10%',
                               render: (status) => (
-                                <Tag color={status === 'online' ? 'green' : 'red'}>
-                                  {status === 'online' ? 'Online' : 'Offline'}
-                                </Tag>
+                                <Badge 
+                                  status={status === 'online' ? 'success' : 'error'} 
+                                  text={status === 'online' ? 'Online' : 'Offline'} 
+                                />
                               )
                             },
                             {
@@ -395,7 +396,12 @@ const Inventory = () => {
                             }
                           ]}
                           dataSource={flightDeckServers}
-                          pagination={false}
+                          pagination={{
+                            pageSize: 10,
+                            showSizeChanger: true,
+                            showQuickJumper: true,
+                            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} servers`,
+                          }}
                         />
                       )
                     },
@@ -416,9 +422,10 @@ const Inventory = () => {
                               key: 'status',
                               width: '10%',
                               render: (status) => (
-                                <Tag color={status === 'online' ? 'green' : 'red'}>
-                                  {status === 'online' ? 'Online' : 'Offline'}
-                                </Tag>
+                                <Badge 
+                                  status={status === 'online' ? 'success' : 'error'} 
+                                  text={status === 'online' ? 'Online' : 'Offline'} 
+                                />
                               )
                             },
                             {
@@ -462,7 +469,12 @@ const Inventory = () => {
                             }
                           ]}
                           dataSource={squadronServers}
-                          pagination={false}
+                          pagination={{
+                            pageSize: 10,
+                            showSizeChanger: true,
+                            showQuickJumper: true,
+                            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} servers`,
+                          }}
                         />
                       )
                     }

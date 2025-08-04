@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout1 from '../Components/layout';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { theme, Layout, Tabs, Table, Button, Modal, Spin, Alert, Input } from 'antd';
+import { theme, Layout, Tabs, Table, Button, Modal, Spin, Alert, Input, Badge } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 
 // LicenseDetailsModalContent: fetches and displays license details for a serverid
@@ -235,10 +235,15 @@ const FlightDeckHostsTable = () => {
           columns={columns}
           dataSource={data}
           rowKey={row => row.sno + '-' + row.serverid}
-          pagination={false}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} hosts`,
+          }}
           bordered
           size="middle"
-            scroll={{ x: 'max-content' }}
+          scroll={{ x: 'max-content' }}
         />
       </Spin>
       {/* Credential Modal */}
@@ -439,10 +444,15 @@ const SquadronNodesTable = () => {
           columns={columns}
           dataSource={data}
           rowKey={row => row.sno + '-' + row.serverid}
-          pagination={false}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} nodes`,
+          }}
           bordered
           size="middle"
-            scroll={{ x: 'max-content' }}
+          scroll={{ x: 'max-content' }}
         />
       </Spin>
       {/* Credential Modal */}
@@ -585,10 +595,15 @@ const CloudDeploymentsTable = () => {
           columns={columns}
           dataSource={data}
           rowKey={row => row.sno + '-' + row.cloudName}
-          pagination={false}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} deployments`,
+          }}
           bordered
           size="middle"
-            scroll={{ x: 'max-content' }}
+          scroll={{ x: 'max-content' }}
         />
       </Spin>
       <Modal
