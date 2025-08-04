@@ -580,7 +580,6 @@ const Dashboard = () => {
                       />
                     </div>
                     <Divider style={{ margin: "0 0 16px 0" }} />
-                  </div>
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
                     <Line
                       data={chartData}
@@ -595,6 +594,7 @@ const Dashboard = () => {
                       // tooltip={false}
                       animation={false}
                     />
+                  </div>
                   </div>
                 </Col>
               </Row>
