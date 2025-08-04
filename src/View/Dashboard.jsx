@@ -57,6 +57,7 @@ const Dashboard = () => {
   const [interfaces, setInterfaces] = useState([]);
   const [selectedInterface, setSelectedInterface] = useState([]);
   const [chartData, setChartData] = useState([]);
+  const [healthStatus, setHealthStatus] = useState("Loading");
   const [memoryData, setMemoryData] = useState(0);
   const [totalMemory, setTotalMemory] = useState(0);
   const [usedMemory, setUsedMemory] = useState(0);
@@ -170,6 +171,30 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [selectedInterface]);
 
+  useEffect(() => {
+    const fetchHealth = async () => {
+      try {
+        const res = await axios.get(`https://${selectedHostIP}:2020/check-health`);
+        setHealthStatus(res.data.status.toUpperCase());
+      } catch (err) {
+        setHealthStatus("ERROR");
+      }
+    };
+
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 10000); // auto-refresh every 10s
+    return () => clearInterval(interval);
+  }, []);
+
+  const statusColorMap = {
+    GOOD: { color: "#52c41a", background: "#f6ffed", border: "#b7eb8f" },
+    WARNING: { color: "#faad14", background: "#fffbe6", border: "#ffe58f" },
+    CRITICAL: { color: "#f5222d", background: "#fff1f0", border: "#ffa39e" },
+    ERROR: { color: "#8c8c8c", background: "#fafafa", border: "#d9d9d9" }
+  };
+
+  const statusStyle = statusColorMap[healthStatus] || statusColorMap.ERROR;
+ 
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // For loading state
@@ -463,20 +488,22 @@ const Dashboard = () => {
                       Health Check
                     </span>
                     <Divider style={{ margin: "0 0 16px 0" }} />
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: '80px',
-                      fontSize: '24px',
-                      fontWeight: 'bold',
-                      color: '#faad14',
-                      backgroundColor: '#fffbe6',
-                      border: '1px solid #ffd591',
-                      borderRadius: '6px',
-                      textAlign: 'center'
-                    }}>
-                      WARNING
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '80px',
+                        fontSize: '24px',
+                        fontWeight: 'bold',
+                        color: statusStyle.color,
+                        backgroundColor: statusStyle.background,
+                        border: `1px solid ${statusStyle.border}`,
+                        borderRadius: '6px',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {healthStatus}
                     </div>
                   </div>
                 </Col>

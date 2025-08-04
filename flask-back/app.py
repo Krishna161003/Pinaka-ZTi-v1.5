@@ -1068,7 +1068,50 @@ def network_health():
         "latency_ms": round(latency_ms, 2) if latency_ms is not None else None
     })
 
-        
+# Thresholds for health levels
+CPU_WARNING = 80
+CPU_CRITICAL = 90
+MEM_WARNING = 70
+MEM_CRITICAL = 85
+DISK_WARNING = 80
+DISK_CRITICAL = 90
+
+def get_local_health_status():
+    try:
+        # CPU usage (average over 1 second)
+        cpu_usage = psutil.cpu_percent(interval=1)
+
+        # Memory usage
+        mem = psutil.virtual_memory()
+        mem_usage = mem.percent
+
+        # Disk usage
+        disk = psutil.disk_usage('/')
+        disk_usage = disk.percent
+
+        # Determine status
+        status = "Good"
+        if cpu_usage > CPU_CRITICAL or mem_usage > MEM_CRITICAL or disk_usage > DISK_CRITICAL:
+            status = "Critical"
+        elif cpu_usage > CPU_WARNING or mem_usage > MEM_WARNING or disk_usage > DISK_WARNING:
+            status = "Warning"
+
+        return {
+            "status": status,
+            "metrics": {
+                "cpu_usage_percent": round(cpu_usage, 2),
+                "memory_usage_percent": round(mem_usage, 2),
+                "disk_usage_percent": round(disk_usage, 2)
+            }
+        }
+
+    except Exception as e:
+        return {"status": "Error", "message": str(e)}
+
+@app.route('/check-health', methods=['GET'])
+def check_health():
+    result = get_local_health_status()
+    return jsonify(result)
 # ------------------- System Utilization Endpoint ends -------------------
 
 # ------------------- Scan Network Endpoint starts-------------------
