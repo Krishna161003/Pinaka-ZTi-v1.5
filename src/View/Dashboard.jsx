@@ -569,7 +569,7 @@ const Dashboard = () => {
                 </Col>
                 <Col className="gutter-row" span={7} style={{ padding: "10px", background: "#fff" }}>
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    {/* <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}> */}
                       <span style={{ fontSize: "18px", fontWeight: "500", userSelect: "none" }}>Bandwidth Latency</span>
                       <Select
                         style={{ width: 100 }}
@@ -578,7 +578,7 @@ const Dashboard = () => {
                         onChange={setSelectedInterface}
                         size="small"
                       />
-                    </div>
+                    {/* </div> */}
                     <Divider style={{ margin: "0 0 16px 0" }} />
                     <div style={{ height: 70, margin: '0 0 10px 0' }}>
                       <Line
