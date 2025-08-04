@@ -203,20 +203,25 @@ const Dashboard = () => {
   }, [selectedHostIP]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchNetworkHealthHistory = async () => {
       try {
-        const res = await fetch(`https://${selectedHostIP}:2020/network-health?interface=${selectedInterface}`);
+        const res = await fetch(`https://${selectedHostIP}:2020/network-health-history?interface=${selectedInterface}`);
         const json = await res.json();
-        setChartData(prev => [...prev.slice(-29), json]); // last 30
+        if (json && Array.isArray(json.network_history)) {
+          setChartData(json.network_history);
+        } else {
+          setChartData([]);
+        }
       } catch (err) {
+        setChartData([]);
         if (lastErrorIpRef.current !== selectedHostIP) {
-          message.error(`Failed to fetch network health from ${selectedHostIP}`);
+          message.error(`Failed to fetch network health history from ${selectedHostIP}`);
           lastErrorIpRef.current = selectedHostIP;
         }
       }
     };
-    fetchData();
-    const interval = setInterval(fetchData, 5000); // every 5s
+    fetchNetworkHealthHistory();
+    const interval = setInterval(fetchNetworkHealthHistory, 5000); // every 5s
     return () => clearInterval(interval);
   }, [selectedHostIP, selectedInterface]);
 

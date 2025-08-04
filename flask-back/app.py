@@ -1034,10 +1034,6 @@ def get_latency(host="8.8.8.8", count=3):
         pass
     return None
 
-@app.route("/interfaces", methods=["GET"])
-def interfaces():
-    iface_list = get_available_interfaces()
-    return jsonify([{"label": iface, "value": iface} for iface in iface_list])
 
 @app.route("/network-health", methods=["GET"])
 def network_health():
@@ -1063,39 +1059,17 @@ def network_health():
     bandwidth_tx_kbps = (tx2 - tx1) / 1024
     latency_ms = get_latency(ping_host)
 
-    return jsonify({
+    result = {
         "time": time.strftime("%H:%M"),
         "bandwidth_kbps": round(bandwidth_rx_kbps + bandwidth_tx_kbps, 2),
         "latency_ms": round(latency_ms, 2) if latency_ms is not None else None
-    })
+    }
 
-# Thresholds for health levels
-CPU_WARNING = 80
-CPU_CRITICAL = 90
-MEM_WARNING = 70
-MEM_CRITICAL = 85
-DISK_WARNING = 80
-DISK_CRITICAL = 90
+    # Append to network health history buffer
+    if interface not in network_health_history:
+        network_health_history[interface] = deque(maxlen=MAX_NETWORK_HEALTH_HISTORY)
+    network_health_history[interface].append(result)
 
-def get_local_health_status():
-    try:
-        # CPU usage (average over 1 second)
-        cpu_usage = psutil.cpu_percent(interval=1)
-
-        # Memory usage
-        mem = psutil.virtual_memory()
-        mem_usage = mem.percent
-
-        # Disk usage
-        disk = psutil.disk_usage('/')
-        disk_usage = disk.percent
-
-        # Determine status
-        status = "Good"
-        if cpu_usage > CPU_CRITICAL or mem_usage > MEM_CRITICAL or disk_usage > DISK_CRITICAL:
-            status = "Critical"
-        elif cpu_usage > CPU_WARNING or mem_usage > MEM_WARNING or disk_usage > DISK_WARNING:
-            status = "Warning"
 
         return {
             "status": status,
