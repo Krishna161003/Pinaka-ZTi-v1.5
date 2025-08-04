@@ -1114,6 +1114,53 @@ def check_health():
     result = get_local_health_status()
     return jsonify(result)
 
+@app.route('/docker-info', methods=['GET'])
+def docker_info():
+    result = get_docker_info()
+    return jsonify(result)
+
+def get_docker_info():
+    containers = []
+    up_count = 0
+    down_count = 0
+    try:
+        # Get all containers (id, name, status)
+        cmd = [
+            'docker', 'ps', '-a', '--format', '{{.ID}}||{{.Names}}||{{.Status}}'
+        ]
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('utf-8')
+        for line in output.strip().split('\n'):
+            if not line.strip():
+                continue
+            parts = line.split('||')
+            if len(parts) != 3:
+                continue
+            docker_id, container_name, status_text = parts
+            # Consider "UP" if status starts with "Up", else "DOWN"
+            status = 'UP' if status_text.strip().lower().startswith('up') else 'DOWN'
+            if status == 'UP':
+                up_count += 1
+            else:
+                down_count += 1
+            containers.append({
+                'dockerId': docker_id,
+                'containerName': container_name,
+                'status': status
+            })
+        return {
+            'containers': containers,
+            'total': len(containers),
+            'up': up_count,
+            'down': down_count
+        }
+    except Exception as e:
+        return {
+            'containers': [],
+            'total': 0,
+            'up': 0,
+            'down': 0,
+            'error': str(e)
+        }
 
 
 # ------------------- System Utilization Endpoint ends -------------------

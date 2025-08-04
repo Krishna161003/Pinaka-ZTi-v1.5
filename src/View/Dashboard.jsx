@@ -207,51 +207,47 @@ const Dashboard = () => {
   // State for hover effects
   const [hoveredCard, setHoveredCard] = useState(null);
 
-  // Docker containers state
-  const dockerContainers = [
-    {
-      dockerId: 'c8f9a2b1d3e4',
-      containerName: 'openstack-nova-compute',
-      status: 'UP'
-    },
-    {
-      dockerId: 'a7b8c9d0e1f2',
-      containerName: 'openstack-neutron-server',
-      status: 'UP'
-    },
-    {
-      dockerId: 'f3e4d5c6b7a8',
-      containerName: 'openstack-keystone',
-      status: 'DOWN'
-    },
-    {
-      dockerId: 'b9a8c7d6e5f4',
-      containerName: 'openstack-glance-api',
-      status: 'UP'
-    },
-    {
-      dockerId: 'e2f1d0c9b8a7',
-      containerName: 'openstack-cinder-volume',
-      status: 'UP'
-    },
-    {
-      dockerId: 'd6c5b4a3f2e1',
-      containerName: 'openstack-horizon',
-      status: 'DOWN'
-    },
-    {
-      dockerId: 'g7h8i9j0k1l2',
-      containerName: 'openstack-heat-engine',
-      status: 'UP'
-    },
-    {
-      dockerId: 'm3n4o5p6q7r8',
-      containerName: 'openstack-swift-proxy',
-      status: 'UP'
-    }
-  ];
+  // Docker containers state (live from backend)
+  const [dockerContainers, setDockerContainers] = useState([]);
+  const [filteredContainers, setFilteredContainers] = useState([]);
+  const [dockerUp, setDockerUp] = useState(0);
+  const [dockerDown, setDockerDown] = useState(0);
+  const [dockerTotal, setDockerTotal] = useState(0);
+  const [dockerError, setDockerError] = useState("");
 
-  const [filteredContainers, setFilteredContainers] = useState(dockerContainers);
+  useEffect(() => {
+    async function fetchDockerInfo() {
+      try {
+        const res = await fetch(`https://${selectedHostIP}:2020/docker-info`);
+        const data = await res.json();
+        if (data && Array.isArray(data.containers)) {
+          setDockerContainers(data.containers);
+          setFilteredContainers(data.containers);
+          setDockerUp(data.up || 0);
+          setDockerDown(data.down || 0);
+          setDockerTotal(data.total || data.containers.length || 0);
+          setDockerError("");
+        } else {
+          setDockerContainers([]);
+          setFilteredContainers([]);
+          setDockerUp(0);
+          setDockerDown(0);
+          setDockerTotal(0);
+          setDockerError(data?.error || "Failed to fetch docker info");
+        }
+      } catch (err) {
+        setDockerContainers([]);
+        setFilteredContainers([]);
+        setDockerUp(0);
+        setDockerDown(0);
+        setDockerTotal(0);
+        setDockerError("Failed to fetch docker info");
+      }
+    }
+    fetchDockerInfo();
+    const interval = setInterval(fetchDockerInfo, 10000); // Poll every 10s
+    return () => clearInterval(interval);
+  }, [selectedHostIP]);
 
   // Docker table columns
   const dockerColumns = [
@@ -645,7 +641,7 @@ const Dashboard = () => {
                         userSelect: "none",
                       }}
                     >
-                      5
+                      {dockerUp}
                     </span>
                   </div>
                 </Col>
@@ -671,7 +667,7 @@ const Dashboard = () => {
                         userSelect: "none",
                       }}
                     >
-                      2
+                      {dockerDown}
                     </span>
                   </div>
                 </Col>
@@ -697,7 +693,7 @@ const Dashboard = () => {
                         userSelect: "none",
                       }}
                     >
-                      7
+                      {dockerTotal}
                     </span>
                   </div>
                 </Col>
@@ -710,9 +706,9 @@ const Dashboard = () => {
                 onChange={(e) => {
                   const value = e.target.value.toLowerCase();
                   const filtered = dockerContainers.filter(container =>
-                    container.dockerId.toLowerCase().includes(value) ||
-                    container.containerName.toLowerCase().includes(value) ||
-                    container.status.toLowerCase().includes(value)
+                    (container.dockerId || "").toLowerCase().includes(value) ||
+                    (container.containerName || "").toLowerCase().includes(value) ||
+                    (container.status || "").toLowerCase().includes(value)
                   );
                   setFilteredContainers(filtered);
                 }}
