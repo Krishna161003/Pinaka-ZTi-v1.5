@@ -49,6 +49,28 @@ const hoverStyle = {
   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
 };
 
+const memoryconfig = {
+  data: memoryHistory,
+  xField: 'date',
+  yField: 'memory',
+  smooth: true,
+  // Set the solid or semi-transparent fill color:
+  areaStyle: {
+    fill: '#8fd98f',     // light‑green hex
+    opacity: 0.6,         // control transparency
+  },
+  // Optional: make the line match the fill color
+  line: {
+    color: '#4CAF50',     // darker green
+    size: 1.5,
+  },
+  // Hide axes/ticks if desired
+  xAxis: false,
+  yAxis: false,
+  tooltip: false,
+  height: 120,
+};
+
 const { Content } = Layout;
 
 const Dashboard = () => {
@@ -651,17 +673,7 @@ const Dashboard = () => {
                     </span>
                     <Divider style={{ margin: "0 0 16px 0" }} />
                     <div style={{ height: '80px' }}>
-                      <Area
-                        data={memoryHistory}
-                        xField="date"
-                        yField="memory"
-                        height={120}
-                        smooth={true}
-                        style={{
-                          fill: 'l(270) 0:#1890ff 0.5:#e6f7ff 1:#ffffff',
-                          stroke: '#1890ff',
-                        }}
-                      />
+                      <Area {...memoryconfig} />
                     </div>
                   </div>
                 </Col>
