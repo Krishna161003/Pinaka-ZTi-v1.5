@@ -527,7 +527,7 @@ const Dashboard = () => {
                       data={chartData}
                       xField="time"
                       yField="bandwidth_kbps"
-                      height={100}
+                      height={130}
                       smooth={true}
                       lineStyle={{ stroke: '#1890ff', lineWidth: 2 }}
                       point={false} // Disable points if not needed
