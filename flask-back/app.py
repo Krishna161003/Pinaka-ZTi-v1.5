@@ -1171,10 +1171,23 @@ def node_status():
     return jsonify(result)
 
 def get_node_status(ip):
-    import paramiko
-    import os
+    # Check if IP is a local address
+    try:
+        local_ips = []
+        for iface in netifaces.interfaces():
+            addrs = netifaces.ifaddresses(iface)
+            if netifaces.AF_INET in addrs:
+                for a in addrs[netifaces.AF_INET]:
+                    if 'addr' in a:
+                        local_ips.append(a['addr'])
+        local_ips.extend(['127.0.0.1', 'localhost'])
+        if ip in local_ips:
+            return {'status': 'UP'}
+    except Exception:
+        pass
     # Directory where .pem keys are stored
-    pem_dir = os.path.join(os.path.dirname(__file__), 'keys')
+    # pem_dir = os.path.join(os.path.dirname(__file__), 'keys')
+    pem_dir = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/"
     # Try to find a .pem key matching the IP or use the first .pem in the directory
     pem_key = None
     for fname in os.listdir(pem_dir):
