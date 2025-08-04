@@ -226,6 +226,22 @@ const Dashboard = () => {
     return () => { cancelled = true; clearInterval(interval); };
   }, [selectedHostIP]);
 
+  useEffect(() => {
+    const fetchHealth = async () => {
+      try {
+        const res = await axios.get("/check-health");
+        setHealthStatus(res.data.status.toUpperCase());
+      } catch (err) {
+        setHealthStatus("ERROR");
+      }
+    };
+
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 10000); // auto-refresh every 10s
+    return () => clearInterval(interval);
+  }, []);
+
+
   const statusColorMap = {
     GOOD: { color: "#52c41a", background: "#f6ffed", border: "#b7eb8f" },
     WARNING: { color: "#faad14", background: "#fffbe6", border: "#ffe58f" },
@@ -234,7 +250,7 @@ const Dashboard = () => {
   };
 
   const statusStyle = statusColorMap[healthStatus] || statusColorMap.ERROR;
- 
+
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // For loading state
