@@ -134,7 +134,7 @@ const Dashboard = () => {
     smooth: true,
     // Set the solid or semi-transparent fill color:
     style: {
-      fill: 'linear-gradient(-90deg, white 0%, darkgreen 100%)',
+      fill: '#8fd98f',
     },
     // Optional: make the line match the fill color
     line: {
