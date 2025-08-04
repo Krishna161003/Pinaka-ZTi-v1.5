@@ -581,15 +581,15 @@ const Dashboard = () => {
                     </div>
                     <Divider style={{ margin: "0 0 16px 0" }} />
                   </div>
-                  <div style={{ height: 70, margin: '0 0 20px 0' }}>
+                  <div style={{ height: 70, margin: '0 0 10px 0' }}>
                     <Line
                       data={chartData}
                       xField="time"
                       yField="bandwidth_kbps"
-                      height={130}
+                      height={100}
                       smooth={true}
                       lineStyle={{ stroke: '#1890ff', lineWidth: 2 }}
-                      point={false} // Disable points if not needed
+                      // point={false} // Disable points if not needed
                       xAxis={false}
                       yAxis={false}
                       // tooltip={false}
@@ -657,8 +657,10 @@ const Dashboard = () => {
                         yField="memory"
                         height={120}
                         smooth={true}
-                        areaStyle={{ fill: 'l(270) 0:#52c41a 0.5:#f6ffed 1:#ffffff' }}
-                        line={{ color: '#52c41a' }}
+                        style={{
+                          fill: 'l(270) 0:#1890ff 0.5:#e6f7ff 1:#ffffff',
+                          stroke: '#1890ff',
+                        }}
                       />
                     </div>
                   </div>
