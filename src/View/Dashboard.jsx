@@ -6,7 +6,7 @@ import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
 import cloud from "../Images/cloud-computing_660475.png";
 import squad from "../Images/database_2231963.png";
-import { Area, Column, Gauge } from '@ant-design/plots';
+import { Area, Line } from '@ant-design/plots';
 
 const style = {
   background: '#fff',
@@ -495,16 +495,18 @@ const Dashboard = () => {
                     <Divider style={{ margin: "0 0 16px 0" }} />
                   </div>
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
-                    <Area
+                    <Line
                       data={chartData}
                       xField="time"
                       yField="bandwidth_kbps"
                       height={100}
                       smooth={true}
-                      areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
+                      lineStyle={{ stroke: '#1890ff', lineWidth: 2 }}
+                      point={false} // Disable points if not needed
                       xAxis={false}
                       yAxis={false}
                       // tooltip={false}
+                      animation={false}
                     />
                   </div>
                 </Col>
