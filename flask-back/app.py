@@ -1037,48 +1037,35 @@ def get_latency(host="8.8.8.8", count=3):
 
 @app.route("/network-health", methods=["GET"])
 def network_health():
-    interfaces = get_available_interfaces()
-    interface = request.args.get("interface")
-    
-    if not interface:
-        if interfaces:
-            interface = interfaces[0]
-        else:
-            return jsonify({"error": "No network interfaces available"}), 500
+    try:
+        interfaces = get_available_interfaces()
+        interface = request.args.get("interface")
+        
+        if not interface:
+            if interfaces:
+                interface = interfaces[0]
+            else:
+                return jsonify({"error": "No network interfaces available"}), 500
 
-    ping_host = request.args.get("ping_host", "8.8.8.8")
+        ping_host = request.args.get("ping_host", "8.8.8.8")
 
-    rx1, tx1 = get_bandwidth(interface)
-    time.sleep(1)
-    rx2, tx2 = get_bandwidth(interface)
+        rx1, tx1 = get_bandwidth(interface)
+        time.sleep(1)
+        rx2, tx2 = get_bandwidth(interface)
 
-    if None in (rx1, tx1, rx2, tx2):
-        return jsonify({"error": f"Failed to read bandwidth data for interface {interface}"}), 500
+        if None in (rx1, tx1, rx2, tx2):
+            return jsonify({"error": f"Failed to read bandwidth data for interface {interface}"}), 500
 
-    bandwidth_rx_kbps = (rx2 - rx1) / 1024
-    bandwidth_tx_kbps = (tx2 - tx1) / 1024
-    latency_ms = get_latency(ping_host)
+        bandwidth_rx_kbps = (rx2 - rx1) / 1024
+        bandwidth_tx_kbps = (tx2 - tx1) / 1024
+        latency_ms = get_latency(ping_host)
 
-    result = {
-        "time": time.strftime("%H:%M"),
-        "bandwidth_kbps": round(bandwidth_rx_kbps + bandwidth_tx_kbps, 2),
-        "latency_ms": round(latency_ms, 2) if latency_ms is not None else None
-    }
-
-    # Append to network health history buffer
-    if interface not in network_health_history:
-        network_health_history[interface] = deque(maxlen=MAX_NETWORK_HEALTH_HISTORY)
-    network_health_history[interface].append(result)
-
-
-    return {
-            "status": status,
-            "metrics": {
-                "cpu_usage_percent": round(cpu_usage, 2),
-                "memory_usage_percent": round(mem_usage, 2),
-                "disk_usage_percent": round(disk_usage, 2)
+        result = {
+            "time": time.strftime("%H:%M"),
+            "bandwidth_kbps": round(bandwidth_rx_kbps + bandwidth_tx_kbps, 2),
+            "latency_ms": round(latency_ms, 2) if latency_ms is not None else None
             }
-        }
+        
 
     except Exception as e:
         return {"status": "Error", "message": str(e)}
