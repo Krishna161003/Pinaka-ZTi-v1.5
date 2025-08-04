@@ -1162,6 +1162,42 @@ def get_docker_info():
             'error': str(e)
         }
 
+@app.route('/node-status', methods=['GET'])
+def node_status():
+    ip = request.args.get('ip')
+    if not ip:
+        return jsonify({'status': 'DOWN', 'error': 'No IP provided'}), 400
+    result = get_node_status(ip)
+    return jsonify(result)
+
+def get_node_status(ip):
+    import paramiko
+    import os
+    # Directory where .pem keys are stored
+    pem_dir = os.path.join(os.path.dirname(__file__), 'keys')
+    # Try to find a .pem key matching the IP or use the first .pem in the directory
+    pem_key = None
+    for fname in os.listdir(pem_dir):
+        if fname.endswith('.pem') and (ip.replace('.', '-') in fname or ip in fname):
+            pem_key = os.path.join(pem_dir, fname)
+            break
+    if not pem_key:
+        # fallback: use first .pem key
+        pem_files = [f for f in os.listdir(pem_dir) if f.endswith('.pem')]
+        if pem_files:
+            pem_key = os.path.join(pem_dir, pem_files[0])
+        else:
+            return {'status': 'DOWN', 'error': 'No .pem key found'}
+    username = 'ubuntu'  # or change as needed
+    try:
+        k = paramiko.RSAKey.from_private_key_file(pem_key)
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(ip, username=username, pkey=k, timeout=5)
+        ssh.close()
+        return {'status': 'UP'}
+    except Exception as e:
+        return {'status': 'DOWN', 'error': str(e)}
 
 # ------------------- System Utilization Endpoint ends -------------------
 

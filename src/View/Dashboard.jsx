@@ -54,6 +54,8 @@ const { Content } = Layout;
 const Dashboard = () => {
   // For error notification on backend fetch failure
   const lastErrorIpRef = useRef(null);
+  // Node SSH status
+  const [nodeStatus, setNodeStatus] = useState('Loading');
 
   // --- CPU & Memory Utilization State ---
   const [cpuData, setCpuData] = useState(0);
@@ -194,23 +196,34 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [selectedHostIP, selectedInterface]);
 
+  // Node SSH status check
   useEffect(() => {
-    const fetchHealth = async () => {
+    let cancelled = false;
+    async function fetchNodeStatus() {
       try {
-        const res = await axios.get(`https://${selectedHostIP}:2020/check-health`);
-        setHealthStatus(res.data.status.toUpperCase());
+        setNodeStatus('Loading');
+        const res = await fetch(`https://${selectedHostIP}:2020/node-status?ip=${selectedHostIP}`);
+        const data = await res.json();
+        if (!cancelled) {
+          setNodeStatus(data.status === 'UP' ? 'UP' : 'DOWN');
+          if (data.status !== 'UP' && lastErrorIpRef.current !== selectedHostIP) {
+            message.error(`Node SSH check failed for ${selectedHostIP}`);
+            lastErrorIpRef.current = selectedHostIP;
+          }
+        }
       } catch (err) {
-        setHealthStatus("ERROR");
-        if (lastErrorIpRef.current !== selectedHostIP) {
-          message.error(`Failed to fetch health check from ${selectedHostIP}`);
-          lastErrorIpRef.current = selectedHostIP;
+        if (!cancelled) {
+          setNodeStatus('DOWN');
+          if (lastErrorIpRef.current !== selectedHostIP) {
+            message.error(`Node SSH check failed for ${selectedHostIP}`);
+            lastErrorIpRef.current = selectedHostIP;
+          }
         }
       }
-    };
-
-    fetchHealth();
-    const interval = setInterval(fetchHealth, 10000); // auto-refresh every 10s
-    return () => clearInterval(interval);
+    }
+    fetchNodeStatus();
+    const interval = setInterval(fetchNodeStatus, 15000); // check every 15s
+    return () => { cancelled = true; clearInterval(interval); };
   }, [selectedHostIP]);
 
   const statusColorMap = {
@@ -470,7 +483,7 @@ const Dashboard = () => {
               <Row gutter={24} justify="start" style={{ marginLeft: "2px" }}>
                 <Col
                   className="gutter-row"
-                  span={7} // Each column takes up 7 spans, so 3 columns will total 21 spans
+                  span={7}
                   style={performancewidgetStyle}
                 >
                   <div>
@@ -494,13 +507,13 @@ const Dashboard = () => {
                       height: '80px',
                       fontSize: '24px',
                       fontWeight: 'bold',
-                      color: healthStatus ? '#52c41a' : '#cf1322',
-                      backgroundColor: healthStatus ? '#f6ffed' : '#fff1f0',
-                      border: healthStatus ? '1px solid #b7eb8f' : '1px solid #ffa39e',
+                      color: nodeStatus === 'UP' ? '#52c41a' : '#cf1322',
+                      backgroundColor: nodeStatus === 'UP' ? '#f6ffed' : '#fff1f0',
+                      border: nodeStatus === 'UP' ? '1px solid #b7eb8f' : '1px solid #ffa39e',
                       borderRadius: '6px',
                       textAlign: 'center'
                     }}>
-                      {healthStatus ? 'UP' : 'DOWN'}
+                      {nodeStatus}
                     </div>
                   </div>
                 </Col>
