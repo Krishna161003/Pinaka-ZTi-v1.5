@@ -7,6 +7,7 @@ import node from "../Images/database_666406.png";
 import cloud from "../Images/cloud-computing_660475.png";
 import squad from "../Images/database_2231963.png";
 import { Area, Line } from '@ant-design/plots';
+import axios from "axios";
 
 const style = {
   background: '#fff',
