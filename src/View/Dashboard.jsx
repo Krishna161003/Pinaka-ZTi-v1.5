@@ -499,6 +499,7 @@ const Dashboard = () => {
                       data={chartData}
                       xField="time"
                       yField="bandwidth_kbps"
+                      height={100}
                       smooth={true}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
                       xAxis={false}
