@@ -580,21 +580,21 @@ const Dashboard = () => {
                       />
                     </div>
                     <Divider style={{ margin: "0 0 16px 0" }} />
-                  <div style={{ height: 70, margin: '0 0 10px 0' }}>
-                    <Line
-                      data={chartData}
-                      xField="time"
-                      yField="bandwidth_kbps"
-                      height={130}
-                      smooth={true}
-                      lineStyle={{ stroke: '#1890ff', lineWidth: 2 }}
-                      point={false} // Disable points if not needed
-                      xAxis={false}
-                      yAxis={false}
-                      // tooltip={false}
-                      animation={false}
-                    />
-                  </div>
+                    <div style={{ height: 70, margin: '0 0 10px 0' }}>
+                      <Line
+                        data={chartData}
+                        xField="time"
+                        yField="bandwidth_kbps"
+                        height={130}
+                        smooth={true}
+                        lineStyle={{ stroke: '#1890ff', lineWidth: 2 }}
+                        point={false} // Disable points if not needed
+                        xAxis={false}
+                        yAxis={false}
+                        // tooltip={false}
+                        animation={false}
+                      />
+                    </div>
                   </div>
                 </Col>
               </Row>
