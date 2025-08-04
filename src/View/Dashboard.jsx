@@ -59,7 +59,6 @@ const Dashboard = () => {
   const [selectedInterface, setSelectedInterface] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [healthStatus, setHealthStatus] = useState("Loading");
-  const [status, setStatus] = useState("Loading");
   const [memoryData, setMemoryData] = useState(0);
   const [totalMemory, setTotalMemory] = useState(0);
   const [usedMemory, setUsedMemory] = useState(0);
@@ -188,21 +187,6 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const res = await axios.get(`/node-status?host=${host}&port=${port}`);
-        setStatus(res.data.status.toUpperCase());
-      } catch (err) {
-        setStatus("DOWN");
-      }
-    };
-
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 10000); // Refresh every 10s
-    return () => clearInterval(interval);
-  }, [host, port]);
 
   const statusStyleMap = {
     UP: {
@@ -222,7 +206,6 @@ const Dashboard = () => {
     }
   };
 
-  const style = statusStyleMap[status] || statusStyleMap.Loading;
 
   const statusColorMap = {
     GOOD: { color: "#52c41a", background: "#f6ffed", border: "#b7eb8f" },
