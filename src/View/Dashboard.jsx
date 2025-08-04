@@ -49,27 +49,7 @@ const hoverStyle = {
   boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
 };
 
-const memoryconfig = {
-  data: memoryHistory,
-  xField: 'date',
-  yField: 'memory',
-  smooth: true,
-  // Set the solid or semi-transparent fill color:
-  areaStyle: {
-    fill: '#8fd98f',     // light‑green hex
-    opacity: 0.6,         // control transparency
-  },
-  // Optional: make the line match the fill color
-  line: {
-    color: '#4CAF50',     // darker green
-    size: 1.5,
-  },
-  // Hide axes/ticks if desired
-  xAxis: false,
-  yAxis: false,
-  tooltip: false,
-  height: 120,
-};
+
 
 const { Content } = Layout;
 
@@ -145,6 +125,29 @@ const Dashboard = () => {
     const interval = setInterval(fetchHistory, 10000);
     return () => clearInterval(interval);
   }, [selectedHostIP]);
+
+
+  const memoryconfig = {
+    data: memoryHistory,
+    xField: 'date',
+    yField: 'memory',
+    smooth: true,
+    // Set the solid or semi-transparent fill color:
+    areaStyle: {
+      fill: '#8fd98f',     // light‑green hex
+      opacity: 0.6,         // control transparency
+    },
+    // Optional: make the line match the fill color
+    line: {
+      color: '#4CAF50',     // darker green
+      size: 1.5,
+    },
+    // Hide axes/ticks if desired
+    xAxis: false,
+    yAxis: false,
+    tooltip: false,
+    height: 120,
+  };
 
   // Still fetch memory and single CPU value for other UI
   useEffect(() => {
