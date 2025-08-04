@@ -188,11 +188,11 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-
+  
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await axios.get(`https://${selectedHostIP}:2020/node-status`);
+        const res = await axios.get(`/node-status?host=${host}&port=${port}`);
         setStatus(res.data.status.toUpperCase());
       } catch (err) {
         setStatus("DOWN");
@@ -202,7 +202,7 @@ const Dashboard = () => {
     fetchStatus();
     const interval = setInterval(fetchStatus, 10000); // Refresh every 10s
     return () => clearInterval(interval);
-  }, []);
+  }, [host, port]);
 
   const statusStyleMap = {
     UP: {
@@ -232,7 +232,7 @@ const Dashboard = () => {
   };
 
   const statusStyle = statusColorMap[healthStatus] || statusColorMap.ERROR;
-
+ 
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true); // For loading state
@@ -475,7 +475,11 @@ const Dashboard = () => {
               <h4 style={{ userSelect: "none", marginTop: "-16px" }} >Performance</h4>
               <Divider style={{ margin: "-16px 0 0 0" }} />
               <Row gutter={24} justify="start" style={{ marginLeft: "2px" }}>
-                <Col className="gutter-row" span={7} style={performancewidgetStyle}>
+                <Col
+                  className="gutter-row"
+                  span={7} // Each column takes up 7 spans, so 3 columns will total 21 spans
+                  style={performancewidgetStyle}
+                >
                   <div>
                     <span
                       style={{
@@ -490,20 +494,20 @@ const Dashboard = () => {
                       Status
                     </span>
                     <Divider style={{ margin: "0 0 16px 0" }} />
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        height: "80px",
-                        fontSize: "24px",
-                        fontWeight: "bold",
-                        textAlign: "center",
-                        borderRadius: "6px",
-                        ...style
-                      }}
-                    >
-                      {status}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '80px',
+                      fontSize: '24px',
+                      fontWeight: 'bold',
+                      color: '#52c41a',
+                      backgroundColor: '#f6ffed',
+                      border: '1px solid #b7eb8f',
+                      borderRadius: '6px',
+                      textAlign: 'center'
+                    }}>
+                      UP
                     </div>
                   </div>
                 </Col>
