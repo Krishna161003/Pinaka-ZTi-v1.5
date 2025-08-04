@@ -229,7 +229,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        const res = await axios.get("/check-health");
+        const res = await axios.get(`https://${selectedHostIP}:2020/check-health`);
         setHealthStatus(res.data.status.toUpperCase());
       } catch (err) {
         setHealthStatus("ERROR");
@@ -239,7 +239,7 @@ const Dashboard = () => {
     fetchHealth();
     const interval = setInterval(fetchHealth, 10000); // auto-refresh every 10s
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedHostIP]);
 
 
   const statusColorMap = {
