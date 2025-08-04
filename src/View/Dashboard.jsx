@@ -488,13 +488,13 @@ const Dashboard = () => {
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
                     <Area
                       data={cpuHistory}
-                      height={90}
-                      width={230}
+                      height={100}
+                      width={250}
                       xField="date"
                       yField="cpu"
                       smooth={true}
                       areaStyle={{ fill: 'l(270) 0:#1890ff 1:#e6f7ff' }}
-                      tooltip={false}
+                      // tooltip={false}
                     />
                   </div>
                 </Col>
@@ -524,29 +524,10 @@ const Dashboard = () => {
                         data={cpuHistory}
                         xField="date"
                         yField="cpu"
-                        height={90}
+                        height={120}
                         smooth={true}
                         areaStyle={{ fill: 'l(270) 0:#1890ff 0.5:#e6f7ff 1:#ffffff' }}
                         line={{ color: '#1890ff' }}
-                        xAxis={{
-                          type: 'time',
-                          tickCount: 5,
-                          label: { style: { fontSize: 10 } }
-                        }}
-                        yAxis={{
-                          min: 0,
-                          max: 100,
-                          tickCount: 4,
-                          label: { style: { fontSize: 10 } }
-                        }}
-                        tooltip={{
-                          formatter: (datum) => {
-                            return {
-                              name: 'CPU Usage',
-                              value: `${datum.cpu.toFixed(1)}%`
-                            };
-                          }
-                        }}
                       />
                     </div>
                   </div>
@@ -575,31 +556,10 @@ const Dashboard = () => {
                         data={memoryHistory}
                         xField="date"
                         yField="memory"
-                        height={90}
+                        height={120}
                         smooth={true}
                         areaStyle={{ fill: 'l(270) 0:#52c41a 0.5:#f6ffed 1:#ffffff' }}
                         line={{ color: '#52c41a' }}
-                        xAxis={{
-                          type: 'time',
-                          tickCount: 5,
-                          label: { style: { fontSize: 10 } }
-                        }}
-                        yAxis={{
-                          min: 0,
-                          max: 100,
-                          tickCount: 4,
-                          label: { style: { fontSize: 10 } }
-                        }}
-                        tooltip={{
-                          formatter: (datum) => {
-                            return {
-                              name: 'Memory Usage',
-                              value: datum && typeof datum.memory === 'number' && !isNaN(datum.memory)
-                                ? `${datum.memory.toFixed(1)}%`
-                                : '0.0%'
-                            };
-                          }
-                        }}
                       />
                     </div>
                   </div>
