@@ -1115,24 +1115,7 @@ def check_health():
     return jsonify(result)
 
 
-def is_host_up(host, port=22, timeout=2):
-    try:
-        socket.setdefaulttimeout(timeout)
-        with socket.create_connection((host, port), timeout=timeout):
-            return True
-    except (socket.timeout, socket.error):
-        return False
 
-@app.route("/node-status", methods=["GET"])
-def node_status():
-    host = request.args.get("host")
-    port = int(request.args.get("port", 22))  # Default to SSH port
-
-    if not host:
-        return jsonify({"error": "Missing required parameter: host"}), 400
-
-    status = "UP" if is_host_up(host, port) else "DOWN"
-    return jsonify({"status": status})
 # ------------------- System Utilization Endpoint ends -------------------
 
 # ------------------- Scan Network Endpoint starts-------------------
