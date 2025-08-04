@@ -159,7 +159,7 @@ const Dashboard = () => {
         setInterfaces(data);
         setSelectedInterface(data[0]?.value);
       });
-  }, []);
+  }, [selectedHostIP]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -170,7 +170,7 @@ const Dashboard = () => {
     fetchData();
     const interval = setInterval(fetchData, 5000); // every 5s
     return () => clearInterval(interval);
-  }, [selectedInterface]);
+  }, [selectedHostIP, selectedInterface]);
 
   useEffect(() => {
     const fetchHealth = async () => {
@@ -185,7 +185,7 @@ const Dashboard = () => {
     fetchHealth();
     const interval = setInterval(fetchHealth, 10000); // auto-refresh every 10s
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedHostIP]);
 
   const statusColorMap = {
     GOOD: { color: "#52c41a", background: "#f6ffed", border: "#b7eb8f" },
