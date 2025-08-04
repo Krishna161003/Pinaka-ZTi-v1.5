@@ -1071,7 +1071,7 @@ def network_health():
     network_health_history[interface].append(result)
 
 
-        return {
+    return {
             "status": status,
             "metrics": {
                 "cpu_usage_percent": round(cpu_usage, 2),
