@@ -187,26 +187,6 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-
-  const statusStyleMap = {
-    UP: {
-      color: "#52c41a",
-      backgroundColor: "#f6ffed",
-      border: "1px solid #b7eb8f"
-    },
-    DOWN: {
-      color: "#f5222d",
-      backgroundColor: "#fff1f0",
-      border: "1px solid #ffa39e"
-    },
-    Loading: {
-      color: "#8c8c8c",
-      backgroundColor: "#fafafa",
-      border: "1px solid #d9d9d9"
-    }
-  };
-
-
   const statusColorMap = {
     GOOD: { color: "#52c41a", background: "#f6ffed", border: "#b7eb8f" },
     WARNING: { color: "#faad14", background: "#fffbe6", border: "#ffe58f" },
@@ -484,13 +464,13 @@ const Dashboard = () => {
                       height: '80px',
                       fontSize: '24px',
                       fontWeight: 'bold',
-                      color: '#52c41a',
-                      backgroundColor: '#f6ffed',
-                      border: '1px solid #b7eb8f',
+                      color: statusStyle.color,
+                      backgroundColor: statusStyle.background,
+                      border: `1px solid ${statusStyle.border}`,
                       borderRadius: '6px',
                       textAlign: 'center'
                     }}>
-                      UP
+                      {healthStatus ? 'UP' : 'DOWN'}
                     </div>
                   </div>
                 </Col>
