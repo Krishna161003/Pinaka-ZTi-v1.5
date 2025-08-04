@@ -145,7 +145,7 @@ const Dashboard = () => {
     xAxis: false,
     // yAxis: false,
     // tooltip: false,
-    height: 120,
+    height: 180,
   };
 
   // Still fetch memory and single CPU value for other UI
@@ -548,8 +548,8 @@ const Dashboard = () => {
                       fontSize: '24px',
                       fontWeight: 'bold',
                       color: nodeStatus === 'UP' ? '#52c41a' : '#cf1322',
-                      backgroundColor: nodeStatus === 'UP' ? '#f6ffed' : '#fff1f0',
-                      border: nodeStatus === 'UP' ? '1px solid #b7eb8f' : '1px solid #ffa39e',
+                      // backgroundColor: nodeStatus === 'UP' ? '#f6ffed' : '#fff1f0',
+                      // border: nodeStatus === 'UP' ? '1px solid #b7eb8f' : '1px solid #ffa39e',
                       borderRadius: '6px',
                       textAlign: 'center'
                     }}>
@@ -581,8 +581,8 @@ const Dashboard = () => {
                         fontSize: '24px',
                         fontWeight: 'bold',
                         color: statusStyle.color,
-                        backgroundColor: statusStyle.background,
-                        border: `1px solid ${statusStyle.border}`,
+                        // backgroundColor: statusStyle.background,
+                        // border: `1px solid ${statusStyle.border}`,
                         borderRadius: '6px',
                         textAlign: 'center'
                       }}
@@ -622,7 +622,7 @@ const Dashboard = () => {
                   </div>
                 </Col>
               </Row>
-              <Row gutter={24} justify="start" style={{ marginTop: 24, marginLeft: "2px" }}>
+              <Row gutter={24} justify="start" style={{ marginTop: 24, marginLeft: "2px", height: "270px" }}>
                 <Col
                   className="gutter-row"
                   span={11} // Each column takes up 7 spans
@@ -642,12 +642,15 @@ const Dashboard = () => {
                       CPU Usage Trend
                     </span>
                     <Divider style={{ margin: "0 0 16px 0" }} />
+                    <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
+                    Current: {cpuData.toFixed(1)}%
+                  </div>
                     <div style={{ height: '100px' }}>
                       <Area
                         data={cpuHistory}
                         xField="date"
                         yField="cpu"
-                        height={120}
+                        height={180}
                         smooth={true}
                         areaStyle={{ fill: 'l(270) 0:#1890ff 0.5:#e6f7ff 1:#ffffff' }}
                         line={{ color: '#1890ff' }}
@@ -674,6 +677,10 @@ const Dashboard = () => {
                       Memory Usage Trend
                     </span>
                     <Divider style={{ margin: "0 0 16px 0" }} />
+                    <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
+                    Used: {usedMemory} MB / {totalMemory} MB  
+                    Usage: {memoryData.toFixed(1)}%
+                  </div>
                     <div style={{ height: '80px' }}>
                       <Area {...memoryconfig} />
                     </div>
