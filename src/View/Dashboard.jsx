@@ -192,7 +192,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await axios.get(`/node-status?host=${host}&port=${port}`);
+        const res = await axios.get(`https://${selectedHostIP}:2020/node-status`);
         setStatus(res.data.status.toUpperCase());
       } catch (err) {
         setStatus("DOWN");
@@ -202,7 +202,7 @@ const Dashboard = () => {
     fetchStatus();
     const interval = setInterval(fetchStatus, 10000); // Refresh every 10s
     return () => clearInterval(interval);
-  }, [host, port]);
+  }, []);
 
   const statusStyleMap = {
     UP: {
