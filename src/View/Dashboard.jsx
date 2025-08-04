@@ -464,9 +464,9 @@ const Dashboard = () => {
                       height: '80px',
                       fontSize: '24px',
                       fontWeight: 'bold',
-                      color: statusStyle.color,
-                      backgroundColor: statusStyle.background,
-                      border: `1px solid ${statusStyle.border}`,
+                      color: healthStatus ? '#52c41a' : '#cf1322',
+                      backgroundColor: healthStatus ? '#f6ffed' : '#fff1f0',
+                      border: healthStatus ? '1px solid #b7eb8f' : '1px solid #ffa39e',
                       borderRadius: '6px',
                       textAlign: 'center'
                     }}>
