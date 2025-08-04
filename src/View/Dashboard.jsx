@@ -151,12 +151,11 @@ const Dashboard = () => {
   }, [selectedHostIP]);
 
   useEffect(() => {
-    fetch("/network-health")
+    fetch(`https://${selectedHostIP}:2020/interfaces`)
       .then(res => res.json())
-      .then(json => {
-        setInterfaces(json.interfaces);
-        setSelectedInterface(json.selected_interface);
-        setChartData([{ time: json.time, bandwidth_kbps: json.bandwidth_kbps }]);
+      .then(data => {
+        setInterfaces(data);
+        setSelectedInterface(data[0]?.value);
       });
   }, []);
 

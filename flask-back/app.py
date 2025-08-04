@@ -1041,12 +1041,14 @@ def interfaces():
 @app.route("/network-health", methods=["GET"])
 def network_health():
     interfaces = get_available_interfaces()
+    interface = request.args.get("interface")
     
-    if not interfaces:
-        return jsonify({"error": "No network interfaces available"}), 500
+    if not interface:
+        if interfaces:
+            interface = interfaces[0]
+        else:
+            return jsonify({"error": "No network interfaces available"}), 500
 
-    # Use requested interface or default to the first
-    interface = request.args.get("interface", interfaces[0])
     ping_host = request.args.get("ping_host", "8.8.8.8")
 
     rx1, tx1 = get_bandwidth(interface)
@@ -1061,8 +1063,6 @@ def network_health():
     latency_ms = get_latency(ping_host)
 
     return jsonify({
-        "selected_interface": interface,
-        "interfaces": [{"label": iface, "value": iface} for iface in interfaces],
         "time": time.strftime("%H:%M"),
         "bandwidth_kbps": round(bandwidth_rx_kbps + bandwidth_tx_kbps, 2),
         "latency_ms": round(latency_ms, 2) if latency_ms is not None else None
