@@ -143,7 +143,7 @@ const Dashboard = () => {
     },
     // Hide axes/ticks if desired
     xAxis: false,
-    yAxis: false,
+    // yAxis: false,
     // tooltip: false,
     height: 120,
   };
