@@ -55,7 +55,7 @@ const Dashboard = () => {
   const [cpuData, setCpuData] = useState(0);
   const [cpuHistory, setCpuHistory] = useState([]);
   const [interfaces, setInterfaces] = useState([]);
-  const [selectedInterface, setSelectedInterface] = useState("eth0");
+  const [selectedInterface, setSelectedInterface] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [memoryData, setMemoryData] = useState(0);
   const [totalMemory, setTotalMemory] = useState(0);
@@ -151,11 +151,12 @@ const Dashboard = () => {
   }, [selectedHostIP]);
 
   useEffect(() => {
-    fetch(`https://${selectedHostIP}:2020/interfaces`)
+    fetch("/network-health")
       .then(res => res.json())
-      .then(data => {
-        setInterfaces(data);
-        setSelectedInterface(data[0]?.value);
+      .then(json => {
+        setInterfaces(json.interfaces);
+        setSelectedInterface(json.selected_interface);
+        setChartData([{ time: json.time, bandwidth_kbps: json.bandwidth_kbps }]);
       });
   }, []);
 
