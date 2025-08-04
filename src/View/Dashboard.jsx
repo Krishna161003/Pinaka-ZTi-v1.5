@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Layout1 from "../Components/layout";
-import { theme, Layout, Spin, Row, Col, Divider, Select, Table, Badge, Input } from "antd";
+import { theme, Layout, Spin, Row, Col, Divider, Select, Table, Badge, Input, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import PasswordUpdateForm from "../Components/PasswordUpdateForm";
 import node from "../Images/database_666406.png";
@@ -52,6 +52,9 @@ const hoverStyle = {
 const { Content } = Layout;
 
 const Dashboard = () => {
+  // For error notification on backend fetch failure
+  const lastErrorIpRef = useRef(null);
+
   // --- CPU & Memory Utilization State ---
   const [cpuData, setCpuData] = useState(0);
   const [cpuHistory, setCpuHistory] = useState([]);
@@ -79,7 +82,6 @@ const Dashboard = () => {
       try {
         const res = await fetch(`https://${selectedHostIP}:2020/system-utilization-history`);
         const data = await res.json();
-        // console.log('Fetched history:', data);
         if (data && Array.isArray(data.cpu_history)) {
           setCpuHistory(
             data.cpu_history.map(item => {
@@ -109,6 +111,10 @@ const Dashboard = () => {
       } catch (err) {
         setCpuHistory([]);
         setMemoryHistory([]);
+        if (lastErrorIpRef.current !== selectedHostIP) {
+          message.error(`Failed to fetch system utilization history from ${selectedHostIP}`);
+          lastErrorIpRef.current = selectedHostIP;
+        }
       }
     }
     fetchHistory();
@@ -122,7 +128,6 @@ const Dashboard = () => {
       try {
         const res = await fetch(`https://${selectedHostIP}:2020/system-utilization`);
         const data = await res.json();
-        // console.log('Fetched utilization:', data);
         if (
           data.error ||
           typeof data.cpu !== 'number' || isNaN(data.cpu) ||
@@ -145,6 +150,10 @@ const Dashboard = () => {
         setMemoryData(0);
         setTotalMemory(0);
         setUsedMemory(0);
+        if (lastErrorIpRef.current !== selectedHostIP) {
+          message.error(`Failed to fetch system utilization from ${selectedHostIP}`);
+          lastErrorIpRef.current = selectedHostIP;
+        }
       }
     }
     fetchUtilization();
@@ -158,14 +167,27 @@ const Dashboard = () => {
       .then(data => {
         setInterfaces(data);
         setSelectedInterface(data[0]?.value);
+      })
+      .catch(() => {
+        if (lastErrorIpRef.current !== selectedHostIP) {
+          message.error(`Failed to fetch interfaces from ${selectedHostIP}`);
+          lastErrorIpRef.current = selectedHostIP;
+        }
       });
   }, [selectedHostIP]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch(`https://${selectedHostIP}:2020/network-health?interface=${selectedInterface}`);
-      const json = await res.json();
-      setChartData(prev => [...prev.slice(-29), json]); // last 30
+      try {
+        const res = await fetch(`https://${selectedHostIP}:2020/network-health?interface=${selectedInterface}`);
+        const json = await res.json();
+        setChartData(prev => [...prev.slice(-29), json]); // last 30
+      } catch (err) {
+        if (lastErrorIpRef.current !== selectedHostIP) {
+          message.error(`Failed to fetch network health from ${selectedHostIP}`);
+          lastErrorIpRef.current = selectedHostIP;
+        }
+      }
     };
     fetchData();
     const interval = setInterval(fetchData, 5000); // every 5s
@@ -179,6 +201,10 @@ const Dashboard = () => {
         setHealthStatus(res.data.status.toUpperCase());
       } catch (err) {
         setHealthStatus("ERROR");
+        if (lastErrorIpRef.current !== selectedHostIP) {
+          message.error(`Failed to fetch health check from ${selectedHostIP}`);
+          lastErrorIpRef.current = selectedHostIP;
+        }
       }
     };
 
@@ -234,6 +260,10 @@ const Dashboard = () => {
           setDockerDown(0);
           setDockerTotal(0);
           setDockerError(data?.error || "Failed to fetch docker info");
+          if (lastErrorIpRef.current !== selectedHostIP) {
+            message.error(`Failed to fetch docker info from ${selectedHostIP}`);
+            lastErrorIpRef.current = selectedHostIP;
+          }
         }
       } catch (err) {
         setDockerContainers([]);
@@ -242,6 +272,10 @@ const Dashboard = () => {
         setDockerDown(0);
         setDockerTotal(0);
         setDockerError("Failed to fetch docker info");
+        if (lastErrorIpRef.current !== selectedHostIP) {
+          message.error(`Failed to fetch docker info from ${selectedHostIP}`);
+          lastErrorIpRef.current = selectedHostIP;
+        }
       }
     }
     fetchDockerInfo();
