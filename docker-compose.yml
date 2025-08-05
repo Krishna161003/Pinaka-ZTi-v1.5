@@ -4,7 +4,7 @@ services:
     build:
       context: .
     ports:
-      - "3000:443"
+      - "1010:443"
     depends_on:
       - node-backend
       - mysql-db
