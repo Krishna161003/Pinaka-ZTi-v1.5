@@ -63,7 +63,9 @@ const Dashboard = () => {
   const [cpuData, setCpuData] = useState(0);
   const [cpuHistory, setCpuHistory] = useState([]);
   const [interfaces, setInterfaces] = useState([]);
-  const [selectedInterface, setSelectedInterface] = useState([]);
+  const [selectedInterface, setSelectedInterface] = useState("");
+  const [bandwidthHistory, setBandwidthHistory] = useState([]);
+  const [currentBandwidth, setCurrentBandwidth] = useState(0);
   const [chartData, setChartData] = useState([]);
   const [healthStatus, setHealthStatus] = useState("Loading");
   const [memoryData, setMemoryData] = useState(0);
@@ -192,7 +194,9 @@ const Dashboard = () => {
       .then(res => res.json())
       .then(data => {
         setInterfaces(data);
-        setSelectedInterface(data[0]?.value);
+        if (data && data.length > 0) {
+          setSelectedInterface(data[0].value);
+        }
       })
       .catch(() => {
         if (lastErrorIpRef.current !== selectedHostIP) {
@@ -201,6 +205,43 @@ const Dashboard = () => {
         }
       });
   }, [selectedHostIP]);
+
+  useEffect(() => {
+    const fetchBandwidthHistory = async () => {
+      try {
+        const res = await fetch(`https://${selectedHostIP}:2020/bandwidth-history?interface=${selectedInterface}`);
+        const data = await res.json();
+        if (data && Array.isArray(data.bandwidth_history)) {
+          setBandwidthHistory(
+            data.bandwidth_history.map(item => ({
+              ...item,
+              date: new Date(item.timestamp * 1000),
+              value: typeof item.bandwidth_kbps === 'number' && !isNaN(item.bandwidth_kbps) ? item.bandwidth_kbps : 0,
+            }))
+          );
+          // Set current bandwidth to the latest value
+          if (data.bandwidth_history.length > 0) {
+            setCurrentBandwidth(data.bandwidth_history[data.bandwidth_history.length - 1].bandwidth_kbps);
+          } else {
+            setCurrentBandwidth(0);
+          }
+        } else {
+          setBandwidthHistory([]);
+          setCurrentBandwidth(0);
+        }
+      } catch (err) {
+        setBandwidthHistory([]);
+        setCurrentBandwidth(0);
+        if (lastErrorIpRef.current !== selectedHostIP) {
+          message.error(`Failed to fetch bandwidth history from ${selectedHostIP}`);
+          lastErrorIpRef.current = selectedHostIP;
+        }
+      }
+    };
+    fetchBandwidthHistory();
+    const interval = setInterval(fetchBandwidthHistory, 5000); // every 5s
+    return () => clearInterval(interval);
+  }, [selectedHostIP, selectedInterface]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -604,12 +645,15 @@ const Dashboard = () => {
                       />
                     </div>
                     <Divider style={{ margin: "0 0 16px 0" }} />
+                    <div style={{ fontSize: 14, color: '#333', marginBottom: 6, marginTop: -16 }}>
+                      Current: {typeof currentBandwidth === 'number' ? currentBandwidth.toFixed(1) : '0.0'} kbps
+                    </div>
                   </div>
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
                     <Line
-                      data={chartData}
-                      xField="time"
-                      yField="bandwidth_kbps"
+                      data={bandwidthHistory}
+                      xField="date"
+                      yField="value"
                       height={100}
                       smooth={true}
                       lineStyle={{ stroke: '#1890ff', lineWidth: 2 }}
@@ -642,9 +686,9 @@ const Dashboard = () => {
                       CPU Usage Trend
                     </span>
                     <Divider style={{ margin: "0 0 16px 0" }} />
-                    <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
-                    Current: {cpuData.toFixed(1)}%
-                  </div>
+                    <div style={{ fontSize: 14, color: '#333', marginBottom: 6, marginTop: -16 }}>
+                      Current: {cpuData.toFixed(1)}%
+                    </div>
                     <div style={{ height: '100px' }}>
                       <Area
                         data={cpuHistory}
@@ -677,10 +721,10 @@ const Dashboard = () => {
                       Memory Usage Trend
                     </span>
                     <Divider style={{ margin: "0 0 16px 0" }} />
-                    <div style={{ fontSize: 14, color: '#333', marginBottom: 6,marginTop: -16 }}>
-                    Used: {usedMemory} MB / {totalMemory} MB  
-                    Usage: {memoryData.toFixed(1)}%
-                  </div>
+                    <div style={{ fontSize: 14, color: '#333', marginBottom: 6, marginTop: -16 }}>
+                      Used: {usedMemory} MB / {totalMemory} MB
+                      Usage: {memoryData.toFixed(1)}%
+                    </div>
                     <div style={{ height: '80px' }}>
                       <Area {...memoryconfig} />
                     </div>

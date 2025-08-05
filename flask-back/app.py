@@ -15,9 +15,10 @@ import logging
 import socket
 from collections import deque
 
-# Store last 60 seconds of CPU and Memory usage
+# Store last 60 seconds of CPU, Memory, and Bandwidth usage
 timestamped_cpu_history = deque(maxlen=60)
 timestamped_memory_history = deque(maxlen=60)
+timestamped_bandwidth_history = deque(maxlen=60)
 
 def add_cpu_history(cpu_percent):
     timestamped_cpu_history.append({
@@ -39,6 +40,31 @@ def get_memory_history():
 
 app = Flask(__name__)
 CORS(app)
+
+# Add bandwidth history
+last_bandwidth = {'rx': 0, 'tx': 0, 'timestamp': 0}
+def add_bandwidth_history(interface):
+    global last_bandwidth
+    rx, tx = get_bandwidth(interface)
+    now = int(time.time())
+    if rx is None or tx is None:
+        return
+    if last_bandwidth['timestamp'] == 0:
+        last_bandwidth = {'rx': rx, 'tx': tx, 'timestamp': now}
+        return
+    elapsed = now - last_bandwidth['timestamp']
+    if elapsed <= 0:
+        return
+    bandwidth_kbps = ((rx - last_bandwidth['rx']) + (tx - last_bandwidth['tx'])) / 1024 / elapsed
+    timestamped_bandwidth_history.append({
+        "timestamp": now,
+        "bandwidth_kbps": round(bandwidth_kbps, 2),
+        "interface": interface
+    })
+    last_bandwidth = {'rx': rx, 'tx': tx, 'timestamp': now}
+
+def get_bandwidth_history():
+    return list(timestamped_bandwidth_history)
 
 # ------------------------------------------------ Server Validation Start --------------------------------------------
 #  Validation criteria
@@ -1063,11 +1089,28 @@ def network_health():
     bandwidth_tx_kbps = (tx2 - tx1) / 1024
     latency_ms = get_latency(ping_host)
 
+    # Add to bandwidth history
+    add_bandwidth_history(interface)
+
     return jsonify({
         "time": time.strftime("%H:%M"),
         "bandwidth_kbps": round(bandwidth_rx_kbps + bandwidth_tx_kbps, 2),
         "latency_ms": round(latency_ms, 2) if latency_ms is not None else None
     })
+
+# Bandwidth history endpoint
+@app.route('/bandwidth-history', methods=['GET'])
+def bandwidth_history():
+    interface = request.args.get('interface')
+    if not interface:
+        interfaces = get_available_interfaces()
+        if interfaces:
+            interface = interfaces[0]
+        else:
+            return jsonify({"bandwidth_history": [], "error": "No interfaces available"})
+    # Optionally, trigger a new sample
+    add_bandwidth_history(interface)
+    return jsonify({"bandwidth_history": get_bandwidth_history()})
 
 # Thresholds for health levels
 CPU_WARNING = 80
