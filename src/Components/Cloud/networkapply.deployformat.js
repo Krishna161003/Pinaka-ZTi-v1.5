@@ -3,7 +3,7 @@
 
 export function buildDeployConfigPayload(form) {
   // Extract relevant fields from form
-  const { configType, useBond, tableData, ip, hostname, selectedDisks, selectedRoles } = form;
+  const { configType, useBond, tableData, hostname, selectedDisks, selectedRoles } = form;
   const using_interfaces = {};
   let ifaceCount = 1;
 
@@ -23,22 +23,24 @@ export function buildDeployConfigPayload(form) {
       if (t.toLowerCase() === 'external traffic' || t.toLowerCase() === 'external_traffic') return 'External_Traffic';
       return t;
     });
-    // Compose interface object
-    using_interfaces[ifaceKey()] = {
+    const ifaceObj = {
       interface_name: row.bondName && useBond ? row.bondName : (Array.isArray(row.interface) ? row.interface[0] : row.interface),
-      type: typeArr,
-      ip: row.ip || '',
+      type: typeArr
     };
+    // Only include ip for non-Secondary
+    if (!(typeArr.length === 1 && typeArr[0] === 'Secondary')) {
+      ifaceObj.ip = row.ip || '';
+    }
+    using_interfaces[ifaceKey()] = ifaceObj;
   });
 
   // Compose output object
   const out = {
     using_interfaces,
-    hostname: hostname || '',
+    hostname: hostname && hostname.trim() ? hostname : 'pinakasv',
     disk: selectedDisks || [],
     roles: selectedRoles || []
   };
-  // Add top-level ip if present (for segregated)
-  if (ip) out.ip = ip;
+  // Do NOT include top-level ip field
   return out;
 }
