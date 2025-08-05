@@ -169,7 +169,7 @@ const Dashboard = () => {
         style: { fontSize: 10 },
       },
     };
-    return <Tiny.Line {...config} />;
+    return <Line {...config} />;
   };
 
 
@@ -673,7 +673,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
-                    <DemoLine data={bandwidthHistory} />
+                    <BandwidthLine data={bandwidthHistory} />
                   </div>
                 </Col>
               </Row>
