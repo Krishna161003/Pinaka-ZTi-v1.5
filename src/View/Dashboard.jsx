@@ -685,8 +685,8 @@ const BandwidthLine = ({ bandwidthHistory }) => {
                       Current: {typeof currentBandwidth === 'number' ? currentBandwidth.toFixed(1) : '0.0'} kbps
                     </div>
                   </div>
-                  <div style={{ height: 70, margin: '0 0 10px 0' }}>
-                    <BandwidthLine bandwidthHistory={getSmoothedBandwidthHistory(bandwidthHistory, 15)} />
+                  <div style={{ height: 70, margin: '0 -20px 10px -20px' }}>
+                    <BandwidthLine bandwidthHistory={getSmoothedBandwidthHistory(bandwidthHistory, 5)} />
                   </div>
                 </Col>
               </Row>
