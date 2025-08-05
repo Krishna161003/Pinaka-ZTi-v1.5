@@ -166,8 +166,8 @@ function getSmoothedBandwidthHistory(history, windowSize = 5) {
 const BandwidthLine = ({ bandwidthHistory }) => {
     const config = {
       data: bandwidthHistory,
-      width: 480,
-      height: 120,
+      width: 280,
+      height: 110,
       shapeField: 'smooth',
       xField: 'date',
       yField: 'value',
