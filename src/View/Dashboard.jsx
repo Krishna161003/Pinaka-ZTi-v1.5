@@ -673,7 +673,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
-                    <BandwidthLine data={bandwidthHistory} />
+                    <BandwidthLine bandwidthHistory={bandwidthHistory} />
                   </div>
                 </Col>
               </Row>
