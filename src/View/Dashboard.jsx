@@ -139,10 +139,10 @@ const Dashboard = () => {
       fill: '#8fd98f',
     },
     // Optional: make the line match the fill color
-    line: {
-      color: '#4CAF50',     // darker green
-      size: 1.5,
-    },
+    // line: {
+    //   color: '#4CAF50',     // darker green
+    //   size: 1.5,
+    // },
     // Hide axes/ticks if desired
     xAxis: false,
     // yAxis: false,
