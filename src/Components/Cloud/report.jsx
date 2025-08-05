@@ -61,7 +61,7 @@ const Report = ({ onDeploymentComplete }) => {
 
   let progressList = [];
   let foundInProgress = false;
-  
+
   for (let i = 0; i < allSteps.length; i++) {
     if (i < completedLogs.length) {
       progressList.push(<li key={i}>{allSteps[i]}</li>);
@@ -88,7 +88,7 @@ const Report = ({ onDeploymentComplete }) => {
         // sessionStorage.setItem('disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
         sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
       };
-      
+
       window.addEventListener('beforeunload', handleBeforeUnload);
       return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -101,49 +101,23 @@ const Report = ({ onDeploymentComplete }) => {
       };
     }
   }, [percent]);
-  
+
   return (
     <div style={{ padding: '20px' }}>
       <h5 style={{ display: "flex", flex: "1", marginLeft: "-2%", marginBottom: "1.25%" }}>
-        <CloudOutlined />
-        &nbsp;&nbsp;{cloudName} Cloud
+        Node Addition Status
       </h5>
       <Divider />
       <Card title={`Cloud Deployment Progress for ${cloudName} (${sessionStorage.getItem('cloud_server_ip') || 'N/A'})`}>
         <Row gutter={24}>
           <Col span={24}>
-            <Flex gap="small" vertical style={{ marginBottom: '20px' }}>
-              <Progress percent={percent} status={percent === 100 ? "success" : "active"} />
-            </Flex>
-            {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
-            <div
-              style={{
-                border: '1px solid #d9d9d9',
-                borderRadius: '4px',
-                padding: '12px',
-                backgroundColor: '#fafafa',
-              }}
-            >
-              <strong>Cloud Deployment Progress:</strong>
-              <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-                {progressList}
-              </ul>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 250 }}>
+              <img
+                src={require('./../../Images/plane.gif')}
+                alt="Deployment Progress"
+                style={{ width: 180, height: 180, objectFit: 'contain' }}
+              />
             </div>
-            {percent === 100 && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-                <Button 
-                  type="primary" 
-                  onClick={() => {
-                    sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
-                    sessionStorage.setItem('lastMenuPath', '/iaas');
-                    sessionStorage.setItem('lastCloudPath', '/iaas');
-                    navigate('/iaas');
-                  }}
-                >
-                  Back to Cloud
-                </Button>
-              </div>
-            )}
           </Col>
         </Row>
       </Card>
@@ -152,3 +126,43 @@ const Report = ({ onDeploymentComplete }) => {
 };
 
 export default Report;
+
+
+{/* <Card title={`Cloud Deployment Progress for ${cloudName} (${sessionStorage.getItem('cloud_server_ip') || 'N/A'})`}>
+<Row gutter={24}>
+  <Col span={24}>
+    <Flex gap="small" vertical style={{ marginBottom: '20px' }}>
+      <Progress percent={percent} status={percent === 100 ? "success" : "active"} />
+    </Flex>
+    {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
+    <div
+      style={{
+        border: '1px solid #d9d9d9',
+        borderRadius: '4px',
+        padding: '12px',
+        backgroundColor: '#fafafa',
+      }}
+    >
+      <strong>Cloud Deployment Progress:</strong>
+      <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
+        {progressList}
+      </ul>
+    </div>
+    {percent === 100 && (
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+        <Button 
+          type="primary" 
+          onClick={() => {
+            sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
+            sessionStorage.setItem('lastMenuPath', '/iaas');
+            sessionStorage.setItem('lastCloudPath', '/iaas');
+            navigate('/iaas');
+          }}
+        >
+          Back to Cloud
+        </Button>
+      </div>
+    )}
+  </Col>
+</Row>
+</Card> */}

@@ -1369,6 +1369,39 @@ def server_reboot():
 
 # ------------------- Server Power Control Endpoints end -------------------
 
+# ------------------- Store Deployment Configs Endpoint -------------------
+import pathlib
+
+@app.route('/store-deployment-configs', methods=['POST'])
+def store_deployment_configs():
+    data = request.get_json()
+    if not data or not isinstance(data, (list, dict)):
+        return jsonify({'error': 'Invalid data format'}), 400
+
+    # Accept both list and dict (dict: {ip: config, ...})
+    if isinstance(data, dict):
+        node_items = list(data.items())
+    else:
+        # If list, expect each item to have a unique 'ip' or 'hostname'
+        node_items = [(str(i+1), node) for i, node in enumerate(data)]
+
+    # Directory to store configs
+    configs_dir = pathlib.Path('deployment_configs')
+    configs_dir.mkdir(exist_ok=True)
+    results = []
+    for idx, (node_key, node_cfg) in enumerate(node_items, 1):
+        fname = f"node_{idx:02d}.json"
+        fpath = configs_dir / fname
+        try:
+            with open(fpath, 'w') as f:
+                json.dump(node_cfg, f, indent=2)
+            results.append({'node': node_key, 'file': str(fpath), 'status': 'success'})
+        except Exception as e:
+            results.append({'node': node_key, 'file': str(fpath), 'status': 'error', 'error': str(e)})
+    return jsonify({'results': results, 'success': all(r['status']== 'success' for r in results)})
+
+# -------------------------------------------------------------------------
+
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",

@@ -735,10 +735,42 @@ const getInitialForms = () => {
   // Check if all cards are applied
   const allApplied = cardStatus.length > 0 && cardStatus.every(s => s.applied);
 
-  const handleNext = () => {
-    // TODO: Implement next step (e.g., go to next tab or section)
-    message.info('Proceeding to the next step...');
-  };
+  const handleNext = async () => {
+  // Only allow if all cards are applied
+  if (!allApplied) {
+    message.warning('Please apply all nodes before deploying.');
+    return;
+  }
+  // Get all node configs from sessionStorage
+  let networkApplyResult = sessionStorage.getItem('cloud_networkApplyResult');
+  if (!networkApplyResult) {
+    message.error('No node configuration found.');
+    return;
+  }
+  let configs;
+  try {
+    configs = JSON.parse(networkApplyResult);
+  } catch (e) {
+    message.error('Failed to parse node configuration.');
+    return;
+  }
+  // POST to backend endpoint
+  try {
+    const res = await fetch('/store-deployment-configs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(configs),
+    });
+    const result = await res.json();
+    if (result.success) {
+      message.success('Deployment configuration stored successfully!');
+    } else {
+      message.error('Some configs failed to store. Check backend logs.');
+    }
+  } catch (e) {
+    message.error('Failed to send deployment configs: ' + e.message);
+  }
+};
 
   return (
     <div style={{ padding: 24 }}>
