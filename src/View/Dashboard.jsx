@@ -150,6 +150,29 @@ const Dashboard = () => {
     height: 180,
   };
 
+  const BandwidthLine = ({ bandwidthHistory }) => {
+    const config = {
+      data: bandwidthHistory,
+      width: 480,
+      height: 120,
+      shapeField: 'smooth',
+      xField: 'date',
+      yField: 'value',
+      label: {
+        selector: 'last',
+        text: (d) => d.value,
+        textAlign: 'right',
+        textBaseline: 'bottom',
+        dx: -10,
+        dy: -10,
+        connector: true,
+        style: { fontSize: 10 },
+      },
+    };
+    return <Tiny.Line {...config} />;
+  };
+
+
   // Still fetch memory and single CPU value for other UI
   useEffect(() => {
     async function fetchUtilization() {
@@ -650,19 +673,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
-                    <Line
-                      data={bandwidthHistory}
-                      xField="date"
-                      yField="value"
-                      height={100}
-                      smooth={true}
-                      lineStyle={{ stroke: '#1890ff', lineWidth: 2 }}
-                      // point={false} // Disable points if not needed
-                      xAxis={false}
-                      yAxis={false}
-                      // tooltip={false}
-                      animation={false}
-                    />
+                    <DemoLine data={bandwidthHistory} />
                   </div>
                 </Col>
               </Row>
