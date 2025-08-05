@@ -763,7 +763,7 @@ const NetworkApply = () => {
     });
     // POST to backend endpoint
     try {
-      const res = await fetch(`http://${hostIP}:2020/store-deployment-configs`, {
+      const res = await fetch(`https://${hostIP}:2020/store-deployment-configs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transformedConfigs),
