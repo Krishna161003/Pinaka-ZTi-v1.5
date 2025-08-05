@@ -66,6 +66,7 @@ const Dashboard = () => {
   const [selectedInterface, setSelectedInterface] = useState("");
   const [bandwidthHistory, setBandwidthHistory] = useState([]);
   const [currentBandwidth, setCurrentBandwidth] = useState(0);
+  const [chartData, setChartData] = useState([]);
   const [healthStatus, setHealthStatus] = useState("Loading");
   const [memoryData, setMemoryData] = useState(0);
   const [totalMemory, setTotalMemory] = useState(0);
