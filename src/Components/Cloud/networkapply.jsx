@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Table, Input, Select, Button, Form, Radio, Checkbox, Divider, Typography, Space, Tooltip, message, Spin } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { buildNetworkConfigPayload } from './networkapply.format';
+import { buildDeployConfigPayload } from './networkapply.deployformat';
 
 const hostIP = window.location.hostname;
 
@@ -756,10 +757,10 @@ const NetworkApply = () => {
       message.error('Failed to parse node configuration.');
       return;
     }
-    // Transform each node config to deployment format
+    // Transform each node config to deployment format (for deploy)
     const transformedConfigs = {};
     Object.entries(configs).forEach(([ip, form]) => {
-      transformedConfigs[ip] = buildNetworkConfigPayload(form);
+      transformedConfigs[ip] = buildDeployConfigPayload(form);
     });
     // POST to backend endpoint
     try {
