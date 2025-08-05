@@ -150,7 +150,20 @@ const Dashboard = () => {
     height: 180,
   };
 
-  const BandwidthLine = ({ bandwidthHistory }) => {
+  // Helper: Moving average smoothing for bandwidth
+function getSmoothedBandwidthHistory(history, windowSize = 5) {
+  if (!Array.isArray(history) || history.length === 0) return [];
+  const smoothed = [];
+  for (let i = 0; i < history.length; i++) {
+    let start = Math.max(0, i - windowSize + 1);
+    let window = history.slice(start, i + 1);
+    let avg = window.reduce((sum, item) => sum + (typeof item.value === 'number' ? item.value : 0), 0) / window.length;
+    smoothed.push({ ...history[i], value: avg });
+  }
+  return smoothed;
+}
+
+const BandwidthLine = ({ bandwidthHistory }) => {
     const config = {
       data: bandwidthHistory,
       width: 480,
@@ -673,7 +686,7 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
-                    <BandwidthLine bandwidthHistory={bandwidthHistory} />
+                    <BandwidthLine bandwidthHistory={getSmoothedBandwidthHistory(bandwidthHistory, 5)} />
                   </div>
                 </Col>
               </Row>
