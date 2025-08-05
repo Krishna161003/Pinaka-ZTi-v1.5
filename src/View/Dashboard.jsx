@@ -151,26 +151,31 @@ const Dashboard = () => {
   };
 
   // Helper: Moving average smoothing for bandwidth
-function getSmoothedBandwidthHistory(history, windowSize = 5) {
-  if (!Array.isArray(history) || history.length === 0) return [];
-  const smoothed = [];
-  for (let i = 0; i < history.length; i++) {
-    let start = Math.max(0, i - windowSize + 1);
-    let window = history.slice(start, i + 1);
-    let avg = window.reduce((sum, item) => sum + (typeof item.value === 'number' ? item.value : 0), 0) / window.length;
-    smoothed.push({ ...history[i], value: avg });
+  function getSmoothedBandwidthHistory(history, windowSize = 5) {
+    if (!Array.isArray(history) || history.length === 0) return [];
+    const smoothed = [];
+    for (let i = 0; i < history.length; i++) {
+      let start = Math.max(0, i - windowSize + 1);
+      let window = history.slice(start, i + 1);
+      let avg = window.reduce((sum, item) => sum + (typeof item.value === 'number' ? item.value : 0), 0) / window.length;
+      smoothed.push({ ...history[i], value: avg });
+    }
+    return smoothed;
   }
-  return smoothed;
-}
 
-const BandwidthLine = ({ bandwidthHistory }) => {
+
+  const BandwidthLine = ({ bandwidthHistory }) => {
     const config = {
       data: bandwidthHistory,
       width: 280,
       height: 110,
-      shapeField: 'smooth',
+      smooth: true,
       xField: 'date',
       yField: 'value',
+      lineStyle: {
+        stroke: '#52c41a',
+        lineWidth: 2,
+      },
       label: {
         selector: 'last',
         text: (d) => d.value,
@@ -184,6 +189,7 @@ const BandwidthLine = ({ bandwidthHistory }) => {
     };
     return <Line {...config} />;
   };
+
 
 
   // Still fetch memory and single CPU value for other UI
