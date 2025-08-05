@@ -3,25 +3,27 @@ import { Card, Table, Input, Select, Button, Form, Radio, Checkbox, Divider, Typ
 import { InfoCircleOutlined } from '@ant-design/icons';
 import { buildNetworkConfigPayload } from './networkapply.format';
 
+const hostIP = window.location.hostname;
+
 const NetworkApply = () => {
 
-const { Option } = Select;
-const ipRegex = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/;
-const subnetRegex = /^(255|254|252|248|240|224|192|128|0+)\.((255|254|252|248|240|224|192|128|0+)\.){2}(255|254|252|248|240|224|192|128|0+)$/;
+  const { Option } = Select;
+  const ipRegex = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/;
+  const subnetRegex = /^(255|254|252|248|240|224|192|128|0+)\.((255|254|252|248|240|224|192|128|0+)\.){2}(255|254|252|248|240|224|192|128|0+)$/;
 
-// Get the nodes from sessionStorage (as in Addnode.jsx)
-function getLicenseNodes() {
-  const saved = sessionStorage.getItem('cloud_licenseNodes');
-  return saved ? JSON.parse(saved) : [];
-}
+  // Get the nodes from sessionStorage (as in Addnode.jsx)
+  function getLicenseNodes() {
+    const saved = sessionStorage.getItem('cloud_licenseNodes');
+    return saved ? JSON.parse(saved) : [];
+  }
 
-const RESTART_DURATION = 3000; // ms
-const BOOT_DURATION = 5000; // ms after restart
-const RESTART_ENDTIME_KEY = 'cloud_networkApplyRestartEndTimes';
-const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
+  const RESTART_DURATION = 3000; // ms
+  const BOOT_DURATION = 5000; // ms after restart
+  const RESTART_ENDTIME_KEY = 'cloud_networkApplyRestartEndTimes';
+  const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
 
   const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
-  
+
   // Dynamic per-node disks and interfaces
   const [nodeDisks, setNodeDisks] = useState({});
   const [nodeInterfaces, setNodeInterfaces] = useState({});
@@ -33,7 +35,7 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
         fetch(`https://${ip}:2020/get-disks`).then(r => r.json()),
         fetch(`https://${ip}:2020/get-interfaces`).then(r => r.json()),
       ]);
-      
+
       // Map disks to include all necessary properties
       const formattedDisks = (diskRes.disks || []).map(disk => ({
         name: disk.name,
@@ -43,7 +45,7 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
         value: disk.wwn, // Store WWN as the value
         display: `${disk.name} (${disk.size}, ${disk.wwn})`
       }));
-      
+
       setNodeDisks(prev => ({ ...prev, [ip]: formattedDisks }));
       setNodeInterfaces(prev => ({ ...prev, [ip]: (ifaceRes.interfaces || []).map(i => ({ iface: i.iface })) }));
     } catch (e) {
@@ -68,57 +70,57 @@ const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
   // For loader recovery timers
   const timerRefs = React.useRef([]);
   // Restore forms from sessionStorage if available and merge with license details
-const getInitialForms = () => {
-  // Get saved license details
-  const licenseDetailsMap = (() => {
-    const saved = sessionStorage.getItem('cloud_licenseActivationResults');
-    if (!saved) return {};
-    try {
-      const arr = JSON.parse(saved);
-      const map = {};
-      for (const row of arr) {
-        if (row.ip && row.details) map[row.ip] = row.details;
+  const getInitialForms = () => {
+    // Get saved license details
+    const licenseDetailsMap = (() => {
+      const saved = sessionStorage.getItem('cloud_licenseActivationResults');
+      if (!saved) return {};
+      try {
+        const arr = JSON.parse(saved);
+        const map = {};
+        for (const row of arr) {
+          if (row.ip && row.details) map[row.ip] = row.details;
+        }
+        return map;
+      } catch {
+        return {};
       }
-      return map;
-    } catch {
-      return {};
-    }
-  })();
+    })();
 
-  // Get saved forms from sessionStorage if they exist
-  const savedForms = sessionStorage.getItem('cloud_networkApplyForms');
-  if (savedForms) {
-    try {
-      const forms = JSON.parse(savedForms);
-      // Merge license details into saved forms
-      return forms.map(form => ({
-        ...form,
-        licenseType: licenseDetailsMap[form.ip]?.type || form.licenseType || '-',
-        licensePeriod: licenseDetailsMap[form.ip]?.period || form.licensePeriod || '-',
-        licenseCode: licenseDetailsMap[form.ip]?.licenseCode || form.licenseCode || '-',
-      }));
-    } catch (e) {
-      console.error('Failed to parse saved forms:', e);
+    // Get saved forms from sessionStorage if they exist
+    const savedForms = sessionStorage.getItem('cloud_networkApplyForms');
+    if (savedForms) {
+      try {
+        const forms = JSON.parse(savedForms);
+        // Merge license details into saved forms
+        return forms.map(form => ({
+          ...form,
+          licenseType: licenseDetailsMap[form.ip]?.type || form.licenseType || '-',
+          licensePeriod: licenseDetailsMap[form.ip]?.period || form.licensePeriod || '-',
+          licenseCode: licenseDetailsMap[form.ip]?.licenseCode || form.licenseCode || '-',
+        }));
+      } catch (e) {
+        console.error('Failed to parse saved forms:', e);
+      }
     }
-  }
 
-  // If no saved forms or error, create new forms with license details
-  return licenseNodes.map(node => ({
-    ip: node.ip,
-    configType: 'default',
-    useBond: false,
-    tableData: generateRows('default', false),
-    defaultGateway: '',
-    defaultGatewayError: '',
-    licenseType: licenseDetailsMap[node.ip]?.type || '-',
-    licensePeriod: licenseDetailsMap[node.ip]?.period || '-',
-    licenseCode: licenseDetailsMap[node.ip]?.licenseCode || '-',
-    selectedDisks: [],
-    diskError: '',
-    selectedRoles: [],
-    roleError: '',
-  }));
-};  
+    // If no saved forms or error, create new forms with license details
+    return licenseNodes.map(node => ({
+      ip: node.ip,
+      configType: 'default',
+      useBond: false,
+      tableData: generateRows('default', false),
+      defaultGateway: '',
+      defaultGatewayError: '',
+      licenseType: licenseDetailsMap[node.ip]?.type || '-',
+      licensePeriod: licenseDetailsMap[node.ip]?.period || '-',
+      licenseCode: licenseDetailsMap[node.ip]?.licenseCode || '-',
+      selectedDisks: [],
+      diskError: '',
+      selectedRoles: [],
+      roleError: '',
+    }));
+  };
   const [forms, setForms] = useState(getInitialForms);
 
   // If licenseNodes changes (e.g. after license activation), restore from sessionStorage if available, else reset
@@ -149,7 +151,7 @@ const getInitialForms = () => {
         licensePeriod: savedLicenseDetails[form.ip]?.period || form.licensePeriod || '-',
         licenseCode: savedLicenseDetails[form.ip]?.licenseCode || form.licenseCode || '-',
       }));
-      
+
       setForms(updatedForms);
       setCardStatus(JSON.parse(savedStatus));
     } else {
@@ -736,41 +738,41 @@ const getInitialForms = () => {
   const allApplied = cardStatus.length > 0 && cardStatus.every(s => s.applied);
 
   const handleNext = async () => {
-  // Only allow if all cards are applied
-  if (!allApplied) {
-    message.warning('Please apply all nodes before deploying.');
-    return;
-  }
-  // Get all node configs from sessionStorage
-  let networkApplyResult = sessionStorage.getItem('cloud_networkApplyResult');
-  if (!networkApplyResult) {
-    message.error('No node configuration found.');
-    return;
-  }
-  let configs;
-  try {
-    configs = JSON.parse(networkApplyResult);
-  } catch (e) {
-    message.error('Failed to parse node configuration.');
-    return;
-  }
-  // POST to backend endpoint
-  try {
-    const res = await fetch('/store-deployment-configs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(configs),
-    });
-    const result = await res.json();
-    if (result.success) {
-      message.success('Deployment configuration stored successfully!');
-    } else {
-      message.error('Some configs failed to store. Check backend logs.');
+    // Only allow if all cards are applied
+    if (!allApplied) {
+      message.warning('Please apply all nodes before deploying.');
+      return;
     }
-  } catch (e) {
-    message.error('Failed to send deployment configs: ' + e.message);
-  }
-};
+    // Get all node configs from sessionStorage
+    let networkApplyResult = sessionStorage.getItem('cloud_networkApplyResult');
+    if (!networkApplyResult) {
+      message.error('No node configuration found.');
+      return;
+    }
+    let configs;
+    try {
+      configs = JSON.parse(networkApplyResult);
+    } catch (e) {
+      message.error('Failed to parse node configuration.');
+      return;
+    }
+    // POST to backend endpoint
+    try {
+      const res = await fetch(`http://${hostIP}:2020/store-deployment-configs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(configs),
+      });
+      const result = await res.json();
+      if (result.success) {
+        message.success('Deployment configuration stored successfully!');
+      } else {
+        message.error('Some configs failed to store. Check backend logs.');
+      }
+    } catch (e) {
+      message.error('Failed to send deployment configs: ' + e.message);
+    }
+  };
 
   return (
     <div style={{ padding: 24 }}>
@@ -862,8 +864,8 @@ const getInitialForms = () => {
                     optionLabelProp="label"
                   >
                     {(nodeDisks[form.ip] || []).map(disk => (
-                      <Option 
-                        key={disk.wwn || disk} 
+                      <Option
+                        key={disk.wwn || disk}
                         value={disk.wwn || disk}
                         label={disk.display || disk}
                       >

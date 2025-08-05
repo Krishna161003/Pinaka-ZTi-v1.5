@@ -13,6 +13,7 @@ import ipaddress
 import netifaces
 import logging
 import socket
+import pathlib
 from collections import deque
 
 # Store last 60 seconds of CPU, Memory, and Bandwidth usage
@@ -1413,7 +1414,6 @@ def server_reboot():
 # ------------------- Server Power Control Endpoints end -------------------
 
 # ------------------- Store Deployment Configs Endpoint -------------------
-import pathlib
 
 @app.route('/store-deployment-configs', methods=['POST'])
 def store_deployment_configs():
