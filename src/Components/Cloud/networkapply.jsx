@@ -756,12 +756,17 @@ const NetworkApply = () => {
       message.error('Failed to parse node configuration.');
       return;
     }
+    // Transform each node config to deployment format
+    const transformedConfigs = {};
+    Object.entries(configs).forEach(([ip, form]) => {
+      transformedConfigs[ip] = buildNetworkConfigPayload(form);
+    });
     // POST to backend endpoint
     try {
       const res = await fetch(`http://${hostIP}:2020/store-deployment-configs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(configs),
+        body: JSON.stringify(transformedConfigs),
       });
       const result = await res.json();
       if (result.success) {
