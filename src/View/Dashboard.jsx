@@ -686,7 +686,7 @@ const BandwidthLine = ({ bandwidthHistory }) => {
                     </div>
                   </div>
                   <div style={{ height: 70, margin: '0 0 10px 0' }}>
-                    <BandwidthLine bandwidthHistory={getSmoothedBandwidthHistory(bandwidthHistory, 5)} />
+                    <BandwidthLine bandwidthHistory={getSmoothedBandwidthHistory(bandwidthHistory, 15)} />
                   </div>
                 </Col>
               </Row>
