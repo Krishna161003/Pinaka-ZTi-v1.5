@@ -307,23 +307,22 @@ def submit_network_config():
 
         # Validate network interfaces
         for iface_name, iface_config in data["using_interfaces"].items():
+            # Use the real interface name from the config, fallback to key if missing
+            real_iface = iface_config.get("interface_name", iface_name)
             # Check if interface exists and is up
-            if not is_interface_up(iface_name):
-                return jsonify({"success": False, "message": f"Interface {iface_name} is not available or could not be brought up"}), 400
-            
+            if not is_interface_up(real_iface):
+                return jsonify({"success": False, "message": f"Interface {real_iface} is not available or could not be brought up"}), 400
             # Validate IP configuration if provided
             if "ip" in iface_config and iface_config["ip"]:
                 if not validate_ip_address(iface_config["ip"]):
-                    return jsonify({"success": False, "message": f"Invalid IP address for interface {iface_name}"}), 400
-                
+                    return jsonify({"success": False, "message": f"Invalid IP address for interface {real_iface}"}), 400
                 # Validate subnet mask if provided
                 if "netmask" in iface_config and iface_config["netmask"]:
                     if not validate_subnet_mask(iface_config["netmask"]):
-                        return jsonify({"success": False, "message": f"Invalid subnet mask for interface {iface_name}"}), 400
-                
+                        return jsonify({"success": False, "message": f"Invalid subnet mask for interface {real_iface}"}), 400
                 # Check if the network is available
                 if not is_network_available(iface_config.get("ip")):
-                    return jsonify({"success": False, "message": f"Network for interface {iface_name} is not available"}), 400
+                    return jsonify({"success": False, "message": f"Network for interface {real_iface} is not available"}), 400
         
         # Validate default gateway reachability
         if not is_ip_reachable(data["default_gateway"]):
