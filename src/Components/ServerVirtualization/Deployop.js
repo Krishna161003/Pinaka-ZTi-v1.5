@@ -9,8 +9,50 @@ const DeploymentOptions = ({ onStart }) => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [cloudName, setCloudName] = useState('');
+  const [isDeployed, setIsDeployed] = useState(false); // NEW: track deployed state
 
   const inputRef = useRef(null); // Create a reference for the input
+
+  // Helper to get userId from sessionStorage
+  const getUserId = () => {
+    try {
+      const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
+      return loginDetails?.data?.id || null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Check if Host entry exists for userId + cloudName
+  const checkHostDeployed = async (cloudNameToCheck) => {
+    const userId = getUserId();
+    if (!userId || !cloudNameToCheck) {
+      setIsDeployed(false);
+      return;
+    }
+    try {
+      const res = await axios.get(`https://${hostIP}:5000/api/host-exists`, {
+        params: { userId, cloudName: cloudNameToCheck }
+      });
+      setIsDeployed(res.data.exists === true);
+    } catch (err) {
+      setIsDeployed(false);
+    }
+  };
+
+  // Check on mount and when cloudName changes
+  useEffect(() => {
+    if (cloudName) {
+      checkHostDeployed(cloudName);
+    }
+  }, [cloudName]);
+
+  // Also check on modal open (when user selects Server Virtualization)
+  useEffect(() => {
+    if (isModalVisible && cloudName) {
+      checkHostDeployed(cloudName);
+    }
+  }, [isModalVisible]);
 
   const handleOptionClick = (option) => {
     if (option === 'Server Virtualization') {
@@ -105,8 +147,8 @@ const DeploymentOptions = ({ onStart }) => {
                   where all OpenStack services are deployed on a single server, perfect for
                   development and testing.<b>(need to change def)</b>
                 </div>
-                <Button className="custom-button" type="primary">
-                  Start
+                <Button className="custom-button" type="primary" disabled={isDeployed}>
+                  {isDeployed ? 'Deployed' : 'Start'}
                 </Button>
               </div>
             </div>
@@ -116,7 +158,7 @@ const DeploymentOptions = ({ onStart }) => {
               }`}
             onClick={() => handleOptionClick('Server Virtualization with HA')}
           > */}
-            {/* <h5>Server Virtualization with HA</h5>
+          {/* <h5>Server Virtualization with HA</h5>
             <div className="option">
               <div
                 className="option-content front"
@@ -139,14 +181,14 @@ const DeploymentOptions = ({ onStart }) => {
                   Start
                 </Button>
               </div> */}
-            {/* </div> */}
+          {/* </div> */}
           {/* </div> */}
           {/* <div
             className={`option-box ${selectedOption === 'Server Virtualization Scale' ? 'selected' : ''
               }`}
             onClick={() => handleOptionClick('Server Virtualization Scale')}
           > */}
-            {/* <h5>Server Virtualization Scale</h5>
+          {/* <h5>Server Virtualization Scale</h5>
             <div className="option">
               <div
                 className="option-content front"

@@ -7,6 +7,7 @@ import { buildDeployConfigPayload } from './networkapply.deployformat';
 const hostIP = window.location.hostname;
 
 const NetworkApply = () => {
+  const [hostServerId, setHostServerId] = useState(() => sessionStorage.getItem('host_server_id') || '');
 
   const { Option } = Select;
   const ipRegex = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/;
@@ -55,11 +56,29 @@ const NetworkApply = () => {
     }
   };
 
-  // On mount, fetch for all nodes
+  // On mount, fetch for all nodes and fetch host server_id
   useEffect(() => {
     licenseNodes.forEach(node => {
       if (node.ip) fetchNodeData(node.ip);
     });
+    // Fetch host server_id from backend
+    async function fetchHostServerId() {
+      try {
+        const userId = JSON.parse(sessionStorage.getItem('loginDetails'))?.data?.id;
+        const url = userId
+          ? `https://${hostIP}:5000/api/first-host-serverid?userId=${encodeURIComponent(userId)}`
+          : `https://${hostIP}:5000/api/first-host-serverid`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.server_id) {
+          setHostServerId(data.server_id);
+          sessionStorage.setItem('host_server_id', data.server_id);
+        }
+      } catch (e) {
+        setHostServerId('');
+      }
+    }
+    fetchHostServerId();
   }, [licenseNodes]);
   // Per-card loading and applied state, restore from sessionStorage if available
   const getInitialCardStatus = () => {
@@ -714,6 +733,82 @@ const NetworkApply = () => {
           bootEndTimes[nodeIdx] = bootEnd;
           sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(restartEndTimes));
           sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(bootEndTimes));
+
+          // --- SSH Polling Section ---
+          // Gather all required info for the polling API
+          const node_ip = form.ip;
+          let user_ip = '';
+          let interfaces = [];
+          if (Array.isArray(form.tableData)) {
+            interfaces = form.tableData.map(row => ({
+              type: row.type,
+              ip: row.ip
+            })).filter(row => row.ip && row.type);
+            // Try to find user-entered IP: for default, primary type; for segregated, management type
+            if (form.configType === 'default') {
+              const primary = interfaces.find(i => i.type === 'primary');
+              if (primary) user_ip = primary.ip;
+            } else if (form.configType === 'segregated') {
+              const mgmt = interfaces.find(i => Array.isArray(i.type) ? i.type.includes('Management') : i.type === 'Management');
+              if (mgmt) user_ip = mgmt.ip;
+            }
+          }
+          // Credentials: adjust as needed
+          const ssh_user = 'root';
+          const ssh_pass = '';
+          const ssh_key = '';
+
+          // Call the backend poll-ssh-status endpoint
+          const controller = new AbortController();
+          fetch(`https://${hostIP}:2020/poll-ssh-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              node_ip,
+              user_ip,
+              mode: form.configType,
+              interfaces,
+              ssh_user,
+              ssh_pass,
+              ssh_key
+            }),
+            signal: controller.signal
+          }).then(response => {
+            if (!response.body) return;
+            const reader = response.body.getReader();
+            let receivedSuccess = false;
+            function readStream() {
+              reader.read().then(({ done, value }) => {
+                if (done) return;
+                const chunk = new TextDecoder().decode(value);
+                // Parse SSE event
+                const lines = chunk.split('\n');
+                for (let line of lines) {
+                  if (line.startsWith('data:')) {
+                    try {
+                      const data = JSON.parse(line.replace('data:', '').trim());
+                      if (data.status === 'success') {
+                        receivedSuccess = true;
+                        setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
+                        message.success(`Node ${data.ip} is back online!`);
+                        controller.abort();
+                        return;
+                      } else if (data.status === 'fail') {
+                        // Show 'node restarting...' only if loader is still up
+                        if (cardStatus[nodeIdx]?.loading) {
+                          message.info('node restarting...');
+                        }
+                      }
+                    } catch (e) { /* ignore parse errors */ }
+                  }
+                }
+                if (!receivedSuccess) readStream();
+              });
+            }
+            readStream();
+          });
+          // --- End SSH Polling Section ---
+
           timerRefs.current[nodeIdx] = setTimeout(() => {
             message.success(`Network config for node ${form.ip} applied! Node restarting...`);
           }, RESTART_DURATION);
@@ -757,27 +852,56 @@ const NetworkApply = () => {
       message.error('Failed to parse node configuration.');
       return;
     }
-    // Transform each node config to deployment format (for deploy)
-    const transformedConfigs = {};
-    Object.entries(configs).forEach(([ip, form]) => {
-      transformedConfigs[ip] = buildDeployConfigPayload(form);
-    });
-    // POST to backend endpoint
+
+    // Prepare POST data for /api/child-deployment-activity-log
+    // Each node must have serverip, type, Management, Storage, External_Traffic, VXLAN, license_code, license_type, license_period
+    const nodes = Object.values(configs).map(form => ({
+      serverip: form.ip,
+      type: form.configType,
+      Management: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('Management') : row.type === 'Management')?.ip || '',
+      Storage: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('Storage') : row.type === 'Storage')?.ip || '',
+      External_Traffic: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('External Traffic') : row.type === 'External Traffic')?.ip || '',
+      VXLAN: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('VXLAN') : row.type === 'VXLAN')?.ip || '',
+      license_code: form.licenseCode || '',
+      license_type: form.licenseType || '',
+      license_period: form.licensePeriod || '',
+    }));
+
+    // Get user info and cloudname
+    const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
+    const user_id = loginDetails?.data?.id || '';
+    const username = loginDetails?.data?.username || '';
+    // Try to get cloudname from meta or fallback
+    let cloudname = '';
+    const meta = document.querySelector('meta[name="cloud-name"]');
+    if (meta) cloudname = meta.content;
+    if (!cloudname) cloudname = sessionStorage.getItem('cloud_cloudName') || 'Cloud';
+    const host_serverid = sessionStorage.getItem('host_server_id') || '';
+
+    // POST to backend
     try {
-      const res = await fetch(`https://${hostIP}:2020/store-deployment-configs`, {
+      const res = await fetch(`https://${hostIP}:5000/api/child-deployment-activity-log`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(transformedConfigs),
+        body: JSON.stringify({ nodes, user_id, username, cloudname, host_serverid })
       });
-      const result = await res.json();
-      if (result.success) {
-        message.success('Deployment configuration stored successfully!');
-      } else {
-        message.error('Some configs failed to store. Check backend logs.');
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to start deployment log');
       }
-    } catch (e) {
-      message.error('Failed to send deployment configs: ' + e.message);
+      // Optionally store the returned serverids for later use
+      sessionStorage.setItem('cloud_lastDeploymentNodes', JSON.stringify(data.nodes));
+      // Navigate to report tab
+      window.location.hash = '#/report'; // If using hash router
+      // Or, if using useNavigate from react-router-dom, use: navigate('/report');
+    } catch (err) {
+      message.error('Failed to start deployment: ' + err.message);
     }
+    // (Optionally, you may still want to transform configs for other purposes)
+    // const transformedConfigs = {};
+    // Object.entries(configs).forEach(([ip, form]) => {
+    //   transformedConfigs[ip] = buildDeployConfigPayload(form);
+    // });
   };
 
   return (
@@ -797,6 +921,12 @@ const NetworkApply = () => {
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {forms.map((form, idx) => (
           <Spin spinning={cardStatus[idx]?.loading} tip="Applying network changes & restarting node...">
+            {/* Host Node server_id display */}
+            {hostServerId && (
+              <div style={{ fontWeight: 600, fontSize: 18, marginBottom: 8, color: '#2a3f5c' }}>
+                Host Node: {hostServerId}
+              </div>
+            )}
             <Card key={form.ip} title={`Node: ${form.ip}`} style={{ width: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>

@@ -24,59 +24,34 @@ const Report = ({ onDeploymentComplete }) => {
   const logStartedRef = useRef(false);
   const intervalRef = useRef(null);
 
+  // Backend deployment progress polling
+  const [deploymentInProgress, setDeploymentInProgress] = useState(true);
+  // Placeholder for completed image path
+  const completedImage = require('./../../Images/completed_placeholder.png'); // Change later
+
   useEffect(() => {
-    // Session logic only, no backend integration
-    let completedTime = null;
-    let stopTimeout = null;
-
-    // Simulate progress for UI demonstration
-    setPercent(0);
-    setCompletedLogs([]);
-    setError(null);
-    let progress = 0;
-    let fakeInterval = setInterval(() => {
-      progress += 20;
-      setPercent(progress);
-      setCompletedLogs(prev => [...prev, allSteps[prev.length]]);
-      if (progress >= 100) {
-        clearInterval(fakeInterval);
-        setDeploymentPollingStopped(true);
-      }
-    }, 700);
-
-    return () => {
-      clearInterval(fakeInterval);
-      if (stopTimeout) clearTimeout(stopTimeout);
-    };
+    let interval = setInterval(() => {
+      fetch(`https://${hostIP}:2020/node-deployment-progress`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && typeof data.in_progress === 'boolean') {
+            setDeploymentInProgress(data.in_progress);
+          }
+        })
+        .catch(() => {});
+    }, 3000);
+    // Initial check
+    fetch(`https://${hostIP}:2020/node-deployment-progress`)
+      .then(res => res.json())
+      .then(data => {
+        if (data && typeof data.in_progress === 'boolean') {
+          setDeploymentInProgress(data.in_progress);
+        }
+      })
+      .catch(() => {});
+    return () => clearInterval(interval);
   }, []);
 
-  const allSteps = [
-    'Step 1: Cloud Initialization',
-    'Step 2: Cloud Resources Provisioned',
-    'Step 3: Network Configuration',
-    'Step 4: Services Deployment',
-    'Step 5: Finalizing Cloud Setup',
-    'Cloud Deployment Completed'
-  ];
-
-  let progressList = [];
-  let foundInProgress = false;
-
-  for (let i = 0; i < allSteps.length; i++) {
-    if (i < completedLogs.length) {
-      progressList.push(<li key={i}>{allSteps[i]}</li>);
-    } else if (!foundInProgress) {
-      progressList.push(
-        <li key={i} style={{ display: 'flex', alignItems: 'center' }}>
-          <em>{allSteps[i].replace('Step', 'Step') + ' in progress'}</em>
-          <Spin size="small" style={{ marginLeft: 8 }} />
-        </li>
-      );
-      foundInProgress = true;
-    } else {
-      progressList.push(<li key={i} style={{ color: '#bbb' }}>{allSteps[i]}</li>);
-    }
-  }
 
   useEffect(() => {
     if (percent === 100) {
@@ -111,12 +86,26 @@ const Report = ({ onDeploymentComplete }) => {
       <Card title={`Cloud Deployment Progress for ${cloudName} (${sessionStorage.getItem('cloud_server_ip') || 'N/A'})`}>
         <Row gutter={24}>
           <Col span={24}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 250 }}>
-              <img
-                src={require('./../../Images/plane.gif')}
-                alt="Deployment Progress"
-                style={{ width: 180, height: 180, objectFit: 'contain' }}
-              />
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', minHeight: 250 }}>
+              {deploymentInProgress ? (
+                <>
+                  <img
+                    src={require('./../../Images/plane.gif')}
+                    alt="Deployment Progress"
+                    style={{ width: 180, height: 180, objectFit: 'contain' }}
+                  />
+                  <div style={{ marginTop: 16, fontWeight: 500 }}>Deployment in progress</div>
+                </>
+              ) : (
+                <>
+                  <img
+                    src={completedImage}
+                    alt="Deployment Completed"
+                    style={{ width: 180, height: 180, objectFit: 'contain' }}
+                  />
+                  <div style={{ marginTop: 16, fontWeight: 500 }}>Deployment completed</div>
+                </>
+              )}
             </div>
           </Col>
         </Row>

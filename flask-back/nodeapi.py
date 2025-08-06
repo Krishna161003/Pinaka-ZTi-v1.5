@@ -322,7 +322,7 @@ def submit_network_config():
                         return jsonify({"success": False, "message": f"Invalid subnet mask for interface {real_iface}"}), 400
                 # Check if the network is available
                 if not is_network_available(iface_config.get("ip")):
-                    return jsonify({"success": False, "message": f"Network for interface {real_iface} is not available"}), 400
+                    return jsonify({"success": False, "message": f"Network for interface {real_iface} is not available or used by another device"}), 400
         
         # Validate default gateway reachability
         if not is_ip_reachable(data["default_gateway"]):
@@ -402,33 +402,29 @@ def is_interface_up(interface):
 def is_network_available(ip):
     try:
         subnet = ".".join(ip.split(".")[:3])
-
         interfaces = psutil.net_if_addrs()
-        network_available = False
+
         for interface, addresses in interfaces.items():
             for addr in addresses:
                 if addr.family.name == "AF_INET":
-                    local_subnet = ".".join(addr.address.split(".")[:3])
+                    local_ip = addr.address
+                    local_subnet = ".".join(local_ip.split(".")[:3])
+                    if local_ip == ip:
+                        # It's the host's own IP, so it's fine
+                        return True
                     if local_subnet == subnet:
-                        network_available = True
-                        break
-            if network_available:
-                break
+                        # Same subnet, but not the same IP → we need to ping
+                        result = subprocess.run(
+                            ["ping", "-c", "1", "-W", "1", ip],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                        return result.returncode != 0  # True if IP is not reachable (i.e., available)
+        
+        # If no local interface in subnet
+        print(f"Error: No network interface available in the subnet {subnet}.")
+        return False
 
-        if not network_available:
-            print(f"Error: No network interface available in the subnet {subnet}.")
-            return False
-
-        active_hosts = []
-        for i in range(1, 6):
-            host_ip = f"{subnet}.{i}"
-            result = subprocess.run(
-                ["ping", "-c", "1", host_ip], capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                active_hosts.append(host_ip)
-
-        return len(active_hosts) > 0
     except Exception as e:
         print(f"Error checking network availability: {e}")
         return False

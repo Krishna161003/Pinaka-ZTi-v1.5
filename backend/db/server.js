@@ -7,6 +7,7 @@ const cors = require("cors");
 const loginRoutes = require("./loginRoutes"); // New file for login
 const nodemailer = require("nodemailer"); // Import nodemailer library
 const bcrypt = require("bcrypt"); // Import bcrypt library
+const { customAlphabet } = require('nanoid'); // Import nanoid for generating unique IDs
 require("dotenv").config(); // Load environment variables
 const https = require('https');
 const fs = require('fs');
@@ -289,6 +290,32 @@ db.connect((err) => {
     if (err) throw err;
     console.log("Deployment_Activity_log table checked/created...");
 
+    // Create new deployment_activity_log table with default timestamp
+    const childDeploymentActivityLogTableSQL = `
+        CREATE TABLE IF NOT EXISTS child_deployment_activity_log (
+          id INT AUTO_INCREMENT PRIMARY KEY, -- S.NO
+          serverid CHAR(36) UNIQUE NOT NULL, -- serverid (generate with nanoid or uuid in app code)
+          user_id CHAR(36),                  -- Userid
+          host_serverid CHAR(36),             -- Host Serverid
+          username VARCHAR(255),             -- username
+          cloudname VARCHAR(255),            -- cloudname
+          serverip VARCHAR(15),              -- serverip
+          status VARCHAR(255),               -- status
+          type VARCHAR(255),                 -- type
+          Management VARCHAR(255) NULL,
+          Storage VARCHAR(255) NULL,
+          External_Traffic VARCHAR(255) NULL,
+          VXLAN VARCHAR(255) NULL,
+          datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_user_id (user_id)        -- Added index for foreign key
+        ) ENGINE=InnoDB;
+        `;
+
+    db.query(childDeploymentActivityLogTableSQL, (err, result) => {
+      if (err) throw err;
+      console.log("Child Deployment_Activity_log table checked/created...");
+    });
+
     // Create License table
     const licenseTableSQL = `
       CREATE TABLE IF NOT EXISTS License (
@@ -372,7 +399,6 @@ db.connect((err) => {
   });
 });
 
-
 // Helper to get the latest in-progress deployment for a user
 app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
   const { user_id } = req.params;
@@ -409,7 +435,7 @@ app.post('/api/deployment-activity-log', (req, res) => {
     WHERE user_id = ? AND status = 'progress' AND cloudname = ? AND serverip = ?
     LIMIT 1
   `;
-  
+
   db.query(checkSql, [user_id, cloudname, serverip], (checkErr, results) => {
     if (checkErr) {
       console.error('Error checking for existing deployment:', checkErr);
@@ -419,8 +445,8 @@ app.post('/api/deployment-activity-log', (req, res) => {
     // If an in-progress deployment exists, return its serverid without creating a new one
     if (results && results.length > 0) {
       const existingServerId = results[0].serverid;
-      return res.status(200).json({ 
-        message: 'Using existing deployment', 
+      return res.status(200).json({
+        message: 'Using existing deployment',
         serverid: existingServerId,
         existing: true
       });
@@ -438,13 +464,13 @@ app.post('/api/deployment-activity-log', (req, res) => {
     } else {
       serverid = nanoid();
     }
-    
+
     const sql = `
       INSERT INTO deployment_activity_log
         (serverid, user_id, username, cloudname, serverip, status, type, server_vip, Management, External_Traffic, Storage, VXLAN)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-    
+
     db.query(sql, [serverid, user_id, username, cloudname, serverip, status, type, vip, Management || null, External_Traffic || null, Storage || null, VXLAN || null], (err, result) => {
       if (err) {
         console.error('Error inserting deployment activity log:', err);
@@ -466,15 +492,15 @@ app.post('/api/deployment-activity-log', (req, res) => {
             console.error('Error inserting/updating license:', licErr);
             // Continue anyway, but log error
           }
-          res.status(200).json({ 
-            message: 'Deployment activity log and license created', 
+          res.status(200).json({
+            message: 'Deployment activity log and license created',
             serverid,
             existing: false
           });
         });
       } else {
-        res.status(200).json({ 
-          message: 'Deployment activity log created', 
+        res.status(200).json({
+          message: 'Deployment activity log created',
           serverid,
           existing: false
         });
@@ -631,6 +657,142 @@ app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) =
       res.status(200).json({ inProgress: true, log: results[0] });
     } else {
       res.status(200).json({ inProgress: false });
+    }
+  });
+});
+
+// Insert multiple child node deployment activity logs
+app.post('/api/child-deployment-activity-log', async (req, res) => {
+  const nodes = req.body.nodes; // Array of node objects
+  const { user_id, username, cloudname, host_serverid } = req.body;
+
+  // Validate required fields
+  if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
+    return res.status(400).json({ error: 'Missing or invalid nodes array' });
+  }
+
+  if (!user_id || !username || !cloudname || !host_serverid) {
+    return res.status(400).json({ error: 'Missing required fields: user_id, username, cloudname, or host_serverid' });
+  }
+
+  try {
+    // Generate server IDs for each node and insert into child_deployment_activity_log
+    const insertedNodes = [];
+    
+    for (const node of nodes) {
+      const { serverip, type, Management, Storage, External_Traffic, VXLAN } = node;
+      
+      // Validate node required fields
+      if (!serverip || !type) {
+        return res.status(400).json({ error: 'Each node must have serverip and type' });
+      }
+
+      // Generate unique serverid with SQDN- prefix
+      const nanoid6 = customAlphabet('ABCDEVSR0123456789abcdefgzkh', 6);
+      const serverid = 'SQDN-' + nanoid6();
+
+      // Insert child deployment activity log
+      const sql = `
+        INSERT INTO child_deployment_activity_log 
+          (serverid, user_id, host_serverid, username, cloudname, serverip, status, type, Management, Storage, External_Traffic, VXLAN) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+      
+      await new Promise((resolve, reject) => {
+        db.query(sql, [serverid, user_id, host_serverid, username, cloudname, serverip, 'progress', type, Management || null, Storage || null, External_Traffic || null, VXLAN || null], (err, result) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(result);
+          }
+        });
+      });
+
+      // Insert or update license details if provided
+      const { license_code, license_type, license_period } = node;
+      if (license_code) {
+        const licenseInsertSQL = `
+          INSERT INTO License (license_code, license_type, license_period, license_status, server_id) 
+          VALUES (?, ?, ?, ?, ?)
+          ON DUPLICATE KEY UPDATE 
+            license_type=VALUES(license_type), 
+            license_period=VALUES(license_period), 
+            license_status=VALUES(license_status),
+            server_id=VALUES(server_id)
+        `;
+        
+        await new Promise((resolve, reject) => {
+          db.query(licenseInsertSQL, [license_code, license_type, license_period, 'validated', serverid], (licErr) => {
+            if (licErr) {
+              reject(licErr);
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
+
+      insertedNodes.push({
+        serverid,
+        serverip,
+        type
+      });
+    }
+
+    res.status(200).json({
+      message: 'Child deployment activity logs created successfully',
+      nodes: insertedNodes
+    });
+
+  } catch (error) {
+    console.error('Error inserting child deployment activity logs:', error);
+    res.status(500).json({ error: 'Failed to insert child deployment activity logs' });
+  }
+});
+
+// API: Get first Host server_id for a user (or any user if not provided)
+app.get('/api/first-host-serverid', (req, res) => {
+  const { userId } = req.query;
+  let sql = 'SELECT server_id FROM Host';
+  let params = [];
+  if (userId) {
+    sql += ' WHERE user_id = ?';
+    params.push(userId);
+  }
+  sql += ' ORDER BY id ASC LIMIT 1';
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error fetching first Host server_id:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (results.length > 0) {
+      return res.json({ server_id: results[0].server_id });
+    } else {
+      return res.json({ server_id: null });
+    }
+  });
+});
+
+// API: Check if Host entry exists for a user and (optionally) cloudName
+app.get('/api/host-exists', (req, res) => {
+  const { userId, cloudName } = req.query;
+  if (!userId) return res.status(400).json({ message: 'userId is required' });
+  let sql = 'SELECT 1 FROM Host WHERE user_id = ?';
+  let params = [userId];
+  if (cloudName) {
+    sql += ' AND cloudname = ?';
+    params.push(cloudName);
+  }
+  sql += ' LIMIT 1';
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error('Error checking Host existence:', err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+    if (results.length > 0) {
+      return res.json({ exists: true });
+    } else {
+      return res.json({ exists: false });
     }
   });
 });

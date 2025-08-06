@@ -607,7 +607,7 @@ def submit_network_config():
                     jsonify(
                         {
                             "success": False,
-                            "message": f"Interface IP {row['ip']} in row {i+1} is unreachable. Please check the network.",
+                            "message": f"Interface IP {row['ip']} in row {i+1} is unreachable or used by another device. Please check the network.",
                         }
                     ),
                     400,
@@ -636,7 +636,7 @@ def submit_network_config():
             if not is_network_available(vip):
                 return (
                     jsonify(
-                        {"success": False, "message": "VIP network is not available"}
+                        {"success": False, "message": "VIP network is not available or used by another device"}
                     ),
                     400,
                 )
@@ -815,33 +815,29 @@ def is_interface_up(interface):
 def is_network_available(ip):
     try:
         subnet = ".".join(ip.split(".")[:3])
-
         interfaces = psutil.net_if_addrs()
-        network_available = False
+
         for interface, addresses in interfaces.items():
             for addr in addresses:
                 if addr.family.name == "AF_INET":
-                    local_subnet = ".".join(addr.address.split(".")[:3])
+                    local_ip = addr.address
+                    local_subnet = ".".join(local_ip.split(".")[:3])
+                    if local_ip == ip:
+                        # It's the host's own IP, so it's fine
+                        return True
                     if local_subnet == subnet:
-                        network_available = True
-                        break
-            if network_available:
-                break
+                        # Same subnet, but not the same IP → we need to ping
+                        result = subprocess.run(
+                            ["ping", "-c", "1", "-W", "1", ip],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                        return result.returncode != 0  # True if IP is not reachable (i.e., available)
+        
+        # If no local interface in subnet
+        print(f"Error: No network interface available in the subnet {subnet}.")
+        return False
 
-        if not network_available:
-            print(f"Error: No network interface available in the subnet {subnet}.")
-            return False
-
-        active_hosts = []
-        for i in range(1, 6):
-            host_ip = f"{subnet}.{i}"
-            result = subprocess.run(
-                ["ping", "-c", "1", host_ip], capture_output=True, text=True
-            )
-            if result.returncode == 0:
-                active_hosts.append(host_ip)
-
-        return len(active_hosts) > 0
     except Exception as e:
         print(f"Error checking network availability: {e}")
         return False
@@ -1444,6 +1440,99 @@ def store_deployment_configs():
     return jsonify({'results': results, 'success': all(r['status']== 'success' for r in results)})
 
 # -------------------------------------------------------------------------
+
+from flask import Response
+import threading
+import queue
+
+@app.route('/poll-ssh-status', methods=['POST'])
+def poll_ssh_status():
+    """
+    POST body: {
+        "node_ip": "...",          # original node ip
+        "user_ip": "...",          # user entered ip (can be empty)
+        "mode": "default"|"segregated", # config type
+        "interfaces": [             # array of {"type":..., "ip":...}
+            {"type": "primary", "ip": "..."},
+            {"type": "management", "ip": "..."},
+            ...
+        ],
+        "ssh_user": "root",       # SSH username
+        "ssh_pass": "...",        # SSH password (if any, or null)
+        "ssh_key": "..."          # SSH private key PEM (optional, as string)
+    }
+    Streams: event: status\ndata: {"status": "success"|"fail", "message": ...}\n\n
+    Tries SSH every 5s, sends fail message if cannot connect, stops and sends success if SSH works.
+    """
+    data = request.get_json()
+    node_ip = data.get('node_ip')
+    user_ip = data.get('user_ip')
+    mode = data.get('mode')
+    interfaces = data.get('interfaces', [])
+    ssh_user = data.get('ssh_user', 'root')
+    ssh_pass = data.get('ssh_pass')
+    ssh_key = data.get('ssh_key')
+
+    # Build candidate IPs in order
+    candidate_ips = []
+    if node_ip:
+        candidate_ips.append(node_ip)
+    if user_ip and user_ip != node_ip:
+        candidate_ips.append(user_ip)
+    if mode == 'default':
+        for iface in interfaces:
+            if iface.get('type') == 'primary' and iface.get('ip') and iface.get('ip') not in candidate_ips:
+                candidate_ips.append(iface['ip'])
+    elif mode == 'segregated':
+        for iface in interfaces:
+            if iface.get('type') == 'management' and iface.get('ip') and iface.get('ip') not in candidate_ips:
+                candidate_ips.append(iface['ip'])
+
+    def try_ssh(ip):
+        try:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            if ssh_key:
+                import io
+                key_file = io.StringIO(ssh_key)
+                pkey = paramiko.RSAKey.from_private_key(key_file)
+                ssh.connect(ip, username=ssh_user, pkey=pkey, timeout=5)
+            else:
+                ssh.connect(ip, username=ssh_user, password=ssh_pass, timeout=5)
+            ssh.close()
+            return True, None
+        except Exception as e:
+            return False, str(e)
+
+    def event_stream():
+        while True:
+            for ip in candidate_ips:
+                ok, err = try_ssh(ip)
+                if ok:
+                    yield f'event: status\ndata: '+json.dumps({"status": "success", "ip": ip, "message": f"SSH successful to {ip}"})+'\n\n'
+                    return
+                else:
+                    yield f'event: status\ndata: '+json.dumps({"status": "fail", "ip": ip, "message": f"SSH failed to {ip}: {err}"})+'\n\n'
+            time.sleep(5)
+    return Response(event_stream(), mimetype='text/event-stream')
+
+
+# ------------------- Node Deployment Progress Monitor Endpoint -------------------
+@app.route("/node-deployment-progress", methods=["GET"])
+def node_deployment_progress():
+    """
+    Checks if any file starting with 'node_' exists in the progress folder.
+    Returns {"in_progress": true} if such a file exists, else {"in_progress": false}.
+    """
+    folder_path = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/progress/"  # Change as needed
+    try:
+        os.makedirs(folder_path, exist_ok=True)
+        for fname in os.listdir(folder_path):
+            if fname.startswith("node_"):
+                return jsonify({"in_progress": True})
+        return jsonify({"in_progress": False})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(
