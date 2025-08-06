@@ -225,8 +225,47 @@ const Deployment = ({ next }) => {
           sessionStorage.removeItem(key); // Clean up if not present
         }
       });
-      // message.success('All validations passed. Proceeding to submit...');
-      // TODO: Add actual submission logic
+
+      // --- Now create deployment activity log after sessionStorage is fully updated ---
+      const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
+      const userData = loginDetails?.data;
+      const user_id = userData?.id;
+      const username = userData?.companyName;
+      const server_ip = sessionStorage.getItem('server_ip');
+      if (!user_id || !username || !cloudName || !server_ip) {
+        setLoading(false);
+        message.error('Missing required fields for deployment log');
+        return;
+      }
+      try {
+        const res = await fetch(`https://${hostIP}:5000/api/deployment-activity-log`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id,
+            username,
+            cloudname: cloudName,
+            serverip: server_ip,
+            license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
+            license_type: JSON.parse(sessionStorage.getItem('licenseStatus'))?.type || null,
+            license_period: JSON.parse(sessionStorage.getItem('licenseStatus'))?.period || null,
+            vip: sessionStorage.getItem('vip') || null,
+            Management: sessionStorage.getItem('Management') || null,
+            External_Traffic: sessionStorage.getItem('External_Traffic') || null,
+            Storage: sessionStorage.getItem('Storage') || null,
+            VXLAN: sessionStorage.getItem('VXLAN') || null
+          })
+        });
+        const data = await res.json();
+        if (data.serverid) {
+          sessionStorage.setItem('currentServerid', data.serverid);
+        }
+        if (next) next(); // Move to Report tab only after log creation
+      } catch (e) {
+        setLoading(false);
+        message.error('Error logging deployment activity');
+        return;
+      }
     } catch (error) {
       message.error('Please fix the errors in required fields.');
     }

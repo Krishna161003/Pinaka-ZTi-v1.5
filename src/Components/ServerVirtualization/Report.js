@@ -21,108 +21,14 @@ const Report = ({ ibn, onDeploymentComplete }) => {
   const [error, setError] = useState(null);
   const [deploymentPollingStopped, setDeploymentPollingStopped] = useState(false);
 
-  // Track serverid for this deployment
+  // Track serverid for this deployment (from sessionStorage only)
   const serveridRef = React.useRef(sessionStorage.getItem('currentServerid') || null);
-  // Prevent duplicate logDeploymentStart calls
-  const logStartedRef = useRef(false);
 
   const intervalRef = useRef(null);
   useEffect(() => {
     let isMounted = true;
     let completedTime = null;
     let stopTimeout = null;
-
-    // --- Prevent duplicate DB logs on reload/login ---
-    const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
-    const userData = loginDetails?.data;
-    const user_id = userData?.id;
-
-    // Check for in-progress deployment and set serveridRef/sessionStorage if needed
-    const checkInProgress = async () => {
-      if (!user_id) return false;
-      try {
-        const res = await fetch(`https://${hostIP}:5000/api/deployment-activity-log/latest-in-progress/${user_id}`);
-        const data = await res.json();
-        if (data.inProgress && data.log?.serverid) {
-          console.log('Existing in-progress deployment found:', data.log.serverid);
-          serveridRef.current = data.log.serverid;
-          sessionStorage.setItem('currentServerid', data.log.serverid);
-          return true;
-        }
-      } catch (e) {
-        console.error('Error checking in-progress deployments:', e);
-      }
-      return false;
-    };
-
-    // Helper to log deployment start
-    const logDeploymentStart = async () => {
-      // Prevent multiple concurrent calls
-      if (logStartedRef.current) {
-        console.log('Log deployment already started, skipping duplicate call');
-        return;
-      }
-      logStartedRef.current = true;
-
-      const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
-      const userData = loginDetails?.data;
-      const user_id = userData?.id;
-      const username = userData?.companyName;
-      const server_ip = sessionStorage.getItem('server_ip');
-      
-      if (!user_id || !username || !cloudName || !server_ip) {
-        console.warn('Missing required fields for deployment log', { user_id, username, cloudName, hostIP, server_ip });
-        logStartedRef.current = false;
-        return;
-      }
-
-      try {
-        // First, check for existing in-progress deployment
-        const checkRes = await fetch(`https://${hostIP}:5000/api/deployment-activity-log/latest-in-progress/${user_id}`);
-        const checkData = await checkRes.json();
-        
-        if (checkData.inProgress && checkData.log) {
-          console.log('Found existing in-progress deployment:', checkData.log.serverid);
-          serveridRef.current = checkData.log.serverid;
-          sessionStorage.setItem('currentServerid', checkData.log.serverid);
-          logStartedRef.current = false;
-          return;
-        }
-
-        // No existing deployment found, create a new one
-        console.log('Creating new deployment activity log', { user_id, username, cloudName, server_ip });
-        const res = await fetch(`https://${hostIP}:5000/api/deployment-activity-log`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id,
-            username,
-            cloudname: cloudName,
-            serverip: server_ip,
-            license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
-            license_type: JSON.parse(sessionStorage.getItem('licenseStatus'))?.type || null,
-            license_period: JSON.parse(sessionStorage.getItem('licenseStatus'))?.period || null,
-            vip: sessionStorage.getItem('vip') || null,
-            Management: sessionStorage.getItem('Management') || null,
-            External_Traffic: sessionStorage.getItem('External_Traffic') || null,
-            Storage: sessionStorage.getItem('Storage') || null,
-            VXLAN: sessionStorage.getItem('VXLAN') || null
-          })
-        });
-        
-        const data = await res.json();
-        console.log('Deployment activity log response:', data);
-        
-        if (data.serverid) {
-          serveridRef.current = data.serverid;
-          sessionStorage.setItem('currentServerid', data.serverid);
-        }
-      } catch (e) {
-        console.error('Error in deployment logging:', e);
-      } finally {
-        logStartedRef.current = false;
-      }
-    };
 
     // Debug: Log each time fetchProgress runs and the percent value
     const debugFetchProgress = (data) => {
@@ -190,7 +96,6 @@ const Report = ({ ibn, onDeploymentComplete }) => {
       }
     };
 
-
     const fetchProgress = async () => {
       try {
         const res = await fetch(`https://${hostIP}:2020/deployment-progress`);
@@ -202,11 +107,6 @@ const Report = ({ ibn, onDeploymentComplete }) => {
             setError(null);
 
             debugFetchProgress(data);
-
-            // --- NEW: Log deployment start ONLY after first progress received (percent > 0) ---
-            if ((data.percent || 0) > 0 && !logStartedRef.current && !serveridRef.current) {
-              await logDeploymentStart();
-            }
 
             // Stop polling IMMEDIATELY if deployment is complete
             if ((data.percent || 0) === 100) {
@@ -258,19 +158,15 @@ const Report = ({ ibn, onDeploymentComplete }) => {
       }
     };
 
+    // Start polling progress
+    fetchProgress();
+    intervalRef.current = setInterval(fetchProgress, 2000);
 
-
-    // First, check for in-progress deployment, then start polling
-    checkInProgress().then((inProgress) => {
-      fetchProgress();
-      intervalRef.current = setInterval(fetchProgress, 2000);
-    });
     return () => {
       isMounted = false;
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (stopTimeout) clearTimeout(stopTimeout);
       if (completionWindowTimeoutRef.current) clearTimeout(completionWindowTimeoutRef.current);
-      logStartedRef.current = false; // Reset on unmount
     };
   }, [cloudName, completionWindowActive, onDeploymentComplete, deploymentPollingStopped]);
 
@@ -316,8 +212,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         sessionStorage.setItem('lastZtiPath', '/servervirtualization?tab=1');
         sessionStorage.setItem('serverVirtualization_activeTab', '1');
         sessionStorage.setItem('disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
-        sessionStorage.setItem('serverVirtualization_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
-        
+        sessionStorage.setItem('serverVirtualization_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true })); 
       };
       window.addEventListener('beforeunload', handleBeforeUnload);
       return () => {
