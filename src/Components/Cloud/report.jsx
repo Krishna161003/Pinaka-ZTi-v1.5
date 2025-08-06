@@ -27,7 +27,7 @@ const Report = ({ onDeploymentComplete }) => {
   // Backend deployment progress polling
   const [deploymentInProgress, setDeploymentInProgress] = useState(true);
   // Placeholder for completed image path
-  const completedImage = require('./../../Images/completed_placeholder.png'); // Change later
+  const completedImage = require('../../Images/completed.png'); // Change later
 
   useEffect(() => {
     let interval = setInterval(() => {
