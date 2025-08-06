@@ -23,29 +23,25 @@ const DeploymentOptions = ({ onStart }) => {
     }
   };
 
-  // Check if Host entry exists for userId + cloudName
-  const checkHostDeployed = async (cloudNameToCheck) => {
-    const userId = getUserId();
-    if (!userId || !cloudNameToCheck) {
-      setIsDeployed(false);
-      return;
-    }
-    try {
-      const res = await axios.get(`https://${hostIP}:5000/api/host-exists`, {
-        params: { userId, cloudName: cloudNameToCheck }
-      });
-      setIsDeployed(res.data.exists === true);
-    } catch (err) {
-      setIsDeployed(false);
-    }
-  };
-
-  // Check on mount and when cloudName changes
+    // Check on mount only (not on cloudName change)
   useEffect(() => {
-    if (cloudName) {
-      checkHostDeployed(cloudName);
-    }
-  }, [cloudName]);
+    const checkHostDeployed = async () => {
+      const userId = getUserId();
+      if (!userId) {
+        setIsDeployed(false);
+        return;
+      }
+      try {
+        const res = await axios.get(`https://${hostIP}:5000/api/host-exists`, {
+          params: { userId }
+        });
+        setIsDeployed(res.data.exists === true);
+      } catch (err) {
+        setIsDeployed(false);
+      }
+    };
+    checkHostDeployed();
+  }, []);
 
   // Also check on modal open (when user selects Server Virtualization)
   useEffect(() => {

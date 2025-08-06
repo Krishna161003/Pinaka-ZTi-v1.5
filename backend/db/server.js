@@ -773,17 +773,12 @@ app.get('/api/first-host-serverid', (req, res) => {
   });
 });
 
-// API: Check if Host entry exists for a user and (optionally) cloudName
+// API: Check if Host entry exists for a user (cloudName ignored)
 app.get('/api/host-exists', (req, res) => {
-  const { userId, cloudName } = req.query;
+  const { userId } = req.query;
   if (!userId) return res.status(400).json({ message: 'userId is required' });
-  let sql = 'SELECT 1 FROM Host WHERE user_id = ?';
+  let sql = 'SELECT 1 FROM Host WHERE user_id = ? LIMIT 1';
   let params = [userId];
-  if (cloudName) {
-    sql += ' AND cloudname = ?';
-    params.push(cloudName);
-  }
-  sql += ' LIMIT 1';
   db.query(sql, params, (err, results) => {
     if (err) {
       console.error('Error checking Host existence:', err);
