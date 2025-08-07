@@ -1469,9 +1469,10 @@ def poll_ssh_status():
     user_ip = data.get('user_ip')
     mode = data.get('mode')
     interfaces = data.get('interfaces', [])
-    ssh_user = data.get('ssh_user', 'root')
-    ssh_pass = data.get('ssh_pass')
-    ssh_key = data.get('ssh_key')
+    ssh_user = "pinakasupport"
+    # ssh_pass = "pinakasupport"
+    # ssh_key = ""
+    pem_path = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
 
     # Build candidate IPs in order
     candidate_ips = []
@@ -1492,13 +1493,8 @@ def poll_ssh_status():
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            if ssh_key:
-                import io
-                key_file = io.StringIO(ssh_key)
-                pkey = paramiko.RSAKey.from_private_key(key_file)
-                ssh.connect(ip, username=ssh_user, pkey=pkey, timeout=5)
-            else:
-                ssh.connect(ip, username=ssh_user, password=ssh_pass, timeout=5)
+            pkey = paramiko.RSAKey.from_private_key_file(pem_path)
+            ssh.connect(ip, username=ssh_user, pkey=pkey, timeout=5)
             ssh.close()
             return True, None
         except Exception as e:
