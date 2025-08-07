@@ -245,6 +245,7 @@ const Deployment = ({ next }) => {
         validationFailed = true;
         return;
       }
+      let backendError = false;
       try {
         const res = await fetch(`https://${hostIP}:5000/api/deployment-activity-log`, {
           method: 'POST',
@@ -269,15 +270,17 @@ const Deployment = ({ next }) => {
           sessionStorage.setItem('currentServerid', data.serverid);
         } else {
           message.error(data.message || 'Error logging deployment activity');
-          setLoading(false);
+          backendError = true;
           validationFailed = true;
           return;
         }
       } catch (e) {
         message.error('Error logging deployment activity');
-        setLoading(false);
+        backendError = true;
         validationFailed = true;
         return;
+      } finally {
+        if (backendError) setLoading(false);
       }
     } catch (error) {
       message.error('Please fix the errors in required fields.');
