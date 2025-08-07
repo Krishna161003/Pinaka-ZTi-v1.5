@@ -405,7 +405,7 @@ app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) =
   const sql = `
     SELECT * FROM deployment_activity_log 
     WHERE user_id = ? AND status = 'progress' 
-    ORDER BY created_at DESC 
+    ORDER BY datetime DESC 
     LIMIT 1
   `;
   db.query(sql, [user_id], (err, results) => {
