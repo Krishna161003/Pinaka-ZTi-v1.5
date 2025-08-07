@@ -693,8 +693,8 @@ app.post('/api/child-deployment-activity-log', async (req, res) => {
       // Insert child deployment activity log
       const sql = `
         INSERT INTO child_deployment_activity_log 
-          (serverid, user_id, host_serverid, username,serverip, status, type, Management, Storage, External_Traffic, VXLAN) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (serverid, user_id, host_serverid, username, serverip, status, type, Management, Storage, External_Traffic, VXLAN)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
       await new Promise((resolve, reject) => {
