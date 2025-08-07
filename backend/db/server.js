@@ -298,7 +298,6 @@ db.connect((err) => {
           user_id CHAR(36),                  -- Userid
           host_serverid CHAR(36),             -- Host Serverid
           username VARCHAR(255),             -- username
-          cloudname VARCHAR(255),            -- cloudname
           serverip VARCHAR(15),              -- serverip
           status VARCHAR(255),               -- status
           type VARCHAR(255),                 -- type
@@ -671,8 +670,8 @@ app.post('/api/child-deployment-activity-log', async (req, res) => {
     return res.status(400).json({ error: 'Missing or invalid nodes array' });
   }
 
-  if (!user_id || !username || !cloudname || !host_serverid) {
-    return res.status(400).json({ error: 'Missing required fields: user_id, username, cloudname, or host_serverid' });
+  if (!user_id || !username || !host_serverid) {
+    return res.status(400).json({ error: 'Missing required fields: user_id, username, or host_serverid' });
   }
 
   try {
@@ -694,12 +693,12 @@ app.post('/api/child-deployment-activity-log', async (req, res) => {
       // Insert child deployment activity log
       const sql = `
         INSERT INTO child_deployment_activity_log 
-          (serverid, user_id, host_serverid, username, cloudname, serverip, status, type, Management, Storage, External_Traffic, VXLAN) 
+          (serverid, user_id, host_serverid, username,serverip, status, type, Management, Storage, External_Traffic, VXLAN) 
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
       
       await new Promise((resolve, reject) => {
-        db.query(sql, [serverid, user_id, host_serverid, username, cloudname, serverip, 'progress', type, Management || null, Storage || null, External_Traffic || null, VXLAN || null], (err, result) => {
+        db.query(sql, [serverid, user_id, host_serverid, username, serverip, 'progress', type, Management || null, Storage || null, External_Traffic || null, VXLAN || null], (err, result) => {
           if (err) {
             reject(err);
           } else {

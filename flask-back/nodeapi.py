@@ -291,45 +291,79 @@ def submit_network_config():
         # Validate default gateway
         if "default_gateway" not in data or not data["default_gateway"]:
             return jsonify({"success": False, "message": "Missing 'default_gateway'"}), 400
-        
         if not validate_ip_address(data["default_gateway"]):
             return jsonify({"success": False, "message": "Invalid default gateway IP address"}), 400
 
-        # Validate hostname if provided
-        if "hostname" in data and not data["hostname"].strip():
+        # Validate hostname
+        if "hostname" not in data or not isinstance(data["hostname"], str) or not data["hostname"].strip():
             return jsonify({"success": False, "message": "Hostname cannot be empty"}), 400
 
         # Validate DNS servers if provided
-        if "dns_servers" in data and isinstance(data["dns_servers"], list):
+        if "dns_servers" in data:
+            if not isinstance(data["dns_servers"], list):
+                return jsonify({"success": False, "message": "'dns_servers' must be a list"}), 400
             for dns in data["dns_servers"]:
                 if not validate_ip_address(dns):
                     return jsonify({"success": False, "message": f"Invalid DNS server IP: {dns}"}), 400
 
         # Validate network interfaces
         for iface_name, iface_config in data["using_interfaces"].items():
-            # Use the real interface name from the config, fallback to key if missing
+            # interface_name
             real_iface = iface_config.get("interface_name", iface_name)
+            if not real_iface or not isinstance(real_iface, str):
+                return jsonify({"success": False, "message": f"Invalid or missing interface_name for {iface_name}"}), 400
+            # type
+            iface_type = iface_config.get("type")
+            if not iface_type or not isinstance(iface_type, list) or not iface_type:
+                return jsonify({"success": False, "message": f"Invalid or missing type for {real_iface}"}), 400
+            # vlan_id
+            vlan_id = iface_config.get("vlan_id")
+            if vlan_id is not None:
+                try:
+                    vlan_num = int(vlan_id)
+                    if not (1 <= vlan_num <= 4094):
+                        return jsonify({"success": False, "message": f"Invalid VLAN ID for {real_iface}"}), 400
+                except Exception:
+                    return jsonify({"success": False, "message": f"Invalid VLAN ID for {real_iface}"}), 400
+            # Bond_Slave
+            bond_slave = iface_config.get("Bond_Slave")
+            if bond_slave and bond_slave not in ["YES", "NO"]:
+                return jsonify({"success": False, "message": f"Bond_Slave for {real_iface} must be 'YES' or 'NO'"}), 400
+            # Properties
+            props = iface_config.get("Properties", {})
+            if props and not isinstance(props, dict):
+                return jsonify({"success": False, "message": f"Properties for {real_iface} must be a dict"}), 400
+            # IP address
+            iface_ip = iface_config.get("ip") or props.get("IP_ADDRESS")
+            if iface_ip:
+                if not validate_ip_address(iface_ip):
+                    return jsonify({"success": False, "message": f"Invalid IP address for interface {real_iface}"}), 400
+                # Netmask
+                netmask = iface_config.get("netmask") or props.get("Netmask")
+                if netmask:
+                    if not validate_subnet_mask(netmask):
+                        return jsonify({"success": False, "message": f"Invalid subnet mask for interface {real_iface}"}), 400
+                # Network available
+                if not is_network_available(iface_ip):
+                    return jsonify({"success": False, "message": f"Network for interface {real_iface} is not available or used by another device"}), 400
+            # DNS in Properties
+            if "DNS" in props:
+                if not validate_ip_address(props["DNS"]):
+                    return jsonify({"success": False, "message": f"Invalid DNS IP in Properties for {real_iface}"}), 400
+            # gateway in Properties
+            if "gateway" in props:
+                if not validate_ip_address(props["gateway"]):
+                    return jsonify({"success": False, "message": f"Invalid gateway IP in Properties for {real_iface}"}), 400
             # Check if interface exists and is up
             if not is_interface_up(real_iface):
                 return jsonify({"success": False, "message": f"Interface {real_iface} is not available or could not be brought up"}), 400
-            # Validate IP configuration if provided
-            if "ip" in iface_config and iface_config["ip"]:
-                if not validate_ip_address(iface_config["ip"]):
-                    return jsonify({"success": False, "message": f"Invalid IP address for interface {real_iface}"}), 400
-                # Validate subnet mask if provided
-                if "netmask" in iface_config and iface_config["netmask"]:
-                    if not validate_subnet_mask(iface_config["netmask"]):
-                        return jsonify({"success": False, "message": f"Invalid subnet mask for interface {real_iface}"}), 400
-                # Check if the network is available
-                if not is_network_available(iface_config.get("ip")):
-                    return jsonify({"success": False, "message": f"Network for interface {real_iface} is not available or used by another device"}), 400
-        
+
         # Validate default gateway reachability
         if not is_ip_reachable(data["default_gateway"]):
             return jsonify({"success": False, "message": "Default gateway is not reachable"}), 400
 
         # Validate DNS servers reachability if provided
-        if "dns_servers" in data and isinstance(data["dns_servers"], list):
+        if "dns_servers" in data:
             for dns in data["dns_servers"]:
                 if not is_ip_reachable(dns):
                     return jsonify({"success": False, "message": f"DNS server {dns} is not reachable"}), 400
