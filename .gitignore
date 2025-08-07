@@ -1,1 +1,5 @@
 node_modules/
+ssl/keycloak.crt
+ssl/keycloak.csr
+ssl/keycloak.key
+ssl/keystore.p12
