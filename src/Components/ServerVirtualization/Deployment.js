@@ -257,10 +257,14 @@ const Deployment = ({ next }) => {
           })
         });
         const data = await res.json();
-        if (data.serverid) {
+        if (res.ok && data.serverid) {
           sessionStorage.setItem('currentServerid', data.serverid);
+          if (next) next(); // Move to Report tab only after log creation
+        } else {
+          setLoading(false);
+          message.error(data.message || 'Error logging deployment activity');
+          return;
         }
-        if (next) next(); // Move to Report tab only after log creation
       } catch (e) {
         setLoading(false);
         message.error('Error logging deployment activity');
