@@ -44,11 +44,11 @@ const DeploymentOptions = ({ onStart }) => {
   }, []);
 
   // Also check on modal open (when user selects Server Virtualization)
-  useEffect(() => {
-    if (isModalVisible && cloudName) {
-      checkHostDeployed(cloudName);
-    }
-  }, [isModalVisible]);
+  // useEffect(() => {
+  //   if (isModalVisible && cloudName) {
+  //     checkHostDeployed(cloudName);
+  //   }
+  // }, [isModalVisible]);
 
   const handleOptionClick = (option) => {
     if (option === 'Server Virtualization') {
