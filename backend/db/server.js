@@ -696,20 +696,18 @@ INSERT INTO child_deployment_activity_log
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
-      db.query(sql, [
-        serverid, user_id, host_serverid, username, serverip, 'progress', 'child',
-        Management || null, Storage || null, External_Traffic || null, VXLAN || null
-      ], callback);
-
-      // await new Promise((resolve, reject) => {
-      //   db.query(sql, [serverid, user_id, host_serverid, username, serverip, 'progress', type, Management || null, Storage || null, External_Traffic || null, VXLAN || null], (err, result) => {
-      //     if (err) {
-      //       reject(err);
-      //     } else {
-      //       resolve(result);
-      //     }
-      //   });
-      // });
+      await new Promise((resolve, reject) => {
+        db.query(sql, [
+          serverid, user_id, host_serverid, username, serverip, 'progress', 'child',
+          Management || null, Storage || null, External_Traffic || null, VXLAN || null
+        ], (err, result) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(result);
+          }
+        });
+      });
 
       // Insert or update license details if provided
       const { license_code, license_type, license_period } = node;
