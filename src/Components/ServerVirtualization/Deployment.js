@@ -100,8 +100,8 @@ const Deployment = ({ next }) => {
       const vipValues = await vipform.validateFields();
 
       if (configType === 'segregated' && !vipValues.defaultGateway) {
-        setLoading(false);
         message.error('Default Gateway is required in segregated mode.');
+        setLoading(false);
         validationFailed = true;
         return;
       }
@@ -112,24 +112,24 @@ const Deployment = ({ next }) => {
 
         // Bond: must select 2 interfaces
         if (!row.interface || (useBond && row.interface.length !== 2)) {
-          setLoading(false);
           message.error(`Row ${i + 1}: Please select ${useBond ? 'exactly two' : 'a'} interface${useBond ? 's' : ''}.`);
+          setLoading(false);
           validationFailed = true;
           return;
         }
 
         // Must select Type
         if (!row.type || (Array.isArray(row.type) && row.type.length === 0)) {
-          setLoading(false);
           message.error(`Row ${i + 1}: Please select a Type.`);
+          setLoading(false);
           validationFailed = true;
           return;
         }
 
         // If bond is enabled, Bond Name is required
         if (useBond && !row.bondName?.trim()) {
-          setLoading(false);
           message.error(`Row ${i + 1}: Please enter a Bond Name.`);
+          setLoading(false);
           validationFailed = true;
           return;
         }
@@ -140,8 +140,8 @@ const Deployment = ({ next }) => {
           const requiredFields = ['ip', 'subnet', 'dns']; // gateway removed
           for (const field of requiredFields) {
             if (!row[field]) {
-              setLoading(false);
               message.error(`Row ${i + 1}: Please enter ${field.toUpperCase()}.`);
+              setLoading(false);
               validationFailed = true;
               return;
             }
@@ -150,8 +150,8 @@ const Deployment = ({ next }) => {
 
         // Check for inline validation errors
         if (Object.keys(row.errors || {}).length > 0) {
-          setLoading(false);
           message.error(`Row ${i + 1} contains invalid entries. Please fix them.`);
+          setLoading(false);
           validationFailed = true;
           return;
         }
@@ -164,8 +164,8 @@ const Deployment = ({ next }) => {
       if (providerTouched) {
         for (const field of providerFields) {
           if (!providerValues[field]) {
-            setLoading(false);
             message.error(`Provider Network: Please fill in the ${field} field.`);
+            setLoading(false);
             validationFailed = true;
             return;
           }
@@ -179,8 +179,8 @@ const Deployment = ({ next }) => {
       if (tenantTouched) {
         for (const field of tenantFields) {
           if (!tenantValues[field]) {
-            setLoading(false);
             message.error(`Tenant Network: Please fill in the ${field} field.`);
+            setLoading(false);
             validationFailed = true;
             return;
           }
@@ -240,8 +240,8 @@ const Deployment = ({ next }) => {
       const username = userData?.companyName;
       const server_ip = sessionStorage.getItem('server_ip');
       if (!user_id || !username || !cloudName || !server_ip) {
-        setLoading(false);
         message.error('Missing required fields for deployment log');
+        setLoading(false);
         validationFailed = true;
         return;
       }
@@ -268,20 +268,20 @@ const Deployment = ({ next }) => {
         if (res.ok && data.serverid) {
           sessionStorage.setItem('currentServerid', data.serverid);
         } else {
-          setLoading(false);
           message.error(data.message || 'Error logging deployment activity');
+          setLoading(false);
           validationFailed = true;
           return;
         }
       } catch (e) {
-        setLoading(false);
         message.error('Error logging deployment activity');
+        setLoading(false);
         validationFailed = true;
         return;
       }
     } catch (error) {
-      setLoading(false);
       message.error('Please fix the errors in required fields.');
+      setLoading(false);
       validationFailed = true;
       return;
     }
@@ -309,8 +309,8 @@ const Deployment = ({ next }) => {
 
         await submitToBackend(rawData);
       } catch (err) {
-        setLoading(false);
         message.error("Validation or submission failed.");
+        setLoading(false);
       }
     } else {
       setLoading(false);
