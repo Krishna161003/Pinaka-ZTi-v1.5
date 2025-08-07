@@ -593,6 +593,231 @@ def get_cpu_socket_count():
         print(f"An error occurred: {e}")
         return None
 
+# ------------------- System Utilization Endpoint -------------------
+import psutil
+@app.route('/system-utilization', methods=['GET'])
+def system_utilization():
+    try:
+        cpu_percent = psutil.cpu_percent(interval=1)
+        mem = psutil.virtual_memory()
+        mem_percent = mem.percent
+        total_mem_mb = int(mem.total / (1024*1024))
+        used_mem_mb = int(mem.used / (1024*1024))
+        # Add to history buffers
+        add_cpu_history(cpu_percent)
+        add_memory_history(mem_percent)
+        return jsonify({
+            "cpu": cpu_percent,
+            "memory": mem_percent,
+            "total_memory": total_mem_mb,
+            "used_memory": used_mem_mb
+        })
+    except Exception as e:
+        # Always return all keys with safe values, plus error for debugging
+        return jsonify({
+            "cpu": 0,
+            "memory": 0,
+            "total_memory": 0,
+            "used_memory": 0,
+            "error": str(e)
+        }), 200
+
+@app.route('/system-utilization-history', methods=['GET'])
+def system_utilization_history():
+    try:
+        cpu_history = get_cpu_history()
+        memory_history = get_memory_history()
+        return jsonify({
+            "cpu_history": cpu_history,
+            "memory_history": memory_history
+        })
+    except Exception as e:
+        return jsonify({
+            "cpu_history": [],
+            "memory_history": [],
+            "error": str(e)
+        })
+
+def get_available_interfaces():
+    try:
+        with open('/proc/net/dev', 'r') as f:
+            lines = f.readlines()[2:]  # Skip headers
+            interfaces = [line.strip().split(':')[0].strip() for line in lines]
+            return interfaces
+    except Exception:
+        return []
+
+def get_bandwidth(interface):
+    try:
+        with open('/proc/net/dev', 'r') as f:
+            lines = f.readlines()
+        for line in lines:
+            if interface in line:
+                data = line.split()
+                rx_bytes = int(data[1])
+                tx_bytes = int(data[9])
+                return rx_bytes, tx_bytes
+        return None, None
+    except Exception:
+        return None, None
+
+def get_latency(host="8.8.8.8", count=3):
+    try:
+        output = subprocess.check_output(["ping", "-c", str(count), host], stderr=subprocess.DEVNULL).decode()
+        match = re.search(r"min/avg/max/mdev = [\d\.]+/([\d\.]+)/", output)
+        if match:
+            return float(match.group(1))
+    except Exception:
+        pass
+    return None
+
+@app.route("/interfaces", methods=["GET"])
+def interfaces():
+    iface_list = get_available_interfaces()
+    return jsonify([{"label": iface, "value": iface} for iface in iface_list])
+
+@app.route("/network-health", methods=["GET"])
+def network_health():
+    interfaces = get_available_interfaces()
+    interface = request.args.get("interface")
+    
+    if not interface:
+        if interfaces:
+            interface = interfaces[0]
+        else:
+            return jsonify({"error": "No network interfaces available"}), 500
+
+    ping_host = request.args.get("ping_host", "8.8.8.8")
+
+    rx1, tx1 = get_bandwidth(interface)
+    time.sleep(1)
+    rx2, tx2 = get_bandwidth(interface)
+
+    if None in (rx1, tx1, rx2, tx2):
+        return jsonify({"error": f"Failed to read bandwidth data for interface {interface}"}), 500
+
+    bandwidth_rx_kbps = (rx2 - rx1) / 1024
+    bandwidth_tx_kbps = (tx2 - tx1) / 1024
+    latency_ms = get_latency(ping_host)
+
+    # Add to bandwidth history
+    add_bandwidth_history(interface)
+
+    return jsonify({
+        "time": time.strftime("%H:%M"),
+        "bandwidth_kbps": round(bandwidth_rx_kbps + bandwidth_tx_kbps, 2),
+        "latency_ms": round(latency_ms, 2) if latency_ms is not None else None
+    })
+
+# Bandwidth history endpoint
+@app.route('/bandwidth-history', methods=['GET'])
+def bandwidth_history():
+    interface = request.args.get('interface')
+    if not interface:
+        interfaces = get_available_interfaces()
+        if interfaces:
+            interface = interfaces[0]
+        else:
+            return jsonify({"bandwidth_history": [], "error": "No interfaces available"})
+    # Optionally, trigger a new sample
+    add_bandwidth_history(interface)
+    return jsonify({"bandwidth_history": get_bandwidth_history()})
+
+# Thresholds for health levels
+CPU_WARNING = 80
+CPU_CRITICAL = 90
+MEM_WARNING = 70
+MEM_CRITICAL = 85
+DISK_WARNING = 80
+DISK_CRITICAL = 90
+
+def get_local_health_status():
+    try:
+        # CPU usage (average over 1 second)
+        cpu_usage = psutil.cpu_percent(interval=1)
+
+        # Memory usage
+        mem = psutil.virtual_memory()
+        mem_usage = mem.percent
+
+        # Disk usage
+        disk = psutil.disk_usage('/')
+        disk_usage = disk.percent
+
+        # Determine status
+        status = "Good"
+        if cpu_usage > CPU_CRITICAL or mem_usage > MEM_CRITICAL or disk_usage > DISK_CRITICAL:
+            status = "Critical"
+        elif cpu_usage > CPU_WARNING or mem_usage > MEM_WARNING or disk_usage > DISK_WARNING:
+            status = "Warning"
+
+        return {
+            "status": status,
+            "metrics": {
+                "cpu_usage_percent": round(cpu_usage, 2),
+                "memory_usage_percent": round(mem_usage, 2),
+                "disk_usage_percent": round(disk_usage, 2)
+            }
+        }
+
+    except Exception as e:
+        return {"status": "Error", "message": str(e)}
+
+@app.route('/check-health', methods=['GET'])
+def check_health():
+    result = get_local_health_status()
+    return jsonify(result)
+
+@app.route('/docker-info', methods=['GET'])
+def docker_info():
+    result = get_docker_info()
+    return jsonify(result)
+
+def get_docker_info():
+    containers = []
+    up_count = 0
+    down_count = 0
+    try:
+        # Get all containers (id, name, status)
+        cmd = [
+            'docker', 'ps', '-a', '--format', '{{.ID}}||{{.Names}}||{{.Status}}'
+        ]
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode('utf-8')
+        for line in output.strip().split('\n'):
+            if not line.strip():
+                continue
+            parts = line.split('||')
+            if len(parts) != 3:
+                continue
+            docker_id, container_name, status_text = parts
+            # Consider "UP" if status starts with "Up", else "DOWN"
+            status = 'UP' if status_text.strip().lower().startswith('up') else 'DOWN'
+            if status == 'UP':
+                up_count += 1
+            else:
+                down_count += 1
+            containers.append({
+                'dockerId': docker_id,
+                'containerName': container_name,
+                'status': status
+            })
+        return {
+            'containers': containers,
+            'total': len(containers),
+            'up': up_count,
+            'down': down_count
+        }
+    except Exception as e:
+        return {
+            'containers': [],
+            'total': 0,
+            'up': 0,
+            'down': 0,
+            'error': str(e)
+        }
+# ------------------- System Utilization End -------------------
+
+
 
 # ------------------------------------------------ local Interface list End --------------------------------------------
 if __name__ == "__main__":
