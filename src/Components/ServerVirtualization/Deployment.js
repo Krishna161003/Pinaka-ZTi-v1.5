@@ -338,9 +338,11 @@ const Deployment = ({ next }) => {
         if (next) next();
       } else {
         message.error(`Error: ${result.message || "Submission failed"}`);
+        setLoading(false);
       }
     } catch (err) {
       message.error(`Server Error: ${err.message}`);
+      setLoading(false);
     }
   };
 
