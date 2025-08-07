@@ -870,12 +870,7 @@ const NetworkApply = () => {
     // Get user info and cloudname
     const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
     const user_id = loginDetails?.data?.id || '';
-    const username = loginDetails?.data?.username || '';
-    // Try to get cloudname from meta or fallback
-    let cloudname = '';
-    const meta = document.querySelector('meta[name="cloud-name"]');
-    if (meta) cloudname = meta.content;
-    if (!cloudname) cloudname = sessionStorage.getItem('cloud_cloudName') || 'Cloud';
+    const username = loginDetails?.data?.companyname || '';
     const host_serverid = sessionStorage.getItem('host_server_id') || '';
 
     // POST to backend
@@ -883,7 +878,7 @@ const NetworkApply = () => {
       const res = await fetch(`https://${hostIP}:5000/api/child-deployment-activity-log`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nodes, user_id, username, cloudname, host_serverid })
+        body: JSON.stringify({ nodes, user_id, username, host_serverid })
       });
       const data = await res.json();
       if (!res.ok) {

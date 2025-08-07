@@ -663,7 +663,7 @@ app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) =
 // Insert multiple child node deployment activity logs
 app.post('/api/child-deployment-activity-log', async (req, res) => {
   const nodes = req.body.nodes; // Array of node objects
-  const { user_id, username, cloudname, host_serverid } = req.body;
+  const { user_id, username, host_serverid } = req.body;
 
   // Validate required fields
   if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
