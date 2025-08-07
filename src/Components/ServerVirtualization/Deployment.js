@@ -94,7 +94,7 @@ const Deployment = ({ next }) => {
 
   const handleSubmit = async () => {
     setLoading(true); // Start loading spinner
-
+    let validationFailed = false;
     try {
       // 1. Validate VIP form
       const vipValues = await vipform.validateFields();
@@ -102,6 +102,7 @@ const Deployment = ({ next }) => {
       if (configType === 'segregated' && !vipValues.defaultGateway) {
         setLoading(false);
         message.error('Default Gateway is required in segregated mode.');
+        validationFailed = true;
         return;
       }
 
@@ -113,6 +114,7 @@ const Deployment = ({ next }) => {
         if (!row.interface || (useBond && row.interface.length !== 2)) {
           setLoading(false);
           message.error(`Row ${i + 1}: Please select ${useBond ? 'exactly two' : 'a'} interface${useBond ? 's' : ''}.`);
+          validationFailed = true;
           return;
         }
 
@@ -120,6 +122,7 @@ const Deployment = ({ next }) => {
         if (!row.type || (Array.isArray(row.type) && row.type.length === 0)) {
           setLoading(false);
           message.error(`Row ${i + 1}: Please select a Type.`);
+          validationFailed = true;
           return;
         }
 
@@ -127,9 +130,9 @@ const Deployment = ({ next }) => {
         if (useBond && !row.bondName?.trim()) {
           setLoading(false);
           message.error(`Row ${i + 1}: Please enter a Bond Name.`);
+          validationFailed = true;
           return;
         }
-
 
         // Skip field validation for 'secondary' in default mode
         const isSecondaryInDefault = configType === 'default' && row.type === 'secondary';
@@ -139,6 +142,7 @@ const Deployment = ({ next }) => {
             if (!row[field]) {
               setLoading(false);
               message.error(`Row ${i + 1}: Please enter ${field.toUpperCase()}.`);
+              validationFailed = true;
               return;
             }
           }
@@ -148,6 +152,7 @@ const Deployment = ({ next }) => {
         if (Object.keys(row.errors || {}).length > 0) {
           setLoading(false);
           message.error(`Row ${i + 1} contains invalid entries. Please fix them.`);
+          validationFailed = true;
           return;
         }
       }
@@ -161,6 +166,7 @@ const Deployment = ({ next }) => {
           if (!providerValues[field]) {
             setLoading(false);
             message.error(`Provider Network: Please fill in the ${field} field.`);
+            validationFailed = true;
             return;
           }
         }
@@ -175,6 +181,7 @@ const Deployment = ({ next }) => {
           if (!tenantValues[field]) {
             setLoading(false);
             message.error(`Tenant Network: Please fill in the ${field} field.`);
+            validationFailed = true;
             return;
           }
         }
@@ -235,6 +242,7 @@ const Deployment = ({ next }) => {
       if (!user_id || !username || !cloudName || !server_ip) {
         setLoading(false);
         message.error('Missing required fields for deployment log');
+        validationFailed = true;
         return;
       }
       try {
@@ -259,46 +267,53 @@ const Deployment = ({ next }) => {
         const data = await res.json();
         if (res.ok && data.serverid) {
           sessionStorage.setItem('currentServerid', data.serverid);
-          if (next) next(); // Move to Report tab only after log creation
         } else {
           setLoading(false);
           message.error(data.message || 'Error logging deployment activity');
+          validationFailed = true;
           return;
         }
       } catch (e) {
         setLoading(false);
         message.error('Error logging deployment activity');
+        validationFailed = true;
         return;
       }
     } catch (error) {
+      setLoading(false);
       message.error('Please fix the errors in required fields.');
+      validationFailed = true;
+      return;
     }
 
-    try {
-      const vipValues = await vipform.validateFields();
-      const providerValues = Providerform.getFieldsValue();
-      const tenantValues = Tenantform.getFieldsValue();
+    // Only proceed to backend submission if NO validation failed
+    if (!validationFailed) {
+      try {
+        const vipValues = await vipform.validateFields();
+        const providerValues = Providerform.getFieldsValue();
+        const tenantValues = Tenantform.getFieldsValue();
 
-      // validation logic here (already written in your previous messages)
-      const rawData = {
-        tableData,
-        configType,
-        useBond,
-        vip: vipform.getFieldValue("vip"),
-        disk: vipform.getFieldValue("disk"),
-        // Always send defaultGateway and hostname, regardless of configType
-        defaultGateway: vipform.getFieldValue("defaultGateway") || "",
-        hostname: vipform.getFieldValue("hostname") || "pinakasv",
-        providerNetwork: providerValues,
-        tenantNetwork: tenantValues,
-      };
+        // validation logic here (already written in your previous messages)
+        const rawData = {
+          tableData,
+          configType,
+          useBond,
+          vip: vipform.getFieldValue("vip"),
+          disk: vipform.getFieldValue("disk"),
+          // Always send defaultGateway and hostname, regardless of configType
+          defaultGateway: vipform.getFieldValue("defaultGateway") || "",
+          hostname: vipform.getFieldValue("hostname") || "pinakasv",
+          providerNetwork: providerValues,
+          tenantNetwork: tenantValues,
+        };
 
-      await submitToBackend(rawData);
-
-    } catch (err) {
-      message.error("Validation or submission failed.");
-    } finally {
-      setLoading(false); // Stop loading spinner
+        await submitToBackend(rawData);
+      } catch (err) {
+        setLoading(false);
+        message.error("Validation or submission failed.");
+      }
+    } else {
+      setLoading(false);
     }
   };
 
