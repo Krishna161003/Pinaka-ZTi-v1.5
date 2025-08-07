@@ -141,7 +141,14 @@ const DeploymentOptions = ({ onStart }) => {
                   where all OpenStack services are deployed on a single server, perfect for
                   development and testing.<b>(need to change def)</b>
                 </div>
-                <Button className="custom-button" type="primary" disabled={isDeployed}>
+                <Button
+                  className="custom-button"
+                  type="primary"
+                  disabled={isDeployed}
+                  onClick={() => {
+                    if (!isDeployed) setIsModalVisible(true);
+                  }}
+                >
                   {isDeployed ? 'Deployed' : 'Start'}
                 </Button>
               </div>
