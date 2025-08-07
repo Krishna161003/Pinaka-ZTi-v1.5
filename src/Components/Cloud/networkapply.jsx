@@ -870,7 +870,7 @@ const NetworkApply = () => {
     // Get user info and cloudname
     const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
     const user_id = loginDetails?.data?.id || '';
-    const username = loginDetails?.data?.companyname || '';
+    const username = loginDetails?.data?.companyName || '';
     const host_serverid = sessionStorage.getItem('host_server_id') || '';
 
     // POST to backend
