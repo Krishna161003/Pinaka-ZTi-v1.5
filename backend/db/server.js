@@ -323,8 +323,7 @@ db.connect((err) => {
         license_type VARCHAR(255), -- License_type
         license_period VARCHAR(255), -- License_period
         license_status VARCHAR(255), -- License_status
-        server_id CHAR(36), -- Server_id (Foreign Key)
-        FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid)
+        server_id CHAR(36) -- Server_id (no longer a Foreign Key)
       ) ENGINE=InnoDB;
     `;
 
@@ -677,10 +676,10 @@ app.post('/api/child-deployment-activity-log', async (req, res) => {
   try {
     // Generate server IDs for each node and insert into child_deployment_activity_log
     const insertedNodes = [];
-    
+
     for (const node of nodes) {
       const { serverip, type, Management, Storage, External_Traffic, VXLAN } = node;
-      
+
       // Validate node required fields
       if (!serverip || !type) {
         return res.status(400).json({ error: 'Each node must have serverip and type' });
@@ -692,20 +691,25 @@ app.post('/api/child-deployment-activity-log', async (req, res) => {
 
       // Insert child deployment activity log
       const sql = `
-        INSERT INTO child_deployment_activity_log 
-          (serverid, user_id, host_serverid, username, serverip, status, type, Management, Storage, External_Traffic, VXLAN)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      
-      await new Promise((resolve, reject) => {
-        db.query(sql, [serverid, user_id, host_serverid, username, serverip, 'progress', type, Management || null, Storage || null, External_Traffic || null, VXLAN || null], (err, result) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(result);
-          }
-        });
-      });
+INSERT INTO child_deployment_activity_log 
+    (serverid, user_id, host_serverid, username, serverip, status, type, Management, Storage, External_Traffic, VXLAN)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+`;
+
+      db.query(sql, [
+        serverid, user_id, host_serverid, username, serverip, 'progress', 'child',
+        Management || null, Storage || null, External_Traffic || null, VXLAN || null
+      ], callback);
+
+      // await new Promise((resolve, reject) => {
+      //   db.query(sql, [serverid, user_id, host_serverid, username, serverip, 'progress', type, Management || null, Storage || null, External_Traffic || null, VXLAN || null], (err, result) => {
+      //     if (err) {
+      //       reject(err);
+      //     } else {
+      //       resolve(result);
+      //     }
+      //   });
+      // });
 
       // Insert or update license details if provided
       const { license_code, license_type, license_period } = node;
@@ -719,7 +723,7 @@ app.post('/api/child-deployment-activity-log', async (req, res) => {
             license_status=VALUES(license_status),
             server_id=VALUES(server_id)
         `;
-        
+
         await new Promise((resolve, reject) => {
           db.query(licenseInsertSQL, [license_code, license_type, license_period, 'validated', serverid], (licErr) => {
             if (licErr) {

@@ -121,9 +121,7 @@ const DeploymentOptions = ({ onStart }) => {
         {/* <h4>Deployment Model</h4> */}
         <div className="options-container">
           <div
-            className={`option-box ${selectedOption === 'Server Virtualization' ? 'selected' : ''
-              }`}
-            onClick={() => handleOptionClick('Server Virtualization')}
+            className={`option-box ${selectedOption === 'Server Virtualization' ? 'selected' : ''}`}
           >
             <h5>Server Virtualization</h5>
             <div className="option">
