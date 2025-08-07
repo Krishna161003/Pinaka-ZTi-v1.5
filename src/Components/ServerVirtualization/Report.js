@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Divider, Card, Progress, Row, Col, Flex, Spin, Button } from 'antd';
 import { CloudOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const getCloudNameFromMetadata = () => {
   let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
@@ -203,6 +203,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
   }
 
   // Set reset flag if deployment is complete and user leaves Report tab (SPA navigation or browser unload)
+  const location = useLocation();
   useEffect(() => {
     if (percent === 100) {
       const handleBeforeUnload = () => {
@@ -227,6 +228,21 @@ const Report = ({ ibn, onDeploymentComplete }) => {
       };
     }
   }, [percent]);
+
+  // Also run disabling logic if navigating away from Report (SPA navigation)
+  useEffect(() => {
+    if (percent === 100) {
+      return () => {
+        sessionStorage.setItem('serverVirtualization_shouldResetOnNextMount', 'true');
+        sessionStorage.setItem('lastMenuPath', '/servervirtualization?tab=1');
+        sessionStorage.setItem('lastServerVirtualizationPath', '/servervirtualization?tab=1');
+        sessionStorage.setItem('lastZtiPath', '/servervirtualization?tab=1');
+        sessionStorage.setItem('serverVirtualization_activeTab', '1');
+        sessionStorage.setItem('disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true }));
+        sessionStorage.setItem('serverVirtualization_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true, "6": true })); 
+      };
+    }
+  }, [location.pathname, percent]);
   
   return (
     <div style={{ padding: '20px' }}>
