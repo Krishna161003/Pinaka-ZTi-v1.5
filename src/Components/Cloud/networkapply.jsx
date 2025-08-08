@@ -803,7 +803,7 @@ const NetworkApply = ({ onGoToReport } = {}) => {
 
 
           timerRefs.current[nodeIdx] = setTimeout(() => {
-            message.success(`Network config for node ${form.ip} applied! Node restarting...`);
+            // message.success(`Network config for node ${form.ip} applied! Node restarting...`);
           }, RESTART_DURATION);
         } else {
           message.error(result.message || 'Failed to apply network configuration.');

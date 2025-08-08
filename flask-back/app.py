@@ -1620,6 +1620,29 @@ def check_ssh_status():
         'message': 'SSH polling in progress'
     })
 
+@app.route('/node-deployment-progress', methods=['GET'])
+def node_deployment_progress():
+    try:
+        configs_dir = pathlib.Path('/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/deployment_configs')
+        if not configs_dir.exists():
+            # No folder means no pending node_* files → consider completed
+            return jsonify({
+                'in_progress': False,
+                'files': []
+            })
+        node_files = sorted([p.name for p in configs_dir.glob('node_*') if p.is_file()])
+        in_progress = len(node_files) > 0
+        return jsonify({
+            'in_progress': in_progress,
+            'files': node_files
+        })
+    except Exception as e:
+        # On error, default to not in progress but include the error for visibility
+        return jsonify({
+            'in_progress': False,
+            'error': str(e)
+        })
+
 if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
