@@ -1493,6 +1493,15 @@ def poll_ssh_status():
         print(f"DEBUG: SSH Key provided: {'Yes' if ssh_key else 'No'}")
         
         try:
+            # Quick TCP reachability check on port 22
+            try:
+                with socket.create_connection((ip, 22), timeout=5) as s:
+                    pass
+                print(f"DEBUG: TCP port 22 reachable on {ip}")
+            except Exception as sock_err:
+                print(f"DEBUG: TCP port 22 NOT reachable on {ip}: {sock_err}")
+                return False, f"TCP 22 unreachable: {sock_err}"
+
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             pkey = None
@@ -1521,7 +1530,16 @@ def poll_ssh_status():
             
             # Connect strictly with key (no password)
             print(f"DEBUG: Connecting with SSH key to {ip}")
-            ssh.connect(ip, username=ssh_user, pkey=pkey, timeout=5)
+            ssh.connect(
+                ip,
+                username=ssh_user,
+                pkey=pkey,
+                timeout=10,
+                banner_timeout=60,
+                auth_timeout=30,
+                look_for_keys=False,
+                allow_agent=False,
+            )
             ssh.close()
             print(f"DEBUG: SSH connection successful to {ip}")
             return True, None
