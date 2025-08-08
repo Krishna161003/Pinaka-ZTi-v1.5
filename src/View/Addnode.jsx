@@ -193,7 +193,14 @@ const App = () => {
           />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Network Apply" key="4" disabled={!licenseNodes || licenseNodes.length === 0}>
-          <NetworkApply />
+          <NetworkApply onGoToReport={() => {
+            // Enable tab 5 and navigate without full reload
+            setDisabledTabs(prev => ({ ...prev, '5': false }));
+            setActiveTab('5');
+            const params = new URLSearchParams(location.search);
+            params.set('tab', '5');
+            navigate({ search: params.toString() }, { replace: true });
+          }} />
         </Tabs.TabPane>
         <Tabs.TabPane tab="Report" key="5" disabled={disabledTabs["5"]}>
           <Report />

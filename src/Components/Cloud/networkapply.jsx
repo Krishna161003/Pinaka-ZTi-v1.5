@@ -6,7 +6,7 @@ import { buildDeployConfigPayload } from './networkapply.deployformat';
 
 const hostIP = window.location.hostname;
 
-const NetworkApply = () => {
+const NetworkApply = ({ onGoToReport } = {}) => {
   const [hostServerId, setHostServerId] = useState(() => sessionStorage.getItem('host_server_id') || '');
 
   const { Option } = Select;
@@ -915,18 +915,22 @@ const NetworkApply = () => {
       }
       // Optionally store the returned serverids for later use
       sessionStorage.setItem('cloud_lastDeploymentNodes', JSON.stringify(data.nodes));
-      // Enable Report tab (tab 5) and switch to it
-      try {
-        const savedDisabled = sessionStorage.getItem('cloud_disabledTabs');
-        const disabledTabs = savedDisabled ? JSON.parse(savedDisabled) : {};
-        disabledTabs['5'] = false;
-        sessionStorage.setItem('cloud_disabledTabs', JSON.stringify(disabledTabs));
-        sessionStorage.setItem('cloud_activeTab', '5');
-      } catch (_) {}
-      // Update URL to trigger Addnode to switch tabs
-      const url = new URL(window.location.href);
-      url.searchParams.set('tab', '5');
-      window.location.href = url.toString();
+      // Prefer parent-provided navigation if available
+      if (typeof onGoToReport === 'function') {
+        onGoToReport();
+      } else {
+        // Fallback: Enable Report tab (tab 5) and switch to it via URL
+        try {
+          const savedDisabled = sessionStorage.getItem('cloud_disabledTabs');
+          const disabledTabs = savedDisabled ? JSON.parse(savedDisabled) : {};
+          disabledTabs['5'] = false;
+          sessionStorage.setItem('cloud_disabledTabs', JSON.stringify(disabledTabs));
+          sessionStorage.setItem('cloud_activeTab', '5');
+        } catch (_) {}
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', '5');
+        window.location.href = url.toString();
+      }
     } catch (err) {
       message.error('Failed to start deployment: ' + err.message);
     }
