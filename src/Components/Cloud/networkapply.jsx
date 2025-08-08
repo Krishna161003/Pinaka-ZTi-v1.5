@@ -729,6 +729,16 @@ const NetworkApply = () => {
 
           // Note: Backend will use the .pem file on disk (e.g., flask-back/ps_key.pem). No passwords are used.
 
+          // Clear any existing polling timers for this IP before starting new ones
+          if (window.__cloudPolling && window.__cloudPolling[node_ip]) {
+            clearInterval(window.__cloudPolling[node_ip]);
+            delete window.__cloudPolling[node_ip];
+          }
+          if (window.__cloudPollingStart && window.__cloudPollingStart[node_ip]) {
+            clearTimeout(window.__cloudPollingStart[node_ip]);
+            delete window.__cloudPollingStart[node_ip];
+          }
+
           // Start the polling by POSTing the IP to backend
           fetch(`https://${hostIP}:2020/poll-ssh-status`, {
             method: 'POST',
@@ -736,50 +746,58 @@ const NetworkApply = () => {
             body: JSON.stringify({ ips: [node_ip], ssh_user, ssh_pass, ssh_key })
           }).then(res => res.json()).then(data => {
             if (data.success) {
-              message.info(`SSH polling started for ${node_ip}. Will begin after 90 seconds.`);
+              message.info(`SSH polling scheduled for ${node_ip}. Will begin after 90 seconds.`);
             }
           }).then(() => {
-            // Set up polling to check SSH status
-            let pollCount = 0;
-            const maxPolls = 60; // Maximum 5 minutes of polling (60 * 5 seconds)
-            
-            const pollInterval = setInterval(() => {
-              pollCount++;
+            // Delay starting the frontend polling until 90 seconds (to match backend delay)
+            const startPollingTimeout = setTimeout(() => {
+              let pollCount = 0;
+              const maxPolls = 60; // Maximum 5 minutes of polling (60 * 5 seconds)
               
-              // Stop polling if we've exceeded the maximum attempts
-              if (pollCount > maxPolls) {
-                clearInterval(pollInterval);
-                setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: false } : s));
-                message.error(`SSH polling timeout for ${node_ip}. Please check the node manually.`);
-                delete window.__cloudPolling[node_ip];
-                return;
-              }
-              
-              fetch(`https://${hostIP}:2020/check-ssh-status?ip=${encodeURIComponent(node_ip)}`)
-                .then(res => res.json())
-                .then(data => {
-                  if (data.status === 'success' && data.ip === node_ip) {
-                    setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
-                    message.success(`Node ${data.ip} is back online!`);
-                    clearInterval(pollInterval);
-                    delete window.__cloudPolling[node_ip];
-                    // Store the form data for this node in sessionStorage
-                    const nodeIp = form.ip || `node${nodeIdx + 1}`;
-                    storeFormData(nodeIp, form);
-                  } else if (data.status === 'fail' && data.ip === node_ip) {
-                    if (cardStatus[nodeIdx]?.loading) {
-                      message.info('Node restarting...');
+              const pollInterval = setInterval(() => {
+                pollCount++;
+                
+                // Stop polling if we've exceeded the maximum attempts
+                if (pollCount > maxPolls) {
+                  clearInterval(pollInterval);
+                  setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: false } : s));
+                  message.error(`SSH polling timeout for ${node_ip}. Please check the node manually.`);
+                  delete window.__cloudPolling[node_ip];
+                  return;
+                }
+                
+                fetch(`https://${hostIP}:2020/check-ssh-status?ip=${encodeURIComponent(node_ip)}`)
+                  .then(res => res.json())
+                  .then(data => {
+                    if (data.status === 'success' && data.ip === node_ip) {
+                      setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
+                      message.success(`Node ${data.ip} is back online!`);
+                      clearInterval(pollInterval);
+                      delete window.__cloudPolling[node_ip];
+                      if (window.__cloudPollingStart && window.__cloudPollingStart[node_ip]) {
+                        delete window.__cloudPollingStart[node_ip];
+                      }
+                      // Store the form data for this node in sessionStorage
+                      const nodeIp = form.ip || `node${nodeIdx + 1}`;
+                      storeFormData(nodeIp, form);
+                    } else if (data.status === 'fail' && data.ip === node_ip) {
+                      if (cardStatus[nodeIdx]?.loading) {
+                        message.info('Node restarting...');
+                      }
                     }
-                  }
-                })
-                .catch(err => {
-                  console.error('SSH status check failed:', err);
-                });
-            }, 5000); // Check every 5 seconds
+                  })
+                  .catch(err => {
+                    console.error('SSH status check failed:', err);
+                  });
+              }, 5000); // Check every 5 seconds
+  
+              // Store the interval reference for cleanup
+              if (!window.__cloudPolling) window.__cloudPolling = {};
+              window.__cloudPolling[node_ip] = pollInterval;
+            }, 90000); // Start polling after 90 seconds
 
-            // Store the interval reference for cleanup
-            if (!window.__cloudPolling) window.__cloudPolling = {};
-            window.__cloudPolling[node_ip] = pollInterval;
+            if (!window.__cloudPollingStart) window.__cloudPollingStart = {};
+            window.__cloudPollingStart[node_ip] = startPollingTimeout;
           });
           // --- End SSH Polling Section ---
 
@@ -806,6 +824,11 @@ const NetworkApply = () => {
       if (window.__cloudPolling) {
         Object.values(window.__cloudPolling).forEach(interval => interval && clearInterval(interval));
         window.__cloudPolling = {};
+      }
+      // Clear all start polling timeouts
+      if (window.__cloudPollingStart) {
+        Object.values(window.__cloudPollingStart).forEach(timeout => timeout && clearTimeout(timeout));
+        window.__cloudPollingStart = {};
       }
     };
   }, []);

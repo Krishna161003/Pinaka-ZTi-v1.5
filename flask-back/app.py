@@ -1473,10 +1473,11 @@ def poll_ssh_status():
         print(f"DEBUG: Invalid IPs data: {ips}")
         return Response('Missing or invalid "ips" in request body', status=400)
     
-    ssh_user = data.get('ssh_user', 'pinakasupport')
-    ssh_pass = data.get('ssh_pass', None)
-    ssh_key = data.get('ssh_key', None)
-    print(f"DEBUG: SSH credentials - User: {ssh_user}, Password: {'Yes' if ssh_pass else 'No'}, Key: {'Yes' if ssh_key else 'No'}")
+    # Force PEM-only auth with fixed user, ignore client-provided credentials
+    ssh_user = 'pinakasupport'
+    ssh_pass = None
+    ssh_key = None
+    print(f"DEBUG: Enforcing PEM-only auth. Using user '{ssh_user}', no password, no inline key (disk PEM only)")
     
     pem_path = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
 
@@ -1506,22 +1507,12 @@ def poll_ssh_status():
                     print(f"DEBUG: Failed to load provided SSH key: {e}")
                     pkey = None
             
-            # If no inline key, search for PEM file on disk (PEM-only, no password fallback)
+            # If no inline key, use the fixed PEM file path provided
             if not pkey:
                 try:
-                    possible_paths = [
-                        # "ps_key.pem",
-                        # "flask-back/ps_key.pem",
-                        "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem",
-                        # "C:/Users/Admin/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
-                    ]
-                    selected_path = None
-                    for key_path in possible_paths:
-                        if os.path.exists(key_path):
-                            selected_path = key_path
-                            break
-                    if not selected_path:
-                        raise FileNotFoundError("No PEM key file found in expected paths. Place ps_key.pem in flask-back/")
+                    selected_path = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
+                    if not os.path.exists(selected_path):
+                        raise FileNotFoundError(f"PEM key file not found at: {selected_path}")
                     pkey = paramiko.RSAKey.from_private_key_file(selected_path)
                     print(f"DEBUG: Using SSH key file: {selected_path} for {ip}")
                 except Exception as e:
