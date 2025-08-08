@@ -24,6 +24,45 @@ const NetworkApply = () => {
   const RESTART_ENDTIME_KEY = 'cloud_networkApplyRestartEndTimes';
   const BOOT_ENDTIME_KEY = 'cloud_networkApplyBootEndTimes';
 
+  // Helper function to get network apply result from sessionStorage
+  const getNetworkApplyResult = () => {
+    const resultRaw = sessionStorage.getItem('cloud_networkApplyResult');
+    if (resultRaw) {
+      try {
+        return JSON.parse(resultRaw);
+      } catch (e) {
+        return {};
+      }
+    }
+    return {};
+  };
+
+  // Helper function to store form data in sessionStorage
+  const storeFormData = (nodeIp, form) => {
+    const networkApplyResult = getNetworkApplyResult();
+    networkApplyResult[nodeIp] = {
+      ...form,
+      tableData: Array.isArray(form.tableData) ? form.tableData.map(row => ({ ...row, type: row.type })) : [],
+    };
+    sessionStorage.setItem('cloud_networkApplyResult', JSON.stringify(networkApplyResult));
+  };
+
+  // Helper function to get license details from sessionStorage
+  const getLicenseDetailsMap = () => {
+    const saved = sessionStorage.getItem('cloud_licenseActivationResults');
+    if (!saved) return {};
+    try {
+      const arr = JSON.parse(saved);
+      const map = {};
+      for (const row of arr) {
+        if (row.ip && row.details) map[row.ip] = row.details;
+      }
+      return map;
+    } catch {
+      return {};
+    }
+  };
+
   const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
 
   // Dynamic per-node disks and interfaces
@@ -92,20 +131,7 @@ const NetworkApply = () => {
   // Restore forms from sessionStorage if available and merge with license details
   const getInitialForms = () => {
     // Get saved license details
-    const licenseDetailsMap = (() => {
-      const saved = sessionStorage.getItem('cloud_licenseActivationResults');
-      if (!saved) return {};
-      try {
-        const arr = JSON.parse(saved);
-        const map = {};
-        for (const row of arr) {
-          if (row.ip && row.details) map[row.ip] = row.details;
-        }
-        return map;
-      } catch {
-        return {};
-      }
-    })();
+    const licenseDetailsMap = getLicenseDetailsMap();
 
     // Get saved forms from sessionStorage if they exist
     const savedForms = sessionStorage.getItem('cloud_networkApplyForms');
@@ -147,20 +173,7 @@ const NetworkApply = () => {
   useEffect(() => {
     const savedForms = sessionStorage.getItem('cloud_networkApplyForms');
     const savedStatus = sessionStorage.getItem('cloud_networkApplyCardStatus');
-    const savedLicenseDetails = (() => {
-      const saved = sessionStorage.getItem('cloud_licenseActivationResults');
-      if (!saved) return {};
-      try {
-        const arr = JSON.parse(saved);
-        const map = {};
-        for (const row of arr) {
-          if (row.ip && row.details) map[row.ip] = row.details;
-        }
-        return map;
-      } catch {
-        return {};
-      }
-    })();
+    const savedLicenseDetails = getLicenseDetailsMap();
 
     if (savedForms && savedStatus) {
       // Merge saved forms with any updated license details
@@ -206,15 +219,7 @@ const NetworkApply = () => {
     let changed = false;
     let newCardStatus = null;
     // For storing results
-    let networkApplyResult = {};
-    const resultRaw = sessionStorage.getItem('cloud_networkApplyResult');
-    if (resultRaw) {
-      try {
-        networkApplyResult = JSON.parse(resultRaw);
-      } catch (e) {
-        networkApplyResult = {};
-      }
-    }
+    let networkApplyResult = getNetworkApplyResult();
     cardStatus.forEach((status, idx) => {
       // Loader should only be up if bootEndTime exists and is in the future
       const bootTime = bootEndTimes[idx];
@@ -226,12 +231,9 @@ const NetworkApply = () => {
           delete restartEndTimes[idx];
           delete bootEndTimes[idx];
           changed = true;
-          // Store the form data for this node in sessionStorage under its IP
-          const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
-          networkApplyResult[nodeIp] = {
-            ...forms[idx],
-            tableData: Array.isArray(forms[idx]?.tableData) ? forms[idx].tableData.map(row => ({ ...row, type: row.type })) : [],
-          };
+                        // Store the form data for this node in sessionStorage under its IP
+              const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
+              storeFormData(nodeIp, forms[idx]);
         } else {
           // Set a timer to clear loader at bootEndTime
           if (!timerRefs.current[idx]) {
@@ -248,20 +250,7 @@ const NetworkApply = () => {
               sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(objB));
               // Store the form data for this node in sessionStorage under its IP
               const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
-              let networkApplyResultInner = {};
-              const resultRawInner = sessionStorage.getItem('cloud_networkApplyResult');
-              if (resultRawInner) {
-                try {
-                  networkApplyResultInner = JSON.parse(resultRawInner);
-                } catch (e) {
-                  networkApplyResultInner = {};
-                }
-              }
-              networkApplyResultInner[nodeIp] = {
-                ...forms[idx],
-                tableData: Array.isArray(forms[idx]?.tableData) ? forms[idx].tableData.map(row => ({ ...row, type: row.type })) : [],
-              };
-              sessionStorage.setItem('cloud_networkApplyResult', JSON.stringify(networkApplyResultInner));
+              storeFormData(nodeIp, forms[idx]);
             }, bootTime - now);
           }
         }
@@ -275,10 +264,7 @@ const NetworkApply = () => {
         if (status.applied) {
           const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
           if (!networkApplyResult[nodeIp]) {
-            networkApplyResult[nodeIp] = {
-              ...forms[idx],
-              tableData: Array.isArray(forms[idx]?.tableData) ? forms[idx].tableData.map(row => ({ ...row, type: row.type })) : [],
-            };
+            storeFormData(nodeIp, forms[idx]);
           }
         }
       }
@@ -737,72 +723,61 @@ const NetworkApply = () => {
           // --- SSH Polling Section ---
           // Gather all required info for the polling API
           const node_ip = form.ip;
-          let user_ip = '';
-          let interfaces = [];
-          if (Array.isArray(form.tableData)) {
-            // Always send type as lowercase for backend compatibility
-            interfaces = form.tableData.map(row => {
-              // For multi-type (segregated), ensure all types are lowercased
-              if (Array.isArray(row.type)) {
-                return { type: row.type.map(t => (typeof t === 'string' ? t.toLowerCase() : t)), ip: row.ip };
-              } else if (typeof row.type === 'string') {
-                return { type: row.type.toLowerCase(), ip: row.ip };
-              } else {
-                return { type: row.type, ip: row.ip };
-              }
-            }).filter(row => row.ip && row.type);
-            // Try to find user-entered IP: for default, primary type; for segregated, management type
-            if (form.configType === 'default') {
-              const primary = interfaces.find(i => i.type === 'primary');
-              if (primary) user_ip = primary.ip;
-            } else if (form.configType === 'segregated') {
-              // For segregated, type may be an array (multi-type)
-              const mgmt = interfaces.find(i => {
-                if (Array.isArray(i.type)) return i.type.includes('management');
-                return i.type === 'management';
-              });
-              if (mgmt) user_ip = mgmt.ip;
-            }
-          }
           const ssh_user = 'root';
           const ssh_pass = '';
           const ssh_key = '';
 
-          // Use EventSource for SSE polling
-          if (!window.__cloudSSE) window.__cloudSSE = {};
-          if (window.__cloudSSE[node_ip]) {
-            window.__cloudSSE[node_ip].close();
-            delete window.__cloudSSE[node_ip];
-          }
-
-          // Start the polling by POSTing the IP to backend, then open SSE
+          // Start the polling by POSTing the IP to backend
           fetch(`https://${hostIP}:2020/poll-ssh-status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ips: [node_ip], ssh_user, ssh_pass, ssh_key })
+          }).then(res => res.json()).then(data => {
+            if (data.success) {
+              message.info(`SSH polling started for ${node_ip}. Will begin after 90 seconds.`);
+            }
           }).then(() => {
-            const sseUrl = `https://${hostIP}:2020/poll-ssh-status/stream?ips=${encodeURIComponent(node_ip)}`;
-            const sse = new window.EventSource(sseUrl);
-            window.__cloudSSE[node_ip] = sse;
-            sse.onmessage = (event) => {
-              try {
-                const data = JSON.parse(event.data);
-                if (data.status === 'success' && data.ip === node_ip) {
-                  setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
-                  message.success(`Node ${data.ip} is back online!`);
-                  sse.close();
-                  delete window.__cloudSSE[node_ip];
-                } else if (data.status === 'fail' && data.ip === node_ip) {
-                  if (cardStatus[nodeIdx]?.loading) {
-                    message.info('node restarting...');
+            // Set up polling to check SSH status
+            let pollCount = 0;
+            const maxPolls = 60; // Maximum 5 minutes of polling (60 * 5 seconds)
+            
+            const pollInterval = setInterval(() => {
+              pollCount++;
+              
+              // Stop polling if we've exceeded the maximum attempts
+              if (pollCount > maxPolls) {
+                clearInterval(pollInterval);
+                setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: false } : s));
+                message.error(`SSH polling timeout for ${node_ip}. Please check the node manually.`);
+                delete window.__cloudPolling[node_ip];
+                return;
+              }
+              
+              fetch(`https://${hostIP}:2020/check-ssh-status?ip=${encodeURIComponent(node_ip)}`)
+                .then(res => res.json())
+                .then(data => {
+                  if (data.status === 'success' && data.ip === node_ip) {
+                    setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
+                    message.success(`Node ${data.ip} is back online!`);
+                    clearInterval(pollInterval);
+                    delete window.__cloudPolling[node_ip];
+                    // Store the form data for this node in sessionStorage
+                    const nodeIp = form.ip || `node${nodeIdx + 1}`;
+                    storeFormData(nodeIp, form);
+                  } else if (data.status === 'fail' && data.ip === node_ip) {
+                    if (cardStatus[nodeIdx]?.loading) {
+                      message.info('Node restarting...');
+                    }
                   }
-                }
-              } catch (e) { /* ignore parse errors */ }
-            };
-            sse.onerror = () => {
-              sse.close();
-              delete window.__cloudSSE[node_ip];
-            };
+                })
+                .catch(err => {
+                  console.error('SSH status check failed:', err);
+                });
+            }, 5000); // Check every 5 seconds
+
+            // Store the interval reference for cleanup
+            if (!window.__cloudPolling) window.__cloudPolling = {};
+            window.__cloudPolling[node_ip] = pollInterval;
           });
           // --- End SSH Polling Section ---
 
@@ -821,14 +796,14 @@ const NetworkApply = () => {
 
   };
 
-  // Clean up timers and SSE connections on unmount
+  // Clean up timers and polling intervals on unmount
   useEffect(() => {
     return () => {
       timerRefs.current.forEach(t => t && clearTimeout(t));
-      // Close all SSE connections
-      if (window.__cloudSSE) {
-        Object.values(window.__cloudSSE).forEach(sse => sse && sse.close && sse.close());
-        window.__cloudSSE = {};
+      // Clear all polling intervals
+      if (window.__cloudPolling) {
+        Object.values(window.__cloudPolling).forEach(interval => interval && clearInterval(interval));
+        window.__cloudPolling = {};
       }
     };
   }, []);
@@ -843,16 +818,9 @@ const NetworkApply = () => {
       return;
     }
     // Get all node configs from sessionStorage
-    let networkApplyResult = sessionStorage.getItem('cloud_networkApplyResult');
-    if (!networkApplyResult) {
+    const configs = getNetworkApplyResult();
+    if (Object.keys(configs).length === 0) {
       message.error('No node configuration found.');
-      return;
-    }
-    let configs;
-    try {
-      configs = JSON.parse(networkApplyResult);
-    } catch (e) {
-      message.error('Failed to parse node configuration.');
       return;
     }
 

@@ -1495,32 +1495,61 @@ def poll_ssh_status():
         while not stop_flags[ip].is_set():
             ok, err = try_ssh(ip)
             if ok:
-                status_queue.put({"status": "success", "ip": ip, "message": f"SSH successful to {ip}"})
+                # Store success result in global variable
+                ssh_polling_results[ip] = {"status": "success", "ip": ip, "message": f"SSH successful to {ip}"}
                 results[ip] = True
                 stop_flags[ip].set()
                 break
             else:
-                status_queue.put({"status": "fail", "ip": ip, "message": f"SSH failed to {ip}: {err}"})
+                # Store fail result temporarily (will be overwritten by next attempt)
+                ssh_polling_results[ip] = {"status": "fail", "ip": ip, "message": f"SSH failed to {ip}: {err}"}
             time.sleep(5)
 
-    def event_stream():
-        # Wait 90 seconds before starting polling
-        time.sleep(90)
+    # Start polling threads after 90 seconds
+    def start_polling():
+        time.sleep(90)  # Wait 1 minute 30 seconds
         threads = []
         for ip in ips:
             t = threading.Thread(target=poll_ip, args=(ip,), daemon=True)
             t.start()
             threads.append(t)
-        remaining = set(ips)
-        while remaining:
-            try:
-                event = status_queue.get(timeout=10)
-                yield f'event: status\ndata: '+json.dumps(event)+'\n\n'
-                if event['status'] == 'success':
-                    remaining.discard(event['ip'])
-            except queue.Empty:
-                continue
-    return Response(event_stream(), mimetype='text/event-stream')
+        
+        # Wait for all threads to complete
+        for t in threads:
+            t.join()
+    
+    # Start the polling in a separate thread
+    polling_thread = threading.Thread(target=start_polling, daemon=True)
+    polling_thread.start()
+    
+    return jsonify({"success": True, "message": f"SSH polling started for {len(ips)} IP(s). Will begin after 90 seconds."})
+
+# Global storage for SSH polling results
+ssh_polling_results = {}
+
+@app.route('/check-ssh-status', methods=['GET'])
+def check_ssh_status():
+    """
+    GET /check-ssh-status?ip=1.2.3.4
+    Returns the current SSH status for a specific IP
+    """
+    ip = request.args.get('ip')
+    if not ip:
+        return jsonify({'error': 'Missing IP parameter'}), 400
+    
+    # Check if we have a result for this IP
+    if ip in ssh_polling_results:
+        result = ssh_polling_results[ip]
+        # Remove the result after returning it (one-time use)
+        del ssh_polling_results[ip]
+        return jsonify(result)
+    
+    # If no result yet, return fail status
+    return jsonify({
+        'status': 'fail',
+        'ip': ip,
+        'message': 'SSH polling in progress'
+    })
 
 if __name__ == "__main__":
     app.run(
