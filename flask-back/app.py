@@ -1444,6 +1444,9 @@ def store_deployment_configs():
 from flask import Response
 import threading
 import queue
+
+
+@app.route('/poll-ssh-status', methods=['POST'])
 def poll_ssh_status():
     """
     POST body: {
