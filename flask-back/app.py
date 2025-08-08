@@ -1444,91 +1444,80 @@ def store_deployment_configs():
 from flask import Response
 import threading
 import queue
-
-@app.route('/poll-ssh-status', methods=['POST'])
 def poll_ssh_status():
     """
     POST body: {
-        "node_ip": "...",          # original node ip
-        "user_ip": "...",          # user entered ip (can be empty)
-        "mode": "default"|"segregated", # config type
-        "interfaces": [             # array of {"type":..., "ip":...}
-            {"type": "primary", "ip": "..."},
-            {"type": "management", "ip": "..."},
-            ...
-        ],
-        "ssh_user": "root",       # SSH username
-        "ssh_pass": "...",        # SSH password (if any, or null)
-        "ssh_key": "..."          # SSH private key PEM (optional, as string)
+        "ips": ["1.2.3.4", "5.6.7.8"],  # List of IPs to poll
+        "ssh_user": "root",              # SSH username
+        "ssh_pass": "...",               # SSH password (if any, or null)
+        "ssh_key": "..."                 # SSH private key PEM (optional, as string)
     }
-    Streams: event: status\ndata: {"status": "success"|"fail", "message": ...}\n\n
-    Tries SSH every 5s, sends fail message if cannot connect, stops and sends success if SSH works.
+    Streams: event: status\ndata: {"status": "success"|"fail", "ip": ..., "message": ...}\n\n
+    Waits 90s, then polls SSH for each IP in parallel every 5s, sends success event per IP when SSH works, stops polling that IP.
     """
     data = request.get_json()
-    node_ip = data.get('node_ip')
-    user_ip = data.get('user_ip')
-    mode = data.get('mode')
-    interfaces = data.get('interfaces', [])
-    ssh_user = "pinakasupport"
-    # ssh_pass = "pinakasupport"
-    # ssh_key = ""
+
+    # Accept list of IPs from frontend (required)
+    ips = data.get('ips')
+    if not ips or not isinstance(ips, list) or not all(isinstance(ip, str) for ip in ips):
+        return Response('Missing or invalid "ips" in request body', status=400)
+    
+    ssh_user = data.get('ssh_user', 'pinakasupport')
+    ssh_pass = data.get('ssh_pass', None)
+    ssh_key = data.get('ssh_key', None)
     pem_path = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
 
-    # Build candidate IPs in order
-    candidate_ips = []
-    if node_ip:
-        candidate_ips.append(node_ip)
-    if user_ip and user_ip != node_ip:
-        candidate_ips.append(user_ip)
-    if mode == 'default':
-        for iface in interfaces:
-            if iface.get('type') == 'primary' and iface.get('ip') and iface.get('ip') not in candidate_ips:
-                candidate_ips.append(iface['ip'])
-    elif mode == 'segregated':
-        for iface in interfaces:
-            if iface.get('type') == 'management' and iface.get('ip') and iface.get('ip') not in candidate_ips:
-                candidate_ips.append(iface['ip'])
+    import threading, queue, time, json
+    status_queue = queue.Queue()
+    stop_flags = {ip: threading.Event() for ip in ips}
+    results = {ip: False for ip in ips}
 
     def try_ssh(ip):
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            pkey = paramiko.RSAKey.from_private_key_file(pem_path)
-            ssh.connect(ip, username=ssh_user, pkey=pkey, timeout=5)
+            pkey = None
+            if ssh_key:
+                import io
+                pkey = paramiko.RSAKey.from_private_key(io.StringIO(ssh_key))
+            else:
+                pkey = paramiko.RSAKey.from_private_key_file(pem_path)
+            ssh.connect(ip, username=ssh_user, pkey=pkey, password=ssh_pass, timeout=5)
             ssh.close()
             return True, None
         except Exception as e:
             return False, str(e)
 
-    def event_stream():
-        while True:
-            for ip in candidate_ips:
-                ok, err = try_ssh(ip)
-                if ok:
-                    yield f'event: status\ndata: '+json.dumps({"status": "success", "ip": ip, "message": f"SSH successful to {ip}"})+'\n\n'
-                    return
-                else:
-                    yield f'event: status\ndata: '+json.dumps({"status": "fail", "ip": ip, "message": f"SSH failed to {ip}: {err}"})+'\n\n'
+    def poll_ip(ip):
+        while not stop_flags[ip].is_set():
+            ok, err = try_ssh(ip)
+            if ok:
+                status_queue.put({"status": "success", "ip": ip, "message": f"SSH successful to {ip}"})
+                results[ip] = True
+                stop_flags[ip].set()
+                break
+            else:
+                status_queue.put({"status": "fail", "ip": ip, "message": f"SSH failed to {ip}: {err}"})
             time.sleep(5)
+
+    def event_stream():
+        # Wait 90 seconds before starting polling
+        time.sleep(90)
+        threads = []
+        for ip in ips:
+            t = threading.Thread(target=poll_ip, args=(ip,), daemon=True)
+            t.start()
+            threads.append(t)
+        remaining = set(ips)
+        while remaining:
+            try:
+                event = status_queue.get(timeout=10)
+                yield f'event: status\ndata: '+json.dumps(event)+'\n\n'
+                if event['status'] == 'success':
+                    remaining.discard(event['ip'])
+            except queue.Empty:
+                continue
     return Response(event_stream(), mimetype='text/event-stream')
-
-
-# ------------------- Node Deployment Progress Monitor Endpoint -------------------
-@app.route("/node-deployment-progress", methods=["GET"])
-def node_deployment_progress():
-    """
-    Checks if any file starting with 'node_' exists in the progress folder.
-    Returns {"in_progress": true} if such a file exists, else {"in_progress": false}.
-    """
-    folder_path = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/progress/"  # Change as needed
-    try:
-        os.makedirs(folder_path, exist_ok=True)
-        for fname in os.listdir(folder_path):
-            if fname.startswith("node_"):
-                return jsonify({"in_progress": True})
-        return jsonify({"in_progress": False})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(

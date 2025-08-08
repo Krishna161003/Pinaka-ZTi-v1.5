@@ -735,79 +735,77 @@ const NetworkApply = () => {
           sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(bootEndTimes));
 
           // --- SSH Polling Section ---
-          // Gather all required info for the polling API
-          const node_ip = form.ip;
-          let user_ip = '';
-          let interfaces = [];
-          if (Array.isArray(form.tableData)) {
-            interfaces = form.tableData.map(row => ({
-              type: row.type,
-              ip: row.ip
-            })).filter(row => row.ip && row.type);
-            // Try to find user-entered IP: for default, primary type; for segregated, management type
-            if (form.configType === 'default') {
-              const primary = interfaces.find(i => i.type === 'primary');
-              if (primary) user_ip = primary.ip;
-            } else if (form.configType === 'segregated') {
-              const mgmt = interfaces.find(i => Array.isArray(i.type) ? i.type.includes('Management') : i.type === 'Management');
-              if (mgmt) user_ip = mgmt.ip;
-            }
-          }
-          // Credentials: adjust as needed
-          const ssh_user = 'root';
-          const ssh_pass = '';
-          const ssh_key = '';
+// Gather all required info for the polling API
+const node_ip = form.ip;
+let user_ip = '';
+let interfaces = [];
+if (Array.isArray(form.tableData)) {
+  // Always send type as lowercase for backend compatibility
+  interfaces = form.tableData.map(row => {
+    // For multi-type (segregated), ensure all types are lowercased
+    if (Array.isArray(row.type)) {
+      return { type: row.type.map(t => (typeof t === 'string' ? t.toLowerCase() : t)), ip: row.ip };
+    } else if (typeof row.type === 'string') {
+      return { type: row.type.toLowerCase(), ip: row.ip };
+    } else {
+      return { type: row.type, ip: row.ip };
+    }
+  }).filter(row => row.ip && row.type);
+  // Try to find user-entered IP: for default, primary type; for segregated, management type
+  if (form.configType === 'default') {
+    const primary = interfaces.find(i => i.type === 'primary');
+    if (primary) user_ip = primary.ip;
+  } else if (form.configType === 'segregated') {
+    // For segregated, type may be an array (multi-type)
+    const mgmt = interfaces.find(i => {
+      if (Array.isArray(i.type)) return i.type.includes('management');
+      return i.type === 'management';
+    });
+    if (mgmt) user_ip = mgmt.ip;
+  }
+}
+const ssh_user = 'root';
+const ssh_pass = '';
+const ssh_key = '';
 
-          // Call the backend poll-ssh-status endpoint
-          const controller = new AbortController();
-          fetch(`https://${hostIP}:2020/poll-ssh-status`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              node_ip,
-              user_ip,
-              mode: form.configType,
-              interfaces,
-              ssh_user,
-              ssh_pass,
-              ssh_key
-            }),
-            signal: controller.signal
-          }).then(response => {
-            if (!response.body) return;
-            const reader = response.body.getReader();
-            let receivedSuccess = false;
-            function readStream() {
-              reader.read().then(({ done, value }) => {
-                if (done) return;
-                const chunk = new TextDecoder().decode(value);
-                // Parse SSE event
-                const lines = chunk.split('\n');
-                for (let line of lines) {
-                  if (line.startsWith('data:')) {
-                    try {
-                      const data = JSON.parse(line.replace('data:', '').trim());
-                      if (data.status === 'success') {
-                        receivedSuccess = true;
-                        setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
-                        message.success(`Node ${data.ip} is back online!`);
-                        controller.abort();
-                        return;
-                      } else if (data.status === 'fail') {
-                        // Show 'node restarting...' only if loader is still up
-                        if (cardStatus[nodeIdx]?.loading) {
-                          message.info('node restarting...');
-                        }
-                      }
-                    } catch (e) { /* ignore parse errors */ }
-                  }
-                }
-                if (!receivedSuccess) readStream();
-              });
-            }
-            readStream();
-          });
-          // --- End SSH Polling Section ---
+// Use EventSource for SSE polling
+if (!window.__cloudSSE) window.__cloudSSE = {};
+if (window.__cloudSSE[node_ip]) {
+  window.__cloudSSE[node_ip].close();
+  delete window.__cloudSSE[node_ip];
+}
+
+// Start the polling by POSTing the IP to backend, then open SSE
+fetch(`https://${hostIP}:2020/poll-ssh-status`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ips: [node_ip], ssh_user, ssh_pass, ssh_key })
+}).then(() => {
+  const sseUrl = `https://${hostIP}:2020/poll-ssh-status/stream?ips=${encodeURIComponent(node_ip)}`;
+  const sse = new window.EventSource(sseUrl);
+  window.__cloudSSE[node_ip] = sse;
+  sse.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.status === 'success' && data.ip === node_ip) {
+        setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
+        message.success(`Node ${data.ip} is back online!`);
+        sse.close();
+        delete window.__cloudSSE[node_ip];
+      } else if (data.status === 'fail' && data.ip === node_ip) {
+        if (cardStatus[nodeIdx]?.loading) {
+          message.info('node restarting...');
+        }
+      }
+    } catch (e) { /* ignore parse errors */ }
+  };
+  sse.onerror = () => {
+    sse.close();
+    delete window.__cloudSSE[node_ip];
+  };
+});
+// --- End SSH Polling Section ---
+
 
           timerRefs.current[nodeIdx] = setTimeout(() => {
             message.success(`Network config for node ${form.ip} applied! Node restarting...`);
@@ -823,10 +821,15 @@ const NetworkApply = () => {
 
   };
 
-  // Clean up timers on unmount
+  // Clean up timers and SSE connections on unmount
   useEffect(() => {
     return () => {
       timerRefs.current.forEach(t => t && clearTimeout(t));
+      // Close all SSE connections
+      if (window.__cloudSSE) {
+        Object.values(window.__cloudSSE).forEach(sse => sse && sse.close && sse.close());
+        window.__cloudSSE = {};
+      }
     };
   }, []);
 
