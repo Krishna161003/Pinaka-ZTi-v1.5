@@ -160,7 +160,7 @@ const Report = ({ onDeploymentComplete }) => {
                   <img
                     src={require('./../../Images/plane.gif')}
                     alt="Deployment Progress"
-                    style={{ width: 180, height: 180, objectFit: 'contain' }}
+                    style={{ width: 280, height: 280, objectFit: 'contain' }}
                   />
                   <div style={{ marginTop: 16, fontWeight: 500 }}>Deployment in progress</div>
                 </>
@@ -169,7 +169,7 @@ const Report = ({ onDeploymentComplete }) => {
                   <img
                     src={completedImage}
                     alt="Deployment Completed"
-                    style={{ width: 180, height: 180, objectFit: 'contain' }}
+                    style={{ width: 280, height: 280, objectFit: 'contain' }}
                   />
                   <div style={{ marginTop: 16, fontWeight: 500 }}>Deployment completed</div>
                 </>
