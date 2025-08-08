@@ -723,15 +723,11 @@ const NetworkApply = () => {
           // --- SSH Polling Section ---
           // Gather all required info for the polling API
           const node_ip = form.ip;
-          const ssh_user = 'root';
-          const ssh_pass = 'password'; // Default password for testing - change this to actual password
-          const ssh_key = ''; // SSH private key content (optional)
+          const ssh_user = 'pinakasupport';
+          const ssh_pass = ''; // Do not use password authentication
+          const ssh_key = ''; // Leave empty to use server-side .pem file (ps_key.pem)
 
-          // TODO: Configure proper SSH credentials for production use
-          // Options:
-          // 1. Set ssh_pass to the actual root password
-          // 2. Set ssh_key to the SSH private key content
-          // 3. Create a ps_key.pem file in the flask-back directory
+          // Note: Backend will use the .pem file on disk (e.g., flask-back/ps_key.pem). No passwords are used.
 
           // Start the polling by POSTing the IP to backend
           fetch(`https://${hostIP}:2020/poll-ssh-status`, {

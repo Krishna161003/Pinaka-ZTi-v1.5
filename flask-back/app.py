@@ -1488,7 +1488,7 @@ def poll_ssh_status():
     def try_ssh(ip):
         print(f"DEBUG: Attempting SSH connection to {ip}")
         print(f"DEBUG: SSH User: {ssh_user}")
-        print(f"DEBUG: SSH Password provided: {'Yes' if ssh_pass else 'No'}")
+        print(f"DEBUG: SSH Password provided: {'Yes' if ssh_pass else 'No'} (ignored)")
         print(f"DEBUG: SSH Key provided: {'Yes' if ssh_key else 'No'}")
         
         try:
@@ -1496,46 +1496,41 @@ def poll_ssh_status():
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             pkey = None
             
-            # Try to use provided SSH key first
+            # Try to use provided SSH key material first
             if ssh_key:
                 try:
                     import io
                     pkey = paramiko.RSAKey.from_private_key(io.StringIO(ssh_key))
-                    print(f"DEBUG: Using provided SSH key for {ip}")
+                    print(f"DEBUG: Using provided SSH key material for {ip}")
                 except Exception as e:
                     print(f"DEBUG: Failed to load provided SSH key: {e}")
+                    pkey = None
             
-            # If no SSH key provided or failed, try to use key file
+            # If no inline key, search for PEM file on disk (PEM-only, no password fallback)
             if not pkey:
                 try:
-                    # Try multiple possible paths for the SSH key
                     possible_paths = [
-                        "ps_key.pem",
-                        "flask-back/ps_key.pem",
+                        # "ps_key.pem",
+                        # "flask-back/ps_key.pem",
                         "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem",
-                        "C:/Users/Admin/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
+                        # "C:/Users/Admin/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
                     ]
-                    
+                    selected_path = None
                     for key_path in possible_paths:
                         if os.path.exists(key_path):
-                            pkey = paramiko.RSAKey.from_private_key_file(key_path)
-                            print(f"DEBUG: Using SSH key from {key_path} for {ip}")
+                            selected_path = key_path
                             break
-                    
-                    if not pkey:
-                        print(f"DEBUG: No SSH key file found, trying password authentication for {ip}")
+                    if not selected_path:
+                        raise FileNotFoundError("No PEM key file found in expected paths. Place ps_key.pem in flask-back/")
+                    pkey = paramiko.RSAKey.from_private_key_file(selected_path)
+                    print(f"DEBUG: Using SSH key file: {selected_path} for {ip}")
                 except Exception as e:
                     print(f"DEBUG: Failed to load SSH key file: {e}")
+                    return False, f"SSH key error: {e}"
             
-            # Connect with available credentials
-            if pkey:
-                print(f"DEBUG: Connecting with SSH key to {ip}")
-                ssh.connect(ip, username=ssh_user, pkey=pkey, timeout=5)
-            else:
-                # Try password authentication if no key available
-                print(f"DEBUG: Connecting with password to {ip}")
-                ssh.connect(ip, username=ssh_user, password=ssh_pass, timeout=5)
-            
+            # Connect strictly with key (no password)
+            print(f"DEBUG: Connecting with SSH key to {ip}")
+            ssh.connect(ip, username=ssh_user, pkey=pkey, timeout=5)
             ssh.close()
             print(f"DEBUG: SSH connection successful to {ip}")
             return True, None
