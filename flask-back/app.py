@@ -16,6 +16,9 @@ import socket
 import pathlib
 from collections import deque
 
+app = Flask(__name__)
+CORS(app, supports_credentials=True)
+
 # Store last 60 seconds of CPU, Memory, and Bandwidth usage
 timestamped_cpu_history = deque(maxlen=60)
 timestamped_memory_history = deque(maxlen=60)
@@ -38,9 +41,6 @@ def get_cpu_history():
 
 def get_memory_history():
     return list(timestamped_memory_history)
-
-app = Flask(__name__)
-CORS(app)
 
 # Add bandwidth history
 last_bandwidth = {'rx': 0, 'tx': 0, 'timestamp': 0}
