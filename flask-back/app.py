@@ -747,7 +747,7 @@ def submit_network_config():
                 iface_count += 1
 
         # === Save the file ===
-        config_dir = "/etc/pinaka/network_configs"
+        config_dir = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/submitted_configs/"
         os.makedirs(config_dir, exist_ok=True)
         file_path = os.path.join(config_dir, "data.json")
         
