@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Divider, Card, Progress, Row, Col, Flex, Spin, Button } from 'antd';
+import { Divider, Card, Progress, Row, Col, Flex, Spin, Button, message } from 'antd';
 import { CloudOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,6 +23,7 @@ const Report = ({ onDeploymentComplete }) => {
   const serveridRef = useRef(sessionStorage.getItem('currentCloudServerid') || null);
   const logStartedRef = useRef(false);
   const intervalRef = useRef(null);
+  const finalizedRef = useRef(false);
 
   // Backend deployment progress polling
   const [deploymentInProgress, setDeploymentInProgress] = useState(true);
@@ -52,6 +53,73 @@ const Report = ({ onDeploymentComplete }) => {
     return () => clearInterval(interval);
   }, []);
 
+  // Persist behavior when leaving Report tab:
+  // - If deployment is in progress, ensure returning opens Report (tab 5) with tabs 1-4 disabled
+  // - If deployment completed (handled below), reset tabs to default via another effect
+  useEffect(() => {
+    return () => {
+      if (deploymentInProgress) {
+        try {
+          sessionStorage.setItem('cloud_activeTab', '5');
+          sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ '1': true, '2': true, '3': true, '4': true, '5': false }));
+          sessionStorage.setItem('lastMenuPath', '/addnode?tab=5');
+          sessionStorage.setItem('lastCloudPath', '/addnode?tab=5');
+        } catch (_) {}
+      }
+    };
+  }, [deploymentInProgress]);
+
+  // Helper to extract role IPs from saved form
+  const extractRoleIps = (form) => {
+    const findIp = (name) => {
+      const row = (form?.tableData || []).find(r => Array.isArray(r.type) ? r.type.includes(name) : r.type === name);
+      return row?.ip || '';
+    };
+    return {
+      Management: findIp('Management'),
+      Storage: findIp('Storage'),
+      External_Traffic: findIp('External Traffic'),
+      VXLAN: findIp('VXLAN'),
+    };
+  };
+
+  // When deployment finishes, finalize child deployments in backend
+  useEffect(() => {
+    if (!deploymentInProgress && !finalizedRef.current) {
+      finalizedRef.current = true;
+      try {
+        const nodesRaw = sessionStorage.getItem('cloud_lastDeploymentNodes');
+        if (!nodesRaw) return;
+        const nodes = JSON.parse(nodesRaw) || [];
+        const configRaw = sessionStorage.getItem('cloud_networkApplyResult');
+        const configMap = configRaw ? JSON.parse(configRaw) : {};
+
+        nodes.forEach(async (node) => {
+          try {
+            const form = configMap[node.serverip] || null;
+            const roleIps = extractRoleIps(form);
+            // 1) Mark child deployment log completed
+            await fetch(`https://${hostIP}:5000/api/child-deployment-activity-log/${encodeURIComponent(node.serverid)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'completed' })
+            }).catch(() => {});
+            // 2) Finalize child deployment (insert/update child_node)
+            await fetch(`https://${hostIP}:5000/api/finalize-child-deployment/${encodeURIComponent(node.serverid)}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                role: node.type || 'child',
+                ...roleIps,
+              })
+            }).catch(() => {});
+          } catch (e) {
+            // Swallow per-node errors to avoid blocking others
+          }
+        });
+      } catch (_) {}
+    }
+  }, [deploymentInProgress]);
 
   useEffect(() => {
     if (percent === 100) {
@@ -60,8 +128,8 @@ const Report = ({ onDeploymentComplete }) => {
         sessionStorage.setItem('lastMenuPath', '/addnode');
         sessionStorage.setItem('lastCloudPath', '/addnode');
         sessionStorage.setItem('cloud_activeTab', '1');
-        // sessionStorage.setItem('disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
-        sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
+        // Disable tabs 2-5 after completion (default mode)
+        sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true }));
       };
 
       window.addEventListener('beforeunload', handleBeforeUnload);
@@ -71,8 +139,8 @@ const Report = ({ onDeploymentComplete }) => {
         sessionStorage.setItem('lastMenuPath', '/addnode');
         sessionStorage.setItem('lastCloudPath', '/addnode');
         sessionStorage.setItem('cloud_activeTab', '1');
-        // sessionStorage.setItem('disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
-        sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true }));
+        // Disable tabs 2-5 after completion (default mode)
+        sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true }));
       };
     }
   }, [percent]);
@@ -110,6 +178,25 @@ const Report = ({ onDeploymentComplete }) => {
           </Col>
         </Row>
       </Card>
+      {!deploymentInProgress && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20, width: '75px' }}>
+          <Button
+            type="primary"
+            onClick={() => {
+              try {
+                sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
+                sessionStorage.setItem('lastMenuPath', '/iaas');
+                sessionStorage.setItem('lastCloudPath', '/iaas');
+                sessionStorage.setItem('cloud_activeTab', '1');
+                sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true }));
+              } catch (_) {}
+              navigate('/iaas');
+            }}
+          >
+            Go to IaaS
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

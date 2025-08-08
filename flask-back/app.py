@@ -752,9 +752,9 @@ def submit_network_config():
         file_path = os.path.join(config_dir, "data.json")
         
         try:
-            with open(file_path, "w") as f:
-                json.dump(response_json, f, indent=4)
-            
+        with open(file_path, "w") as f:
+            json.dump(response_json, f, indent=4)
+
             # Set appropriate permissions
             os.chmod(file_path, 0o644)  # rw-r--r--
             
@@ -1509,8 +1509,8 @@ def poll_ssh_status():
             # Try to use provided SSH key material first
             if ssh_key:
                 try:
-                    import io
-                    pkey = paramiko.RSAKey.from_private_key(io.StringIO(ssh_key))
+                import io
+                pkey = paramiko.RSAKey.from_private_key(io.StringIO(ssh_key))
                     print(f"DEBUG: Using provided SSH key material for {ip}")
                 except Exception as e:
                     print(f"DEBUG: Failed to load provided SSH key: {e}")

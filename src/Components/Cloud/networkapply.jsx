@@ -65,6 +65,34 @@ const NetworkApply = ({ onGoToReport } = {}) => {
 
   const [licenseNodes, setLicenseNodes] = useState(getLicenseNodes());
 
+  // Track mounted state globally to allow background polling to update storage without setState leaks
+  useEffect(() => {
+    window.__cloudMountedNetworkApply = true;
+    return () => {
+      window.__cloudMountedNetworkApply = false;
+    };
+  }, []);
+
+  // Helper: update card status in sessionStorage by IP (to persist across navigation)
+  const setCardStatusForIpInSession = (ip, nextStatus) => {
+    try {
+      const savedFormsRaw = sessionStorage.getItem('cloud_networkApplyForms');
+      const savedStatusRaw = sessionStorage.getItem('cloud_networkApplyCardStatus');
+      if (!savedFormsRaw || !savedStatusRaw) return;
+      const formsArr = JSON.parse(savedFormsRaw);
+      const statusArr = JSON.parse(savedStatusRaw);
+      const idx = formsArr.findIndex(f => f && f.ip === ip);
+      if (idx === -1) return;
+      const merged = {
+        ...(statusArr[idx] || { loading: false, applied: false }),
+        ...nextStatus,
+      };
+      const nextStatusArr = [...statusArr];
+      nextStatusArr[idx] = merged;
+      sessionStorage.setItem('cloud_networkApplyCardStatus', JSON.stringify(nextStatusArr));
+    } catch (_) {}
+  };
+
   // Dynamic per-node disks and interfaces
   const [nodeDisks, setNodeDisks] = useState({});
   const [nodeInterfaces, setNodeInterfaces] = useState({});
@@ -760,7 +788,10 @@ const NetworkApply = ({ onGoToReport } = {}) => {
                 // Stop polling if we've exceeded the maximum attempts
                 if (pollCount > maxPolls) {
                   clearInterval(pollInterval);
-                  setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: false } : s));
+                  setCardStatusForIpInSession(node_ip, { loading: false, applied: false });
+                  if (window.__cloudMountedNetworkApply) {
+                    setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: false } : s));
+                  }
                   message.error(`SSH polling timeout for ${node_ip}. Please check the node manually.`);
                   delete window.__cloudPolling[node_ip];
                   return;
@@ -770,7 +801,11 @@ const NetworkApply = ({ onGoToReport } = {}) => {
                   .then(res => res.json())
                   .then(data => {
                     if (data.status === 'success' && data.ip === node_ip) {
-                      setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
+                      // Persist status to sessionStorage so it reflects on remount or in other menus
+                      setCardStatusForIpInSession(node_ip, { loading: false, applied: true });
+                      if (window.__cloudMountedNetworkApply) {
+                        setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { loading: false, applied: true } : s));
+                      }
                       message.success(`Node ${data.ip} is back online!`);
                       clearInterval(pollInterval);
                       delete window.__cloudPolling[node_ip];
@@ -781,7 +816,7 @@ const NetworkApply = ({ onGoToReport } = {}) => {
                       const nodeIp = form.ip || `node${nodeIdx + 1}`;
                       storeFormData(nodeIp, form);
                     } else if (data.status === 'fail' && data.ip === node_ip) {
-                      if (cardStatus[nodeIdx]?.loading) {
+                      if (cardStatus[nodeIdx]?.loading || !window.__cloudMountedNetworkApply) {
                         message.info('Node restarting...');
                       }
                     }
@@ -791,7 +826,7 @@ const NetworkApply = ({ onGoToReport } = {}) => {
                   });
               }, 5000); // Check every 5 seconds
   
-              // Store the interval reference for cleanup
+              // Store the interval reference globally (do not clear on unmount to allow background polling)
               if (!window.__cloudPolling) window.__cloudPolling = {};
               window.__cloudPolling[node_ip] = pollInterval;
             }, 90000); // Start polling after 90 seconds
@@ -816,20 +851,11 @@ const NetworkApply = ({ onGoToReport } = {}) => {
 
   };
 
-  // Clean up timers and polling intervals on unmount
+  // Clean up only internal timers on unmount; keep global polling running in background
   useEffect(() => {
     return () => {
       timerRefs.current.forEach(t => t && clearTimeout(t));
-      // Clear all polling intervals
-      if (window.__cloudPolling) {
-        Object.values(window.__cloudPolling).forEach(interval => interval && clearInterval(interval));
-        window.__cloudPolling = {};
-      }
-      // Clear all start polling timeouts
-      if (window.__cloudPollingStart) {
-        Object.values(window.__cloudPollingStart).forEach(timeout => timeout && clearTimeout(timeout));
-        window.__cloudPollingStart = {};
-      }
+      // Do not clear window.__cloudPolling or __cloudPollingStart here, to allow background progress
     };
   }, []);
 
@@ -887,6 +913,7 @@ const NetworkApply = ({ onGoToReport } = {}) => {
     const nodes = Object.values(configs).map(form => ({
       serverip: form.ip,
       type: form.configType,
+      role: Array.isArray(form.selectedRoles) && form.selectedRoles.length > 0 ? form.selectedRoles[0] : 'child',
       Management: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('Management') : row.type === 'Management')?.ip || '',
       Storage: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('Storage') : row.type === 'Storage')?.ip || '',
       External_Traffic: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('External Traffic') : row.type === 'External Traffic')?.ip || '',

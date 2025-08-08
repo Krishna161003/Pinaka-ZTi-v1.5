@@ -40,7 +40,7 @@ const App = () => {
   }); // Only use cloud_activeTab for Cloud
   const [disabledTabs, setDisabledTabs] = useState(() => {
   const saved = sessionStorage.getItem("cloud_disabledTabs");
-  const initial = saved ? JSON.parse(saved) : { "2": true, "3": true };
+  const initial = saved ? JSON.parse(saved) : { "2": true, "3": true, "4": true };
   // Always disable tab 5 (Report)
   return { ...initial, "5": true };
 });
@@ -71,6 +71,45 @@ const App = () => {
   useEffect(() => {
     sessionStorage.setItem("cloud_disabledTabs", JSON.stringify(disabledTabs));
   }, [disabledTabs]);
+
+  // Auto-redirect to Report tab if child deployment is in progress
+  useEffect(() => {
+    const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
+    const userId = loginDetails?.data?.id;
+    if (!userId) return;
+    const hostIP = window.location.hostname;
+    fetch(`https://${hostIP}:5000/api/child-deployment-activity-log/latest-in-progress/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.inProgress) {
+          setActiveTab("5");
+          setDisabledTabs({
+            "1": true,
+            "2": true,
+            "3": true,
+            "4": true,
+            "5": false
+          });
+          // Update the URL to tab=5 if not already
+          navigate("?tab=5", { replace: true });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // When on Report tab (5), disable tabs 1-4
+  useEffect(() => {
+    if (activeTab === '5') {
+      setDisabledTabs(prev => ({
+        ...prev,
+        '1': true,
+        '2': true,
+        '3': true,
+        '4': true,
+        '5': false,
+      }));
+    }
+  }, [activeTab]);
 
   // Restore state on mount & on location.search change
   useEffect(() => {
@@ -192,7 +231,7 @@ const App = () => {
             }}
           />
         </Tabs.TabPane>
-        <Tabs.TabPane tab="Network Apply" key="4" disabled={!licenseNodes || licenseNodes.length === 0}>
+        <Tabs.TabPane tab="Network Apply" key="4" disabled={disabledTabs["4"]}>
           <NetworkApply onGoToReport={() => {
             // Enable tab 5 and navigate without full reload
             setDisabledTabs(prev => ({ ...prev, '5': false }));

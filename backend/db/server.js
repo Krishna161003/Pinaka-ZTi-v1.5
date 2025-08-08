@@ -301,6 +301,7 @@ db.connect((err) => {
           serverip VARCHAR(15),              -- serverip
           status VARCHAR(255),               -- status
           type VARCHAR(255),                 -- type
+          role VARCHAR(255),                 -- role
           Management VARCHAR(255) NULL,
           Storage VARCHAR(255) NULL,
           External_Traffic VARCHAR(255) NULL,
@@ -313,6 +314,12 @@ db.connect((err) => {
     db.query(childDeploymentActivityLogTableSQL, (err, result) => {
       if (err) throw err;
       console.log("Child Deployment_Activity_log table checked/created...");
+      // Ensure 'role' column exists (MySQL 8 supports IF NOT EXISTS)
+      db.query("ALTER TABLE child_deployment_activity_log ADD COLUMN IF NOT EXISTS role VARCHAR(255)", (altErr) => {
+        if (altErr && altErr.code !== 'ER_DUP_FIELDNAME' && altErr.code !== 'ER_CANT_ADD_FIELD') {
+          console.warn("Could not ensure 'role' column on child_deployment_activity_log:", altErr.message);
+        }
+      });
     });
 
     // Create License table
@@ -410,6 +417,27 @@ app.get('/api/deployment-activity-log/latest-in-progress/:user_id', (req, res) =
     if (err) {
       console.error('Error fetching in-progress deployment:', err);
       return res.status(500).json({ error: 'Failed to fetch deployment status' });
+    }
+    res.json({
+      inProgress: results.length > 0,
+      log: results[0] || null
+    });
+  });
+});
+
+// Get latest in-progress child deployment activity log for a user
+app.get('/api/child-deployment-activity-log/latest-in-progress/:user_id', (req, res) => {
+  const { user_id } = req.params;
+  const sql = `
+    SELECT * FROM child_deployment_activity_log 
+    WHERE user_id = ? AND status = 'progress' 
+    ORDER BY datetime DESC 
+    LIMIT 1
+  `;
+  db.query(sql, [user_id], (err, results) => {
+    if (err) {
+      console.error('Error fetching in-progress child deployment:', err);
+      return res.status(500).json({ error: 'Failed to fetch child deployment status' });
     }
     res.json({
       inProgress: results.length > 0,
@@ -678,7 +706,7 @@ app.post('/api/child-deployment-activity-log', async (req, res) => {
     const insertedNodes = [];
 
     for (const node of nodes) {
-      const { serverip, type, Management, Storage, External_Traffic, VXLAN } = node;
+      const { serverip, type, role, Management, Storage, External_Traffic, VXLAN } = node;
 
       // Validate node required fields
       if (!serverip || !type) {
@@ -692,14 +720,14 @@ app.post('/api/child-deployment-activity-log', async (req, res) => {
       // Insert child deployment activity log
       const sql = `
 INSERT INTO child_deployment_activity_log 
-    (serverid, user_id, host_serverid, username, serverip, status, type, Management, Storage, External_Traffic, VXLAN)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (serverid, user_id, host_serverid, username, serverip, status, type, role, Management, Storage, External_Traffic, VXLAN)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
       await new Promise((resolve, reject) => {
         db.query(sql, [
           serverid, user_id, host_serverid, username, serverip, 'progress', 'child',
-          Management || null, Storage || null, External_Traffic || null, VXLAN || null
+          role || null, Management || null, Storage || null, External_Traffic || null, VXLAN || null
         ], (err, result) => {
           if (err) {
             reject(err);
@@ -736,7 +764,8 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       insertedNodes.push({
         serverid,
         serverip,
-        type
+        type,
+        role: role || null
       });
     }
 
@@ -1341,4 +1370,121 @@ app.get('/api/server-counts', async (req, res) => {
 
 https.createServer(options, app).listen(5000, () => {
   console.log('Node.js backend is running on HTTPS at port 5000');
+});
+
+// Mark child deployment activity log as completed
+app.patch('/api/child-deployment-activity-log/:serverid', (req, res) => {
+  const { serverid } = req.params;
+  const { status } = req.body;
+  const newStatus = status || 'completed';
+  const sql = `UPDATE child_deployment_activity_log SET status = ? WHERE serverid = ?`;
+  db.query(sql, [newStatus, serverid], (err, result) => {
+    if (err) {
+      console.error('Error updating child deployment activity log:', err);
+      return res.status(500).json({ error: 'Failed to update child deployment activity log' });
+    }
+    res.status(200).json({ message: `Child deployment activity log updated to ${newStatus}` });
+  });
+});
+
+// Finalize a child deployment: mark completed and create child_node entry
+app.post('/api/finalize-child-deployment/:serverid', (req, res) => {
+  const { serverid } = req.params;
+
+  // Fetch child deployment data (prefer completed, but accept progress too if needed)
+  const getChildSQL = `SELECT * FROM child_deployment_activity_log WHERE serverid = ? LIMIT 1`;
+  db.query(getChildSQL, [serverid], (err, rows) => {
+    if (err) {
+      console.error('Error fetching child deployment activity log:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: 'Child deployment not found' });
+    }
+
+    const dep = rows[0];
+
+    // 1) Update status to completed (idempotent)
+    const updateStatusSQL = `UPDATE child_deployment_activity_log SET status = 'completed' WHERE serverid = ?`;
+    db.query(updateStatusSQL, [serverid], (upErr) => {
+      if (upErr) {
+        console.error('Error marking child deployment completed:', upErr);
+        // Continue to try inserting child node anyway
+      }
+
+      // 2) Get license_code if linked
+      const licQuery = 'SELECT license_code FROM License WHERE server_id = ? LIMIT 1';
+      db.query(licQuery, [serverid], (licErr, licRows) => {
+        if (licErr) {
+          console.error('Error fetching license_code for child:', licErr);
+        }
+        const licenseCodeToUse = licRows && licRows.length > 0 ? licRows[0].license_code : null;
+
+        // 3) Set license status to 'activated' (optional, like Host)
+        if (licenseCodeToUse) {
+          const updLicSQL = `UPDATE License SET license_status = 'activated', server_id = ? WHERE license_code = ?`;
+          db.query(updLicSQL, [serverid, licenseCodeToUse], (licUpdErr) => {
+            if (licUpdErr) {
+              console.error('Error activating child license:', licUpdErr);
+            }
+          });
+        }
+
+        // 4) Insert/update child_node entry
+        const checkSQL = 'SELECT id FROM child_node WHERE server_id = ? LIMIT 1';
+        db.query(checkSQL, [serverid], (chkErr, chkRows) => {
+          if (chkErr) {
+            console.error('Error checking existing child node:', chkErr);
+            return res.status(500).json({ error: 'Failed to finalize child node (check)' });
+          }
+
+          const resolvedRole = (dep.role || 'child');
+          const values = [
+            dep.user_id,
+            serverid,
+            dep.host_serverid || '',
+            dep.serverip,
+            resolvedRole,
+            licenseCodeToUse,
+            req.body.Management || dep.Management || null,
+            req.body.Storage || dep.Storage || null,
+            req.body.External_Traffic || dep.External_Traffic || null,
+            req.body.VXLAN || dep.VXLAN || null
+          ];
+
+          if (chkRows && chkRows.length > 0) {
+            // Update existing
+            const updSQL = `
+              UPDATE child_node
+              SET user_id=?, host_serverid=?, serverip=?, role=?, license_code=?, Management=?, Storage=?, External_Traffic=?, VXLAN=?
+              WHERE server_id=?
+            `;
+            const updValues = [
+              values[0], values[2], values[3], values[4], values[5], values[6], values[7], values[8], values[9], serverid
+            ];
+            db.query(updSQL, updValues, (updErr) => {
+              if (updErr) {
+                console.error('Error updating child node record:', updErr);
+                return res.status(500).json({ error: 'Failed to update child node record' });
+              }
+              return res.json({ message: 'Child node record updated successfully' });
+            });
+          } else {
+            // Insert new
+            const insSQL = `
+              INSERT INTO child_node (user_id, server_id, host_serverid, serverip, role, license_code, Management, Storage, External_Traffic, VXLAN)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            db.query(insSQL, values, (insErr) => {
+              if (insErr) {
+                console.error('Error creating child node record:', insErr);
+                return res.status(500).json({ error: 'Failed to create child node record' });
+              }
+              return res.json({ message: 'Child node record created successfully' });
+            });
+          }
+        });
+      });
+    });
+  });
 });
