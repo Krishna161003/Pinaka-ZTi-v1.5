@@ -1650,5 +1650,5 @@ if __name__ == "__main__":
     app.run(
         host="0.0.0.0",
         port=2020,
-        ssl_context=("cert.pem", "key.pem"),  # (certificate, private key)
+        ssl_context=("keycloak.crt", "keycloak.key"),  # (certificate, private key)
     )
