@@ -125,8 +125,8 @@ const Report = ({ onDeploymentComplete }) => {
     if (percent === 100) {
       const handleBeforeUnload = () => {
         sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
-        sessionStorage.setItem('lastMenuPath', '/addnode');
-        sessionStorage.setItem('lastCloudPath', '/addnode');
+        sessionStorage.setItem('lastMenuPath', '/addnode?tab=1');
+        sessionStorage.setItem('lastCloudPath', '/addnode?tab=1');
         sessionStorage.setItem('cloud_activeTab', '1');
         // Disable tabs 2-5 after completion (default mode)
         sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true }));
@@ -136,8 +136,8 @@ const Report = ({ onDeploymentComplete }) => {
       return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
         sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
-        sessionStorage.setItem('lastMenuPath', '/addnode');
-        sessionStorage.setItem('lastCloudPath', '/addnode');
+        sessionStorage.setItem('lastMenuPath', '/addnode?tab=1');
+        sessionStorage.setItem('lastCloudPath', '/addnode?tab=1');
         sessionStorage.setItem('cloud_activeTab', '1');
         // Disable tabs 2-5 after completion (default mode)
         sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true }));

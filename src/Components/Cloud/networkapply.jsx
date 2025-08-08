@@ -237,52 +237,17 @@ const NetworkApply = ({ onGoToReport } = {}) => {
     }
   }, [licenseNodes]);
 
-  // Loader recovery: robustly clear stuck loaders and expired timers
+  // Loader recovery: keep loader until SSH polling succeeds or times out; do NOT auto-apply based on timers
   useEffect(() => {
     const restartEndTimesRaw = sessionStorage.getItem(RESTART_ENDTIME_KEY);
     const bootEndTimesRaw = sessionStorage.getItem(BOOT_ENDTIME_KEY);
     const restartEndTimes = restartEndTimesRaw ? JSON.parse(restartEndTimesRaw) : {};
     const bootEndTimes = bootEndTimesRaw ? JSON.parse(bootEndTimesRaw) : {};
     const now = Date.now();
-    let changed = false;
-    let newCardStatus = null;
     // For storing results
     let networkApplyResult = getNetworkApplyResult();
     cardStatus.forEach((status, idx) => {
-      // Loader should only be up if bootEndTime exists and is in the future
-      const bootTime = bootEndTimes[idx];
-      if (status.loading) {
-        if (!bootTime || isNaN(bootTime) || bootTime <= now) {
-          // No boot time or boot time expired/corrupted: clear loader
-          newCardStatus = (newCardStatus || [...cardStatus]);
-          newCardStatus[idx] = { loading: false, applied: true };
-          delete restartEndTimes[idx];
-          delete bootEndTimes[idx];
-          changed = true;
-                        // Store the form data for this node in sessionStorage under its IP
-              const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
-              storeFormData(nodeIp, forms[idx]);
-        } else {
-          // Set a timer to clear loader at bootEndTime
-          if (!timerRefs.current[idx]) {
-            timerRefs.current[idx] = setTimeout(() => {
-              setCardStatus(prev => prev.map((s, i) => i === idx ? { loading: false, applied: true } : s));
-              // Remove from sessionStorage
-              const storedR = sessionStorage.getItem(RESTART_ENDTIME_KEY);
-              const objR = storedR ? JSON.parse(storedR) : {};
-              const storedB = sessionStorage.getItem(BOOT_ENDTIME_KEY);
-              const objB = storedB ? JSON.parse(storedB) : {};
-              delete objR[idx];
-              delete objB[idx];
-              sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(objR));
-              sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(objB));
-              // Store the form data for this node in sessionStorage under its IP
-              const nodeIp = forms[idx]?.ip || `node${idx + 1}`;
-              storeFormData(nodeIp, forms[idx]);
-            }, bootTime - now);
-          }
-        }
-      } else {
+      if (!status.loading) {
         // If not loading, ensure timer is cleared
         if (timerRefs.current[idx]) {
           clearTimeout(timerRefs.current[idx]);
@@ -297,11 +262,6 @@ const NetworkApply = ({ onGoToReport } = {}) => {
         }
       }
     });
-    if (changed && newCardStatus) {
-      setCardStatus(newCardStatus);
-      sessionStorage.setItem(RESTART_ENDTIME_KEY, JSON.stringify(restartEndTimes));
-      sessionStorage.setItem(BOOT_ENDTIME_KEY, JSON.stringify(bootEndTimes));
-    }
     // Also, on every render, clean up any timers for cards that are no longer loading
     cardStatus.forEach((status, idx) => {
       if (!status.loading && timerRefs.current[idx]) {
@@ -741,6 +701,8 @@ const NetworkApply = ({ onGoToReport } = {}) => {
       .then(result => {
         if (result.success) {
           setCardStatus(prev => prev.map((s, i) => i === nodeIdx ? { ...s, loading: true } : s));
+          // Persist loader state immediately by IP to survive navigation
+          setCardStatusForIpInSession(form.ip, { loading: true, applied: false });
           // Store restartEndTime and bootEndTime in sessionStorage
           const restartEndTimesRaw = sessionStorage.getItem(RESTART_ENDTIME_KEY);
           const bootEndTimesRaw = sessionStorage.getItem(BOOT_ENDTIME_KEY);

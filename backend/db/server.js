@@ -389,8 +389,8 @@ db.connect((err) => {
           External_Traffic VARCHAR(255) NULL,
           VXLAN VARCHAR(255) NULL,
           timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES deployment_activity_log(user_id),
-          FOREIGN KEY (server_id) REFERENCES deployment_activity_log(serverid),
+          FOREIGN KEY (user_id) REFERENCES child_deployment_activity_log(user_id),
+          FOREIGN KEY (server_id) REFERENCES child_deployment_activity_log(serverid),
           FOREIGN KEY (license_code) REFERENCES License(license_code)
         ) ENGINE=InnoDB;
       `;
