@@ -747,18 +747,29 @@ def submit_network_config():
                 iface_count += 1
 
         # === Save the file ===
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"network_config_{timestamp}.json"
-        file_path = os.path.join("submitted_configs", filename)
-        os.makedirs("submitted_configs", exist_ok=True)
-
-        with open(file_path, "w") as f:
-            json.dump(response_json, f, indent=4)
-
-        return (
-            jsonify({"success": True, "message": "Config saved", "filename": filename}),
-            200,
-        )
+        config_dir = "/etc/pinaka/network_configs"
+        os.makedirs(config_dir, exist_ok=True)
+        file_path = os.path.join(config_dir, "data.json")
+        
+        try:
+            with open(file_path, "w") as f:
+                json.dump(response_json, f, indent=4)
+            
+            # Set appropriate permissions
+            os.chmod(file_path, 0o644)  # rw-r--r--
+            
+            return jsonify({
+                "success": True, 
+                "message": "Network configuration saved successfully",
+                "path": file_path
+            }), 200
+            
+        except Exception as e:
+            app.logger.error(f"❌ Failed to save network config: {str(e)}")
+            return jsonify({
+                "success": False, 
+                "message": f"Failed to save configuration: {str(e)}"
+            }), 500
 
     except Exception as e:
         app.logger.error(f"❌ Exception occurred: {str(e)}")
@@ -1449,25 +1460,24 @@ import queue
 @app.route('/poll-ssh-status', methods=['POST'])
 def poll_ssh_status():
     """
-    POST body: {
-        "ips": ["1.2.3.4", "5.6.7.8"],  # List of IPs to poll
-        "ssh_user": "root",              # SSH username
-        "ssh_pass": "...",               # SSH password (if any, or null)
-        "ssh_key": "..."                 # SSH private key PEM (optional, as string)
-    }
-    Streams: event: status\ndata: {"status": "success"|"fail", "ip": ..., "message": ...}\n\n
-    Waits 90s, then polls SSH for each IP in parallel every 5s, sends success event per IP when SSH works, stops polling that IP.
+    POST /poll-ssh-status
+    Start SSH polling for the provided IPs
     """
+    print(f"DEBUG: poll-ssh-status endpoint called")
     data = request.get_json()
+    print(f"DEBUG: Received data: {data}")
 
     # Accept list of IPs from frontend (required)
     ips = data.get('ips')
     if not ips or not isinstance(ips, list) or not all(isinstance(ip, str) for ip in ips):
+        print(f"DEBUG: Invalid IPs data: {ips}")
         return Response('Missing or invalid "ips" in request body', status=400)
     
     ssh_user = data.get('ssh_user', 'pinakasupport')
     ssh_pass = data.get('ssh_pass', None)
     ssh_key = data.get('ssh_key', None)
+    print(f"DEBUG: SSH credentials - User: {ssh_user}, Password: {'Yes' if ssh_pass else 'No'}, Key: {'Yes' if ssh_key else 'No'}")
+    
     pem_path = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
 
     import threading, queue, time, json
@@ -1476,38 +1486,87 @@ def poll_ssh_status():
     results = {ip: False for ip in ips}
 
     def try_ssh(ip):
+        print(f"DEBUG: Attempting SSH connection to {ip}")
+        print(f"DEBUG: SSH User: {ssh_user}")
+        print(f"DEBUG: SSH Password provided: {'Yes' if ssh_pass else 'No'}")
+        print(f"DEBUG: SSH Key provided: {'Yes' if ssh_key else 'No'}")
+        
         try:
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             pkey = None
+            
+            # Try to use provided SSH key first
             if ssh_key:
-                import io
-                pkey = paramiko.RSAKey.from_private_key(io.StringIO(ssh_key))
+                try:
+                    import io
+                    pkey = paramiko.RSAKey.from_private_key(io.StringIO(ssh_key))
+                    print(f"DEBUG: Using provided SSH key for {ip}")
+                except Exception as e:
+                    print(f"DEBUG: Failed to load provided SSH key: {e}")
+            
+            # If no SSH key provided or failed, try to use key file
+            if not pkey:
+                try:
+                    # Try multiple possible paths for the SSH key
+                    possible_paths = [
+                        "ps_key.pem",
+                        "flask-back/ps_key.pem",
+                        "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem",
+                        "C:/Users/Admin/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
+                    ]
+                    
+                    for key_path in possible_paths:
+                        if os.path.exists(key_path):
+                            pkey = paramiko.RSAKey.from_private_key_file(key_path)
+                            print(f"DEBUG: Using SSH key from {key_path} for {ip}")
+                            break
+                    
+                    if not pkey:
+                        print(f"DEBUG: No SSH key file found, trying password authentication for {ip}")
+                except Exception as e:
+                    print(f"DEBUG: Failed to load SSH key file: {e}")
+            
+            # Connect with available credentials
+            if pkey:
+                print(f"DEBUG: Connecting with SSH key to {ip}")
+                ssh.connect(ip, username=ssh_user, pkey=pkey, timeout=5)
             else:
-                pkey = paramiko.RSAKey.from_private_key_file(pem_path)
-            ssh.connect(ip, username=ssh_user, pkey=pkey, password=ssh_pass, timeout=5)
+                # Try password authentication if no key available
+                print(f"DEBUG: Connecting with password to {ip}")
+                ssh.connect(ip, username=ssh_user, password=ssh_pass, timeout=5)
+            
             ssh.close()
+            print(f"DEBUG: SSH connection successful to {ip}")
             return True, None
         except Exception as e:
-            return False, str(e)
+            error_msg = str(e)
+            print(f"DEBUG: SSH connection failed to {ip}: {error_msg}")
+            return False, error_msg
 
     def poll_ip(ip):
+        print(f"DEBUG: Starting SSH polling for IP: {ip}")
         while not stop_flags[ip].is_set():
             ok, err = try_ssh(ip)
+            print(f"DEBUG: SSH attempt for {ip}: {'SUCCESS' if ok else f'FAILED - {err}'}")
             if ok:
                 # Store success result in global variable
                 ssh_polling_results[ip] = {"status": "success", "ip": ip, "message": f"SSH successful to {ip}"}
                 results[ip] = True
                 stop_flags[ip].set()
+                print(f"DEBUG: SSH SUCCESS for {ip}, stored result")
                 break
             else:
                 # Store fail result temporarily (will be overwritten by next attempt)
                 ssh_polling_results[ip] = {"status": "fail", "ip": ip, "message": f"SSH failed to {ip}: {err}"}
+                print(f"DEBUG: SSH FAIL for {ip}, stored fail result")
             time.sleep(5)
 
     # Start polling threads after 90 seconds
     def start_polling():
+        print(f"DEBUG: Starting 90-second delay for SSH polling")
         time.sleep(90)  # Wait 1 minute 30 seconds
+        print(f"DEBUG: 90-second delay completed, starting SSH polling for IPs: {ips}")
         threads = []
         for ip in ips:
             t = threading.Thread(target=poll_ip, args=(ip,), daemon=True)
@@ -1537,14 +1596,20 @@ def check_ssh_status():
     if not ip:
         return jsonify({'error': 'Missing IP parameter'}), 400
     
+    # Debug logging
+    print(f"DEBUG: Checking SSH status for IP: {ip}")
+    print(f"DEBUG: ssh_polling_results keys: {list(ssh_polling_results.keys())}")
+    
     # Check if we have a result for this IP
     if ip in ssh_polling_results:
         result = ssh_polling_results[ip]
         # Remove the result after returning it (one-time use)
         del ssh_polling_results[ip]
+        print(f"DEBUG: Returning result for {ip}: {result}")
         return jsonify(result)
     
     # If no result yet, return fail status
+    print(f"DEBUG: No result found for {ip}, returning fail status")
     return jsonify({
         'status': 'fail',
         'ip': ip,

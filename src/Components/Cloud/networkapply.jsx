@@ -724,8 +724,14 @@ const NetworkApply = () => {
           // Gather all required info for the polling API
           const node_ip = form.ip;
           const ssh_user = 'root';
-          const ssh_pass = '';
-          const ssh_key = '';
+          const ssh_pass = 'password'; // Default password for testing - change this to actual password
+          const ssh_key = ''; // SSH private key content (optional)
+
+          // TODO: Configure proper SSH credentials for production use
+          // Options:
+          // 1. Set ssh_pass to the actual root password
+          // 2. Set ssh_key to the SSH private key content
+          // 3. Create a ps_key.pem file in the flask-back directory
 
           // Start the polling by POSTing the IP to backend
           fetch(`https://${hostIP}:2020/poll-ssh-status`, {
