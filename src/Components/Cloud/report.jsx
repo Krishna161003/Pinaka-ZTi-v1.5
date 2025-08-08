@@ -122,7 +122,7 @@ const Report = ({ onDeploymentComplete }) => {
   }, [deploymentInProgress]);
 
   useEffect(() => {
-    if (percent === 100) {
+    if (deploymentInProgress === false) {
       const handleBeforeUnload = () => {
         sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
         sessionStorage.setItem('lastMenuPath', '/addnode?tab=1');
@@ -147,7 +147,7 @@ const Report = ({ onDeploymentComplete }) => {
         sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true }));
       };
     }
-  }, [percent]);
+  }, [deploymentInProgress]);
 
   return (
     <div style={{ padding: '20px' }}>
@@ -206,43 +206,3 @@ const Report = ({ onDeploymentComplete }) => {
 };
 
 export default Report;
-
-
-{/* <Card title={`Cloud Deployment Progress for ${cloudName} (${sessionStorage.getItem('cloud_server_ip') || 'N/A'})`}>
-<Row gutter={24}>
-  <Col span={24}>
-    <Flex gap="small" vertical style={{ marginBottom: '20px' }}>
-      <Progress percent={percent} status={percent === 100 ? "success" : "active"} />
-    </Flex>
-    {error && <div style={{ color: 'red', marginBottom: 8 }}>{error}</div>}
-    <div
-      style={{
-        border: '1px solid #d9d9d9',
-        borderRadius: '4px',
-        padding: '12px',
-        backgroundColor: '#fafafa',
-      }}
-    >
-      <strong>Cloud Deployment Progress:</strong>
-      <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-        {progressList}
-      </ul>
-    </div>
-    {percent === 100 && (
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-        <Button 
-          type="primary" 
-          onClick={() => {
-            sessionStorage.setItem('cloud_shouldResetOnNextMount', 'true');
-            sessionStorage.setItem('lastMenuPath', '/iaas');
-            sessionStorage.setItem('lastCloudPath', '/iaas');
-            navigate('/iaas');
-          }}
-        >
-          Back to Cloud
-        </Button>
-      </div>
-    )}
-  </Col>
-</Row>
-</Card> */}
