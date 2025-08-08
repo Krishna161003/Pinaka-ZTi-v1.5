@@ -128,8 +128,7 @@ const Report = ({ onDeploymentComplete }) => {
         sessionStorage.setItem('lastMenuPath', '/addnode?tab=1');
         sessionStorage.setItem('lastCloudPath', '/addnode?tab=1');
         sessionStorage.setItem('lastZtiPath', '/addnode?tab=1');
-        sessionStorage.setItem('lastAddNodePath', '/addnode?tab=1');
-
+        sessionStorage.setItem('lastAddnodePath', '/addnode?tab=1');
         sessionStorage.setItem('cloud_activeTab', '1');
         // Disable tabs 2-5 after completion (default mode)
         sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true }));
@@ -142,7 +141,7 @@ const Report = ({ onDeploymentComplete }) => {
         sessionStorage.setItem('lastMenuPath', '/addnode?tab=1');
         sessionStorage.setItem('lastCloudPath', '/addnode?tab=1');
         sessionStorage.setItem('lastZtiPath', '/addnode?tab=1');
-        sessionStorage.setItem('lastAddNodePath', '/addnode?tab=1');
+        sessionStorage.setItem('lastAddnodePath', '/addnode?tab=1');
         sessionStorage.setItem('cloud_activeTab', '1');
         // Disable tabs 2-5 after completion (default mode)
         sessionStorage.setItem('cloud_disabledTabs', JSON.stringify({ "2": true, "3": true, "4": true, "5": true }));
