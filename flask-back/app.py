@@ -660,7 +660,11 @@ def submit_network_config():
             "disk": disk,
             "vip": vip,
             "default_gateway": default_gateway,  # Always include
-            "hostname": data.get("hostname", "pinakasv")  # Always include
+            "hostname": data.get("hostname", "pinakasv"),  # Always include
+            # Persist license details if provided by client
+            "license_code": data.get("license_code"),
+            "license_type": data.get("license_type"),
+            "license_period": data.get("license_period"),
         }
 
         if default_gateway:
@@ -752,8 +756,8 @@ def submit_network_config():
         file_path = os.path.join(config_dir, "data.json")
         
         try:
-        with open(file_path, "w") as f:
-            json.dump(response_json, f, indent=4)
+            with open(file_path, "w") as f:
+                json.dump(response_json, f, indent=4)
 
             # Set appropriate permissions
             os.chmod(file_path, 0o644)  # rw-r--r--
@@ -763,7 +767,6 @@ def submit_network_config():
                 "message": "Network configuration saved successfully",
                 "path": file_path
             }), 200
-            
         except Exception as e:
             app.logger.error(f"❌ Failed to save network config: {str(e)}")
             return jsonify({
@@ -1509,8 +1512,8 @@ def poll_ssh_status():
             # Try to use provided SSH key material first
             if ssh_key:
                 try:
-                import io
-                pkey = paramiko.RSAKey.from_private_key(io.StringIO(ssh_key))
+                    import io
+                    pkey = paramiko.RSAKey.from_private_key(io.StringIO(ssh_key))
                     print(f"DEBUG: Using provided SSH key material for {ip}")
                 except Exception as e:
                     print(f"DEBUG: Failed to load provided SSH key: {e}")

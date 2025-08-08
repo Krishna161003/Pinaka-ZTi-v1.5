@@ -3,15 +3,17 @@ import { Divider, Button, Spin, notification } from "antd";
 import { HomeOutlined, CloudOutlined } from "@ant-design/icons";
 import axios from "axios";
 
-const getCloudNameFromMetadata = () => {
-  let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
-  return cloudNameMeta ? cloudNameMeta.content : null;
+const getCloudName = () => {
+  const fromSession = sessionStorage.getItem('cloudName');
+  if (fromSession) return fromSession;
+  const meta = document.querySelector('meta[name="cloud-name"]');
+  return meta ? meta.content : null;
 };
 const hostIP = window.location.hostname;
 
 
 const Validation = ({ nodes, onIbnUpdate, next, onValidationResult }) => {
-  const cloudName = getCloudNameFromMetadata();
+  const cloudName = getCloudName();
   const [api, contextHolder] = notification.useNotification();
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);

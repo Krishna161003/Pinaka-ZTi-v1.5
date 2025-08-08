@@ -19,16 +19,18 @@ import {
 
 const { Paragraph, Text } = Typography;
 
-const getCloudNameFromMetadata = () => {
-  const cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
-  return cloudNameMeta ? cloudNameMeta.content : null;
+const getCloudName = () => {
+  const fromSession = sessionStorage.getItem('cloudName');
+  if (fromSession) return fromSession;
+  const meta = document.querySelector('meta[name="cloud-name"]');
+  return meta ? meta.content : null;
 };
 const hostIP = window.location.hostname;
 // const hostIP = "192.168.20.195"
 
 
 const ActivateKey = ({ next, onValidationResult }) => {
-  const cloudName = getCloudNameFromMetadata();
+  const cloudName = getCloudName();
   const [licenseCode, setLicenseCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null); // stores API response

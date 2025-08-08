@@ -69,6 +69,14 @@ const DeploymentOptions = ({ onStart }) => {
     cloudNameMeta.content = name;
   };
 
+  // Sync meta with session cloudName on mount (keeps UI consistent after refresh)
+  useEffect(() => {
+    const saved = sessionStorage.getItem('cloudName');
+    if (saved) {
+      updateMetadata(saved);
+    }
+  }, []);
+
   const handleModalOk = async () => {
     try {
       const response = await axios.post(`https://${hostIP}:5000/check-cloud-name`, {
@@ -76,6 +84,8 @@ const DeploymentOptions = ({ onStart }) => {
       });
 
       if (response.status === 200) {
+        // Persist in session and update meta so it survives refresh
+        sessionStorage.setItem('cloudName', cloudName);
         updateMetadata(cloudName);
         onStart(cloudName);
 

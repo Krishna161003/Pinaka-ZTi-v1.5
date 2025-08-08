@@ -725,7 +725,13 @@ const NetworkApply = ({ onGoToReport } = {}) => {
       setForms(prev => prev.map((f, i) => i === nodeIdx ? { ...f, roleError: '' } : f));
     }
     // Submit logic here (API call or sessionStorage)
-    const payload = buildNetworkConfigPayload(form);
+    const payloadBase = buildNetworkConfigPayload(form);
+    const payload = {
+      ...payloadBase,
+      license_code: form.licenseCode || null,
+      license_type: form.licenseType || null,
+      license_period: form.licensePeriod || null,
+    };
     fetch(`https://${form.ip}:2020/submit-network-config`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

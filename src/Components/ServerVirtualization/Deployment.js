@@ -25,16 +25,18 @@ const { Option } = Select;
 const ipRegex = /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.|$)){4}$/;
 const subnetRegex = /^(255|254|252|248|240|224|192|128|0+)\.((255|254|252|248|240|224|192|128|0+)\.){2}(255|254|252|248|240|224|192|128|0+)$/;
 
-const getCloudNameFromMetadata = () => {
-  let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
-  return cloudNameMeta ? cloudNameMeta.content : null; // Return the content of the meta tag
+const getCloudName = () => {
+  const fromSession = sessionStorage.getItem('cloudName');
+  if (fromSession) return fromSession;
+  const meta = document.querySelector('meta[name="cloud-name"]');
+  return meta ? meta.content : null; // Return the content of the meta tag
 };
 
 
 
 
 const Deployment = ({ next }) => {
-  const cloudName = getCloudNameFromMetadata();
+  const cloudName = getCloudName();
   const [configType, setConfigType] = useState('default');
   const [tableData, setTableData] = useState([]);
   const [useBond, setUseBond] = useState(false);
@@ -253,7 +255,7 @@ const Deployment = ({ next }) => {
           body: JSON.stringify({
             user_id,
             username,
-            cloudname: cloudName,
+            cloudname: cloudName || sessionStorage.getItem('cloudName') || cloudName,
             serverip: server_ip,
             license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
             license_type: JSON.parse(sessionStorage.getItem('licenseStatus'))?.type || null,
@@ -308,6 +310,10 @@ const Deployment = ({ next }) => {
           hostname: vipform.getFieldValue("hostname") || "pinakasv",
           providerNetwork: providerValues,
           tenantNetwork: tenantValues,
+          // License details
+          license_code: JSON.parse(sessionStorage.getItem('licenseStatus') || '{}')?.license_code || null,
+          license_type: JSON.parse(sessionStorage.getItem('licenseStatus') || '{}')?.type || null,
+          license_period: JSON.parse(sessionStorage.getItem('licenseStatus') || '{}')?.period || null,
         };
 
         await submitToBackend(rawData);

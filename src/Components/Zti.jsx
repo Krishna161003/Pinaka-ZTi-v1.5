@@ -1,6 +1,6 @@
 import React from "react";
 import Layout1 from "./layout";
-import { theme, Layout, Col, Row } from "antd";
+import { theme, Layout, Col, Row, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
 import addnode from "../Images/database_666401.png";
 import node from "../Images/database_666406.png";
@@ -19,6 +19,28 @@ const { Content } = Layout;
 
 export default function Zti({ children }) {
   const navigate = useNavigate();
+  const [hostExists, setHostExists] = React.useState(false);
+
+  // Check if Host entry exists to enable/disable Add Node card
+  React.useEffect(() => {
+    const hostIP = window.location.hostname;
+    try {
+      const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
+      const userId = loginDetails?.data?.id;
+      if (!userId) {
+        setHostExists(false);
+        return;
+      }
+      fetch(`https://${hostIP}:5000/api/host-exists?userId=${encodeURIComponent(userId)}`)
+        .then(res => res.json())
+        .then(data => {
+          setHostExists(!!data.exists);
+        })
+        .catch(() => setHostExists(false));
+    } catch (_) {
+      setHostExists(false);
+    }
+  }, []);
 
 
   const handleRedirect = () => {
@@ -56,7 +78,7 @@ export default function Zti({ children }) {
       >
         <Col
           className="gutter-row"
-          span={7} // Each column takes up 7 spans, so 3 columns will total 21 spans
+          span={7} // Each column takes up 7 spans
           onClick={handleRedirect}
           style={style}
         >
@@ -78,23 +100,28 @@ export default function Zti({ children }) {
         <Col
           className="gutter-row"
           span={7} // Each column takes up 7 spans
-          onClick={handleRedirectAddNode}
-          style={style}
+          onClick={hostExists ? handleRedirectAddNode : undefined}
+          style={{
+            ...style,
+            cursor: hostExists ? 'pointer' : 'not-allowed',
+            opacity: hostExists ? 1 : 0.6,
+          }}
         >
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <img src={addnode} alt="cloud--v1" style={{ width: "60px", height: "60px", marginLeft: "30px", userSelect: "none" }}></img>
-
-            <span
-              style={{
-                fontSize: "18px",
-                fontWeight: "500",
-                marginLeft: "30px",
-                userSelect: "none"
-              }}
-            >
-              Add Node
-            </span>
-          </div>
+          <Tooltip title="Flight Deck Not deployed" placement="top" open={hostExists ? false : undefined} disabled={hostExists}>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <img src={addnode} alt="cloud--v1" style={{ width: "60px", height: "60px", marginLeft: "30px", userSelect: "none" }}></img>
+              <span
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "500",
+                  marginLeft: "30px",
+                  userSelect: "none"
+                }}
+              >
+                Add Node
+              </span>
+            </div>
+          </Tooltip>
         </Col>
 
         <Col

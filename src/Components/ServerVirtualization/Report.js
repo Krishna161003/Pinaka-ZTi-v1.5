@@ -3,9 +3,11 @@ import { Divider, Card, Progress, Row, Col, Flex, Spin, Button } from 'antd';
 import { CloudOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-const getCloudNameFromMetadata = () => {
-  let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
-  return cloudNameMeta ? cloudNameMeta.content : 'Default';
+const getCloudName = () => {
+  const fromSession = sessionStorage.getItem('cloudName');
+  if (fromSession) return fromSession;
+  const meta = document.querySelector('meta[name="cloud-name"]');
+  return meta ? meta.content : 'Default';
 };
 
 const hostIP = window.location.hostname;
@@ -15,7 +17,7 @@ const Report = ({ ibn, onDeploymentComplete }) => {
   const [completionWindowActive, setCompletionWindowActive] = useState(false);
   const completionWindowTimeoutRef = useRef(null);
   const revertedRef = useRef(false);
-  const cloudName = getCloudNameFromMetadata();
+  const cloudName = getCloudName();
   const [percent, setPercent] = useState(0);
   const [completedLogs, setCompletedLogs] = useState([]);
   const [error, setError] = useState(null);

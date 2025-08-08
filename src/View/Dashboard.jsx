@@ -72,14 +72,44 @@ const Dashboard = () => {
   const [totalMemory, setTotalMemory] = useState(0);
   const [usedMemory, setUsedMemory] = useState(0);
 
-  // Host IP dropdown state
-  const hostIpOptions = [
-    window.location.hostname,
-    "192.168.1.10",
-    "192.168.1.20",
-    "10.0.0.5"
-  ];
+  // Host IP dropdown state (dynamic from backend Host and child_node tables)
+  const [hostIpOptions, setHostIpOptions] = useState([]);
   const [selectedHostIP, setSelectedHostIP] = useState(window.location.hostname);
+
+  // Fetch unique server IPs from Host and child_node tables
+  useEffect(() => {
+    const hostIP = window.location.hostname;
+    async function fetchServerIps() {
+      try {
+        const userId = JSON.parse(sessionStorage.getItem('loginDetails'))?.data?.id;
+        const hostsRes = await fetch(`https://${hostIP}:5000/api/hosts${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`);
+        const hosts = await hostsRes.json();
+        const childrenRes = await fetch(`https://${hostIP}:5000/api/child-nodes${userId ? `?userId=${encodeURIComponent(userId)}` : ''}`);
+        const children = await childrenRes.json();
+        const ips = new Set();
+        if (Array.isArray(hosts)) {
+          hosts.forEach(h => { if (h && h.serverip) ips.add(h.serverip); });
+        }
+        if (Array.isArray(children)) {
+          children.forEach(c => { if (c && c.serverip) ips.add(c.serverip); });
+        }
+        let uniqueIps = Array.from(ips);
+        if (uniqueIps.length === 0) {
+          uniqueIps = [window.location.hostname];
+        }
+        setHostIpOptions(uniqueIps);
+        // Keep current selection if still valid; otherwise default to first available or hostname
+        if (!uniqueIps.includes(selectedHostIP)) {
+          setSelectedHostIP(uniqueIps[0] || window.location.hostname);
+        }
+      } catch (e) {
+        // Fallback to current hostname if fetch fails
+        setHostIpOptions([window.location.hostname]);
+        setSelectedHostIP(prev => prev || window.location.hostname);
+      }
+    }
+    fetchServerIps();
+  }, []);
 
   // Fetch CPU and Memory time series for Area charts
   const [memoryHistory, setMemoryHistory] = useState([]);
@@ -583,10 +613,10 @@ const Dashboard = () => {
                 style={{ width: 220 }}
                 value={selectedHostIP}
                 onChange={setSelectedHostIP}
-                options={hostIpOptions.map(ip => ({ label: ip, value: ip }))}
+                options={(hostIpOptions || []).map(ip => ({ label: ip, value: ip }))}
                 showSearch
                 optionFilterProp="children"
-                filterOption={(input, option) => option.label.toLowerCase().includes(input.toLowerCase())}
+                filterOption={(input, option) => (option?.label || '').toLowerCase().includes((input || '').toLowerCase())}
               />
             </div>
             {/* Performance Section Header */}

@@ -10,16 +10,18 @@ import { HomeOutlined } from "@ant-design/icons";
 import { CloudOutlined } from "@ant-design/icons";
 
 
-const getCloudNameFromMetadata = () => {
-  let cloudNameMeta = document.querySelector('meta[name="cloud-name"]');
-  return cloudNameMeta ? cloudNameMeta.content : null; // Return the content of the meta tag
+const getCloudName = () => {
+  const fromSession = sessionStorage.getItem('cloudName');
+  if (fromSession) return fromSession;
+  const meta = document.querySelector('meta[name="cloud-name"]');
+  return meta ? meta.content : null; // Return the content of the meta tag
 };
 
 const hostIP = window.location.hostname;
 
 
 const DataTable = ({ onNodeSelect, next }) => {
-  const cloudName = getCloudNameFromMetadata();
+  const cloudName = getCloudName();
   const [isScanning, setIsScanning] = useState(false);
   const [nodes, setNodes] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
