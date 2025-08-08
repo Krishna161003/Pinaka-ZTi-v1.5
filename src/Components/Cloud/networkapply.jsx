@@ -915,9 +915,18 @@ const NetworkApply = () => {
       }
       // Optionally store the returned serverids for later use
       sessionStorage.setItem('cloud_lastDeploymentNodes', JSON.stringify(data.nodes));
-      // Navigate to report tab
-      window.location.hash = '#/report'; // If using hash router
-      // Or, if using useNavigate from react-router-dom, use: navigate('/report');
+      // Enable Report tab (tab 5) and switch to it
+      try {
+        const savedDisabled = sessionStorage.getItem('cloud_disabledTabs');
+        const disabledTabs = savedDisabled ? JSON.parse(savedDisabled) : {};
+        disabledTabs['5'] = false;
+        sessionStorage.setItem('cloud_disabledTabs', JSON.stringify(disabledTabs));
+        sessionStorage.setItem('cloud_activeTab', '5');
+      } catch (_) {}
+      // Update URL to trigger Addnode to switch tabs
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', '5');
+      window.location.href = url.toString();
     } catch (err) {
       message.error('Failed to start deployment: ' + err.message);
     }
