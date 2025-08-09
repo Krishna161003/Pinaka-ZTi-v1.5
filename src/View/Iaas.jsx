@@ -152,14 +152,14 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
           </h3> */}
           
           <div style={{ marginBottom: '24px' }}>
-            {/* <label style={{ 
+            <label style={{ 
               display: 'block', 
               marginBottom: '8px', 
               fontWeight: 500,
               color: '#1f1f1f'
             }}>
-              License Code (12 characters)
-            </label> */}
+              Enter the License Code
+            </label>
             <div style={{ display: 'flex', gap: '12px' }}>
               <Input
                 value={newLicenseCode}
