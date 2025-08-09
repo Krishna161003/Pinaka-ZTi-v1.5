@@ -1241,7 +1241,7 @@ def get_node_status(ip):
         pass
     # Directory where .pem keys are stored
     # pem_dir = os.path.join(os.path.dirname(__file__), 'keys')
-    pem_dir = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/"
+    pem_dir = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
     # Try to find a .pem key matching the IP or use the first .pem in the directory
     pem_key = None
     for fname in os.listdir(pem_dir):
