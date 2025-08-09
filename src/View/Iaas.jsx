@@ -550,41 +550,59 @@ const FlightDeckHostsTable = () => {
           <b>1. Flight Deck</b>
           <ul style={{ marginBottom: 8 }}>
             <li>{modalRecord?.credentialsUrl ? (
-              <a href={modalRecord.credentialsUrl} target="_blank" rel="noopener noreferrer">
-                {modalRecord.credentialsUrl}
-              </a>
+              <div>
+                <a href={modalRecord.credentialsUrl} target="_blank" rel="noopener noreferrer">
+                  {modalRecord.credentialsUrl}
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: s9UDxlXIL1opnqwG8cEDXxoiBLNX40C3yBVtafiP</div>
+              </div>
             ) : <span>No URL</span>}</li>
           </ul>
           <b>2. Storage</b>
           <ul style={{ marginBottom: 8 }}>
             <li>{modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:8443/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:8443/
-              </a>
+              <div>
+                <a href={`https://${modalRecord.serverip}:8443/`} target="_blank" rel="noopener noreferrer">
+                  https://{modalRecord.serverip}:8443/
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: </div>
+              </div>
             ) : <span>No URL</span>}</li>
           </ul>
           <b>3. Monitoring</b>
           <ul style={{ marginBottom: 8 }}>
             <li>{modalRecord?.vip ? (
-              <a href={`https://${modalRecord.vip}:7000/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.vip}:7000/
-              </a>
+              <div>
+                <a href={`https://${modalRecord.vip}:7000/`} target="_blank" rel="noopener noreferrer">
+                  https://{modalRecord.vip}:7000/
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: eldh8jlBg7n3SycW4GTF33hoE8ir3diBUFa14uut</div>
+              </div>
             ) : modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:7000/
-              </a>
+              <div>
+                <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
+                  https://{modalRecord.serverip}:7000/
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: eldh8jlBg7n3SycW4GTF33hoE8ir3diBUFa14uut</div>
+              </div>
             ) : <span>No URL</span>}</li>
           </ul>
           <b>4. Diagnosis Dashboard</b>
           <ul style={{ marginBottom: 0 }}>
             <li>{modalRecord?.vip ? (
-              <a href={`https://${modalRecord.vip}:5601/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.vip}:5601/
-              </a>
+              <div>
+                <a href={`https://${modalRecord.vip}:5601/`} target="_blank" rel="noopener noreferrer">
+                  https://{modalRecord.vip}:5601/
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: mmezZX8u1F66IFCDPSjPdWyIJZkids04X8pdwBT8</div>
+              </div>
             ) : modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:5601/
-              </a>
+              <div>
+                <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
+                  https://{modalRecord.serverip}:5601/
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: mmezZX8u1F66IFCDPSjPdWyIJZkids04X8pdwBT8</div>
+              </div>
             ) : <span>No URL</span>}</li>
           </ul>
         </div>
@@ -769,44 +787,48 @@ const SquadronNodesTable = () => {
         width={600}
       >
         <div>
-          <b>1. Squadron </b>
+          <b>1. Squadron</b>
           <ul style={{ marginBottom: 8 }}>
             <li>{modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}
-              </a>
+              <div>
+                <a href={`https://${modalRecord.serverip}`} target="_blank" rel="noopener noreferrer">
+                  https://{modalRecord.serverip}
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: s9UDxlXIL1opnqwG8cEDXxoiBLNX40C3yBVtafiP</div>
+              </div>
             ) : <span>No URL</span>}</li>
           </ul>
           <b>2. Storage</b>
           <ul style={{ marginBottom: 8 }}>
             <li>{modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:8443/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:8443/
-              </a>
+              <div>
+                <a href={`https://${modalRecord.serverip}:8443/`} target="_blank" rel="noopener noreferrer">
+                  https://{modalRecord.serverip}:8443/
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: </div>
+              </div>
             ) : <span>No URL</span>}</li>
           </ul>
           <b>3. Monitoring</b>
           <ul style={{ marginBottom: 8 }}>
             <li>{modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:7000/
-              </a>
-            ) : modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:7000/
-              </a>
+              <div>
+                <a href={`https://${modalRecord.serverip}:7000/`} target="_blank" rel="noopener noreferrer">
+                  https://{modalRecord.serverip}:7000/
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: eldh8jlBg7n3SycW4GTF33hoE8ir3diBUFa14uut</div>
+              </div>
             ) : <span>No URL</span>}</li>
           </ul>
           <b>4. Diagnosis Dashboard</b>
           <ul style={{ marginBottom: 0 }}>
             <li>{modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:5601/
-              </a>
-            ) : modalRecord?.serverip ? (
-              <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
-                https://{modalRecord.serverip}:5601/
-              </a>
+              <div>
+                <a href={`https://${modalRecord.serverip}:5601/`} target="_blank" rel="noopener noreferrer">
+                  https://{modalRecord.serverip}:5601/
+                </a>
+                <div style={{ marginTop: 4, color: '#666' }}>Password: mmezZX8u1F66IFCDPSjPdWyIJZkids04X8pdwBT8</div>
+              </div>
             ) : <span>No URL</span>}</li>
           </ul>
         </div>
