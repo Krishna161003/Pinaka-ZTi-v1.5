@@ -769,7 +769,7 @@ const SquadronNodesTable = () => {
         width={600}
       >
         <div>
-          <b>1. Flight Deck</b>
+          <b>1. Squadron </b>
           <ul style={{ marginBottom: 8 }}>
             <li>{modalRecord?.credentialsUrl ? (
               <a href={modalRecord.credentialsUrl} target="_blank" rel="noopener noreferrer">
