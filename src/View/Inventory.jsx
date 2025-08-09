@@ -415,7 +415,7 @@ const Inventory = () => {
                             { title: 'S.No', dataIndex: 'sno', key: 'sno', width: '5%' },
                             { title: 'Server ID', dataIndex: 'serverid', key: 'serverid', width: '15%' },
                             { title: 'Server IP', dataIndex: 'serverip', key: 'serverip', width: '15%' },
-                            { title: 'Host Server ID', dataIndex: 'host_serverid', key: 'host_serverid', width: '15%' },
+                            { title: 'Host Server ID', dataIndex: 'host_serverid', key: 'host_serverid', width: '10%' },
                             { 
                               title: 'Status', 
                               dataIndex: 'status', 
