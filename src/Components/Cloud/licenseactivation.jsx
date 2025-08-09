@@ -50,7 +50,7 @@ const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
                                 result: 'Success',
                                 details: {
                                     type: result.key_type || 'N/A',
-                                    period: result.license_period ? `${result.license_period} days` : 'N/A',
+                                    period: result.license_period ? `${result.license_period}` : 'N/A',
                                     mac_address: result.mac_address,
                                     socket_count: result.socket_count,
                                     licenseCode: row.license || '-' // Store the license code
@@ -127,8 +127,7 @@ const LicenseActivation = ({ nodes = [], results, setResults, onNext }) => {
             render: (_, record) => (
                 <div>
                     <div>Type: <b>{record.details?.type || '-'}</b></div>
-                    <div>Period: <b>{record.details?.period || '-'}</b></div>
-                    {record.details?.mac_address && (
+                    <div>Period (Days): <b>{record.details?.period || '-'}</b></div>                    {record.details?.mac_address && (
                         <div>MAC: <b>{record.details.mac_address}</b></div>
                     )}
                     {record.details?.socket_count && (
