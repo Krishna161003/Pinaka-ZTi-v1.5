@@ -1239,22 +1239,10 @@ def get_node_status(ip):
             return {'status': 'UP'}
     except Exception:
         pass
-    # Directory where .pem keys are stored
-    # pem_dir = os.path.join(os.path.dirname(__file__), 'keys')
-    pem_dir = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
-    # Try to find a .pem key matching the IP or use the first .pem in the directory
-    pem_key = None
-    for fname in os.listdir(pem_dir):
-        if fname.endswith('.pem') and (ip.replace('.', '-') in fname or ip in fname):
-            pem_key = os.path.join(pem_dir, fname)
-            break
-    if not pem_key:
-        # fallback: use first .pem key
-        pem_files = [f for f in os.listdir(pem_dir) if f.endswith('.pem')]
-        if pem_files:
-            pem_key = os.path.join(pem_dir, pem_files[0])
-        else:
-            return {'status': 'DOWN', 'error': 'No .pem key found'}
+    # Path to the SSH private key
+    pem_key = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
+    if not os.path.isfile(pem_key):
+        return {'status': 'DOWN', 'error': 'SSH key not found at specified path'}
     username = 'ubuntu'  # or change as needed
     try:
         k = paramiko.RSAKey.from_private_key_file(pem_key)
