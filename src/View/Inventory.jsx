@@ -366,6 +366,7 @@ const Inventory = () => {
                                     okText="Yes"
                                     cancelText="No"
                                     disabled={!record.isOnline}
+                                    overlayStyle={{ maxWidth: '250px' }}
                                   >
                                     <Button 
                                       type="primary" 
@@ -382,6 +383,7 @@ const Inventory = () => {
                                     okText="Yes"
                                     cancelText="No"
                                     disabled={!record.isOnline}
+                                    overlayStyle={{ maxWidth: '250px' }}
                                   >
                                     <Button 
                                       type="primary"
@@ -440,6 +442,7 @@ const Inventory = () => {
                                     okText="Yes"
                                     cancelText="No"
                                     disabled={!record.isOnline}
+                                    overlayStyle={{ maxWidth: '250px' }}
                                   >
                                     <Button 
                                       type="primary" 
@@ -456,6 +459,7 @@ const Inventory = () => {
                                     okText="Yes"
                                     cancelText="No"
                                     disabled={!record.isOnline}
+                                    overlayStyle={{ maxWidth: '250px' }}
                                   >
                                     <Button 
                                       type="primary"
