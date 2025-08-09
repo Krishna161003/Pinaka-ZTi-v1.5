@@ -1239,11 +1239,11 @@ def get_node_status(ip):
             return {'status': 'UP'}
     except Exception:
         pass
-    # Path to the SSH private key
+    # Use the specified PEM key path
     pem_key = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
-    if not os.path.isfile(pem_key):
-        return {'status': 'DOWN', 'error': 'SSH key not found at specified path'}
-    username = 'ubuntu'  # or change as needed
+    if not os.path.exists(pem_key):
+        return {'status': 'DOWN', 'error': f'PEM key not found at {pem_key}'}
+    username = 'pinakasupport'  # specified username
     try:
         k = paramiko.RSAKey.from_private_key_file(pem_key)
         ssh = paramiko.SSHClient()
