@@ -497,18 +497,7 @@ const FlightDeckHostsTable = () => {
         open={modalVisible === 'license'}
         onCancel={() => setModalVisible(null)}
         title="License Details"
-        footer={
-          <>
-            <Button 
-              type="primary" 
-              onClick={() => setShowUpdateForm(true)}
-              style={{ marginRight: 8 }}
-            >
-              Update License
-            </Button>
-            <Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>
-          </>
-        }
+        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
         width={400}
       >
         <LicenseDetailsModalContent 
@@ -729,18 +718,7 @@ const SquadronNodesTable = () => {
         open={modalVisible === 'license'}
         onCancel={() => setModalVisible(null)}
         title="License Details"
-        footer={
-          <>
-            <Button 
-              type="primary" 
-              onClick={() => setShowUpdateForm(true)}
-              style={{ marginRight: 8 }}
-            >
-              Update License
-            </Button>
-            <Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>
-          </>
-        }
+        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
         width={400}
       >
         <LicenseDetailsModalContent 
