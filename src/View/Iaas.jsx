@@ -113,7 +113,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
   if (showUpdateForm) {
     return (
       <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <div style={{ marginBottom: '24px' }}>
+        {/* <div style={{ marginBottom: '24px' }}>
           <Button 
             type="text"
             icon={<span style={{ marginRight: '4px' }}>←</span>}
@@ -131,7 +131,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
           >
             Back
           </Button>
-        </div>
+        </div> */}
         
         <div style={{ 
           marginBottom: '24px',
@@ -259,7 +259,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
             borderTop: '1px solid #f0f0f0',
             marginTop: '24px'
           }}>
-            {/* <Button
+            <Button
               onClick={() => setShowUpdateForm(false)}
               style={{ 
                 marginRight: '12px',
@@ -269,7 +269,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
               }}
             >
               Cancel
-            </Button> */}
+            </Button>
             <Button
               type="primary"
               onClick={handleUpdateLicense}
@@ -280,8 +280,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
                 padding: '0 16px',
                 borderRadius: '6px',
                 fontWeight: 500,
-                minWidth: '120px',
-                width: '120px'
+                minWidth: '120px'
               }}
             >
               {updateLoading ? 'Updating...' : 'Update License'}
