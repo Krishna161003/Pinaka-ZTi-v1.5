@@ -542,9 +542,9 @@ const FlightDeckHostsTable = () => {
       <Modal
         open={modalVisible === 'credential'}
         onCancel={() => setModalVisible(null)}
-        title="Host Credentials"
+        title="Flight Deck Credentials"
         footer={null}
-        width={400}
+        width={600}
       >
         <div>
           <b>1. Flight Deck</b>
@@ -944,6 +944,7 @@ const CloudDeploymentsTable = () => {
         onCancel={() => setModalVisible(false)}
         title="Cloud Credentials"
         footer={null}
+        width={600}
       >
 
         <div>
