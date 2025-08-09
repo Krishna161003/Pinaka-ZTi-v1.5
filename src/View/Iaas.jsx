@@ -136,7 +136,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
           borderRadius: '8px',
           boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)'
         }}>
-          <h3 style={{ 
+          {/* <h3 style={{ 
             marginTop: 0, 
             marginBottom: '24px',
             color: '#1f1f1f',
@@ -144,17 +144,17 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
             fontWeight: 600
           }}>
             Update License
-          </h3>
+          </h3> */}
           
           <div style={{ marginBottom: '24px' }}>
-            <label style={{ 
+            {/* <label style={{ 
               display: 'block', 
               marginBottom: '8px', 
               fontWeight: 500,
               color: '#1f1f1f'
             }}>
               License Code (12 characters)
-            </label>
+            </label> */}
             <div style={{ display: 'flex', gap: '12px' }}>
               <Input
                 value={newLicenseCode}
@@ -167,6 +167,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
                 style={{ 
                   flex: 1,
                   height: '40px',
+                  width: '150px',
                   borderRadius: '6px'
                 }}
               />
