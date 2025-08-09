@@ -9,6 +9,8 @@ import squad from "../Images/database_2231963.png";
 import { Area, Line } from '@ant-design/plots';
 import axios from "axios";
 
+const hostIP = window.location.hostname;
+
 const style = {
   background: '#fff',
   padding: '16px 20px', // Reduced vertical padding for shorter Col height
@@ -78,7 +80,7 @@ const Dashboard = () => {
 
   // Fetch unique server IPs from Host and child_node tables
   useEffect(() => {
-    const hostIP = window.location.hostname;
+    
     async function fetchServerIps() {
       try {
         const userId = JSON.parse(sessionStorage.getItem('loginDetails'))?.data?.id;
