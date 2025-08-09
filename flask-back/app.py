@@ -1225,6 +1225,8 @@ def node_status():
     return jsonify(result)
 
 def get_node_status(ip):
+    print(f"Checking status for IP: {ip}")
+    
     # Check if IP is a local address
     try:
         local_ips = []
@@ -1236,23 +1238,75 @@ def get_node_status(ip):
                         local_ips.append(a['addr'])
         local_ips.extend(['127.0.0.1', 'localhost'])
         if ip in local_ips:
+            print(f"IP {ip} is local, marking as UP")
             return {'status': 'UP'}
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error checking local IPs: {str(e)}")
+    
     # Use the specified PEM key path
     pem_key = "/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem"
+    print(f"Using PEM key: {pem_key}")
+    
     if not os.path.exists(pem_key):
-        return {'status': 'DOWN', 'error': f'PEM key not found at {pem_key}'}
+        error_msg = f'PEM key not found at {pem_key}'
+        print(error_msg)
+        return {'status': 'DOWN', 'error': error_msg}
+    
     username = 'pinakasupport'  # specified username
+    print(f"Attempting SSH connection to {username}@{ip}")
+    
     try:
-        k = paramiko.RSAKey.from_private_key_file(pem_key)
+        # Test if we can read the key file
+        try:
+            k = paramiko.RSAKey.from_private_key_file(pem_key)
+            print("Successfully loaded private key")
+        except Exception as e:
+            error_msg = f'Failed to load private key: {str(e)}'
+            print(error_msg)
+            return {'status': 'DOWN', 'error': error_msg}
+        
+        # Attempt SSH connection
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(ip, username=username, pkey=k, timeout=5)
-        ssh.close()
-        return {'status': 'UP'}
+        
+        try:
+            print(f"Attempting to connect to {ip}...")
+            ssh.connect(ip, username=username, pkey=k, timeout=5, banner_timeout=10, auth_timeout=10)
+            print("SSH connection successful")
+            
+            # Test if we can execute a simple command
+            try:
+                stdin, stdout, stderr = ssh.exec_command('echo "Connection test successful"', timeout=5)
+                exit_status = stdout.channel.recv_exit_status()
+                if exit_status == 0:
+                    print("Command execution test passed")
+                else:
+                    error_msg = f'Command failed with exit status {exit_status}'
+                    print(error_msg)
+                    return {'status': 'DOWN', 'error': error_msg}
+            except Exception as e:
+                error_msg = f'Command execution test failed: {str(e)}'
+                print(error_msg)
+                return {'status': 'DOWN', 'error': error_msg}
+            
+            return {'status': 'UP'}
+            
+        except Exception as e:
+            error_msg = f'SSH connection failed: {str(e)}'
+            print(error_msg)
+            return {'status': 'DOWN', 'error': error_msg}
+            
+        finally:
+            try:
+                ssh.close()
+                print("SSH connection closed")
+            except:
+                pass
+                
     except Exception as e:
-        return {'status': 'DOWN', 'error': str(e)}
+        error_msg = f'Unexpected error: {str(e)}'
+        print(error_msg)
+        return {'status': 'DOWN', 'error': error_msg}
 
 # ------------------- System Utilization Endpoint ends -------------------
 
