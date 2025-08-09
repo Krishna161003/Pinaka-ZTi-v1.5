@@ -5,10 +5,15 @@ import { theme, Layout, Tabs, Table, Button, Modal, Spin, Alert, Input, Badge } 
 import { SearchOutlined } from '@ant-design/icons';
 
 // LicenseDetailsModalContent: fetches and displays license details for a serverid
-function LicenseDetailsModalContent({ serverid }) {
+function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [license, setLicense] = useState(null);
+  const [showUpdateForm, setShowUpdateForm] = useState(false);
+  const [newLicenseCode, setNewLicenseCode] = useState('');
+  const [newLicenseDetails, setNewLicenseDetails] = useState(null);
+  const [checkingLicense, setCheckingLicense] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
 
   useEffect(() => {
     if (!serverid) return;
@@ -25,22 +30,205 @@ function LicenseDetailsModalContent({ serverid }) {
       .finally(() => setLoading(false));
   }, [serverid]);
 
+  const checkLicenseCode = async (licenseCode) => {
+    if (!licenseCode.trim()) {
+      setNewLicenseDetails(null);
+      return;
+    }
+    
+    setCheckingLicense(true);
+    try {
+      const response = await fetch(`https://${hostIP}:5000/api/check-license-exists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ license_code: licenseCode })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.exists) {
+          // Fetch license details for the new code
+          const detailsResponse = await fetch(`https://${hostIP}:5000/api/license-details-by-code/${licenseCode}`);
+          if (detailsResponse.ok) {
+            const details = await detailsResponse.json();
+            setNewLicenseDetails(details);
+          } else {
+            setNewLicenseDetails(null);
+          }
+        } else {
+          setNewLicenseDetails(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking license:', error);
+      setNewLicenseDetails(null);
+    } finally {
+      setCheckingLicense(false);
+    }
+  };
+
+  const handleUpdateLicense = async () => {
+    if (!newLicenseCode.trim() || !newLicenseDetails) return;
+    
+    setUpdateLoading(true);
+    try {
+      const response = await fetch(`https://${hostIP}:5000/api/update-license/${serverid}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          new_license_code: newLicenseCode,
+          license_type: newLicenseDetails.license_type,
+          license_period: newLicenseDetails.license_period
+        })
+      });
+      
+      if (response.ok) {
+        // Refresh license details
+        const updatedResponse = await fetch(`https://${hostIP}:5000/api/license-details/${serverid}`);
+        if (updatedResponse.ok) {
+          const updatedLicense = await updatedResponse.json();
+          setLicense(updatedLicense);
+        }
+        setShowUpdateForm(false);
+        setNewLicenseCode('');
+        setNewLicenseDetails(null);
+        if (onLicenseUpdate) onLicenseUpdate();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || 'Failed to update license');
+      }
+    } catch (error) {
+      console.error('Error updating license:', error);
+      alert('Failed to update license');
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
   if (!serverid) return <div style={{ color: '#aaa' }}>No server ID selected.</div>;
   if (loading) return <Spin tip="Loading license details..." />;
   if (error) return <Alert type="error" message={error} showIcon />;
   if (!license) return <div style={{ color: '#aaa' }}>No license data found.</div>;
+
+  if (showUpdateForm) {
+    return (
+      <div>
+        <div style={{ marginBottom: 16 }}>
+          <Button 
+            size="small" 
+            onClick={() => setShowUpdateForm(false)}
+            style={{ marginBottom: 16 }}
+          >
+            ← Back to License Details
+          </Button>
+        </div>
+        
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
+            Enter New License Code (12 characters max):
+          </label>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <Input
+              value={newLicenseCode}
+              onChange={(e) => {
+                const value = e.target.value.slice(0, 12); // Limit to 12 characters
+                setNewLicenseCode(value);
+              }}
+              placeholder="Enter license code"
+              maxLength={12}
+              style={{ flex: 1 }}
+            />
+            <Button
+              onClick={() => checkLicenseCode(newLicenseCode)}
+              loading={checkingLicense}
+              disabled={!newLicenseCode.trim() || newLicenseCode.length !== 12}
+            >
+              Check
+            </Button>
+          </div>
+        </div>
+
+        {checkingLicense && (
+          <div style={{ marginBottom: 16 }}>
+            <Spin size="small" tip="Checking license..." />
+          </div>
+        )}
+
+        {newLicenseCode.length === 12 && !checkingLicense && !newLicenseDetails && (
+          <div style={{ marginBottom: 16 }}>
+            <Alert 
+              message="Please click 'Check' to verify the license code" 
+              type="info" 
+              showIcon 
+            />
+          </div>
+        )}
+
+        {newLicenseDetails && (
+          <div style={{ 
+            border: '1px solid #d9d9d9', 
+            borderRadius: 8, 
+            padding: 16, 
+            marginBottom: 16,
+            backgroundColor: '#fafafa'
+          }}>
+            <h4 style={{ marginTop: 0, marginBottom: 12 }}>License Preview:</h4>
+            <div><b>License Code:</b> {newLicenseDetails.license_code}</div>
+            <div><b>Type:</b> {newLicenseDetails.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
+            <div><b>Period:</b> {newLicenseDetails.license_period ? `${newLicenseDetails.license_period} days` : <span style={{ color: '#aaa' }}>-</span>}</div>
+            <div><b>Status:</b> {newLicenseDetails.license_status || <span style={{ color: '#aaa' }}>-</span>}</div>
+          </div>
+        )}
+
+        <Button
+          type="primary"
+          onClick={handleUpdateLicense}
+          loading={updateLoading}
+          disabled={!newLicenseCode.trim() || !newLicenseDetails}
+          style={{ width: '100%' }}
+        >
+          Update License
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div><b>License Code:</b> {license.license_code || <span style={{ color: '#aaa' }}>-</span>}</div>
       <div><b>Type:</b> {license.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
-      <div><b>Period:</b> {license.license_period || <span style={{ color: '#aaa' }}>-</span>}</div>
+      <div><b>Period:</b> {license.license_period ? `${license.license_period} days` : <span style={{ color: '#aaa' }}>-</span>}</div>
       <div><b>Status:</b> {(
         license.license_status && license.license_status.toLowerCase() === 'activated'
           ? <span style={{ color: 'green' }}>Active</span>
-          : license.license_status
-            ? <span style={{ color: 'red' }}>{license.license_status}</span>
-            : <span style={{ color: '#aaa' }}>-</span>
+          : license.license_status && license.license_status.toLowerCase() === 'expired'
+            ? <span style={{ color: 'red' }}>Expired</span>
+            : license.license_status
+              ? <span style={{ color: 'orange' }}>{license.license_status}</span>
+              : <span style={{ color: '#aaa' }}>-</span>
       )}</div>
+      <div><b>Start Date:</b> {license.start_date ? new Date(license.start_date).toLocaleDateString() : <span style={{ color: '#aaa' }}>-</span>}</div>
+      <div><b>End Date:</b> {license.end_date ? (
+        <span style={{ 
+          color: new Date(license.end_date) < new Date() ? 'red' : 'inherit',
+          fontWeight: new Date(license.end_date) < new Date() ? 'bold' : 'normal'
+        }}>
+          {new Date(license.end_date).toLocaleDateString()}
+          {new Date(license.end_date) < new Date() && ' (Expired)'}
+        </span>
+      ) : <span style={{ color: '#aaa' }}>-</span>}</div>
+      
+      {license.license_status && license.license_status.toLowerCase() === 'expired' && (
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #d9d9d9' }}>
+          <Button 
+            type="primary" 
+            onClick={() => setShowUpdateForm(true)}
+            style={{ width: '100%' }}
+          >
+            Update License
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -182,13 +370,19 @@ const FlightDeckHostsTable = () => {
           >
             {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
           </Button>
-          {/* {record.license_status ? (
-            <span style={{ color: record.license_status.toLowerCase() === 'activated' ? 'green' : 'red', fontSize: 12 }}>
-              {record.license_status.toLowerCase() === 'activated' ? 'Active' : record.license_status}
+          {record.license_status ? (
+            <span style={{ 
+              color: record.license_status.toLowerCase() === 'activated' ? 'green' : 
+                     record.license_status.toLowerCase() === 'expired' ? 'red' : 'orange', 
+              fontSize: 12 
+            }}>
+              {record.license_status.toLowerCase() === 'activated' ? 'Active' : 
+               record.license_status.toLowerCase() === 'expired' ? 'Expired' : 
+               record.license_status}
             </span>
           ) : (
             <span style={{ color: '#999', fontSize: 12 }}>-</span>
-          )} */}
+          )}
         </div>
       )
     },
@@ -305,7 +499,13 @@ const FlightDeckHostsTable = () => {
         footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
         width={400}
       >
-        <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
+        <LicenseDetailsModalContent 
+          serverid={modalRecord?.serverid} 
+          onLicenseUpdate={() => {
+            // Refresh the table data when license is updated
+            window.location.reload();
+          }}
+        />
       </Modal>
     </div>
   );
@@ -399,13 +599,19 @@ const SquadronNodesTable = () => {
           >
             {record.licensecode ? 'View' : <span style={{ color: '#999' }}>N/A</span>}
           </Button>
-          {/* {record.license_status ? (
-            <span style={{ color: record.license_status.toLowerCase() === 'activated' ? 'green' : 'red', fontSize: 12 }}>
-              {record.license_status.toLowerCase() === 'activated' ? 'Active' : record.license_status}
+          {record.license_status ? (
+            <span style={{ 
+              color: record.license_status.toLowerCase() === 'activated' ? 'green' : 
+                     record.license_status.toLowerCase() === 'expired' ? 'red' : 'orange', 
+              fontSize: 12 
+            }}>
+              {record.license_status.toLowerCase() === 'activated' ? 'Active' : 
+               record.license_status.toLowerCase() === 'expired' ? 'Expired' : 
+               record.license_status}
             </span>
           ) : (
             <span style={{ color: '#999', fontSize: 12 }}>-</span>
-          )} */}
+          )}
         </div>
       )
     },
@@ -514,7 +720,13 @@ const SquadronNodesTable = () => {
         footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
         width={400}
       >
-        <LicenseDetailsModalContent serverid={modalRecord?.serverid} />
+        <LicenseDetailsModalContent 
+          serverid={modalRecord?.serverid} 
+          onLicenseUpdate={() => {
+            // Refresh the table data when license is updated
+            window.location.reload();
+          }}
+        />
       </Modal>
     </div>
   );

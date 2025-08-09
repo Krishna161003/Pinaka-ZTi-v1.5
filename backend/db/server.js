@@ -9,6 +9,48 @@ const nodemailer = require("nodemailer"); // Import nodemailer library
 const bcrypt = require("bcrypt"); // Import bcrypt library
 const { customAlphabet } = require('nanoid'); // Import nanoid for generating unique IDs
 require("dotenv").config(); // Load environment variables
+
+// Helper function to calculate end date based on license period (number of days)
+function calculateEndDate(licensePeriod) {
+  if (!licensePeriod) return null;
+  
+  const today = new Date();
+  const startDate = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+  
+  // Parse license period as number of days
+  const days = parseInt(licensePeriod);
+  
+  if (isNaN(days) || days < 0) {
+    console.warn(`Invalid license period: ${licensePeriod}. Expected a positive number of days.`);
+    return null;
+  }
+  
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() + days);
+  
+  return endDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+}
+
+// Helper function to check and update expired licenses
+function checkAndUpdateExpiredLicenses() {
+  const today = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD format
+  
+  const updateExpiredSQL = `
+    UPDATE License 
+    SET license_status = 'expired' 
+    WHERE license_status = 'activated' 
+    AND end_date IS NOT NULL 
+    AND end_date < ?
+  `;
+  
+  db.query(updateExpiredSQL, [today], (err, result) => {
+    if (err) {
+      console.error('Error updating expired licenses:', err);
+    } else if (result.affectedRows > 0) {
+      console.log(`Updated ${result.affectedRows} expired license(s)`);
+    }
+  });
+}
 const https = require('https');
 const fs = require('fs');
 const { exec } = require("child_process");
@@ -330,13 +372,28 @@ db.connect((err) => {
         license_type VARCHAR(255), -- License_type
         license_period VARCHAR(255), -- License_period
         license_status VARCHAR(255), -- License_status
-        server_id CHAR(36) -- Server_id (no longer a Foreign Key)
+        server_id CHAR(36), -- Server_id (no longer a Foreign Key)
+        start_date DATE NULL, -- Start date when license is activated
+        end_date DATE NULL -- End date calculated from license_period
       ) ENGINE=InnoDB;
     `;
 
     db.query(licenseTableSQL, (err, result) => {
       if (err) throw err;
       console.log("License table checked/created...");
+      
+      // Add start_date and end_date columns to existing License table if they don't exist
+      db.query("ALTER TABLE License ADD COLUMN IF NOT EXISTS start_date DATE NULL", (altErr) => {
+        if (altErr && altErr.code !== 'ER_DUP_FIELDNAME' && altErr.code !== 'ER_CANT_ADD_FIELD') {
+          console.warn("Could not ensure 'start_date' column on License:", altErr.message);
+        }
+      });
+      
+      db.query("ALTER TABLE License ADD COLUMN IF NOT EXISTS end_date DATE NULL", (altErr) => {
+        if (altErr && altErr.code !== 'ER_DUP_FIELDNAME' && altErr.code !== 'ER_CANT_ADD_FIELD') {
+          console.warn("Could not ensure 'end_date' column on License:", altErr.message);
+        }
+      });
 
       // Create Host table
       const hostTableSQL = `
@@ -402,6 +459,12 @@ db.connect((err) => {
     });
     console.log("Child Node table checked/created...");
   });
+  
+  // Set up periodic check for expired licenses (run every hour)
+  setInterval(checkAndUpdateExpiredLicenses, 60 * 60 * 1000); // 60 minutes * 60 seconds * 1000 milliseconds
+  
+  // Also run the check once on startup
+  setTimeout(checkAndUpdateExpiredLicenses, 5000); // Run after 5 seconds to ensure DB is ready
 });
 
 // Helper to get the latest in-progress deployment for a user
@@ -553,7 +616,11 @@ app.patch('/api/deployment-activity-log/:serverid', (req, res) => {
 // API to fetch license details for a serverid
 app.get('/api/license-details/:serverid', (req, res) => {
   const { serverid } = req.params;
-  const sql = 'SELECT license_code, license_type, license_period, license_status FROM License WHERE server_id = ? LIMIT 1';
+  
+  // First check and update any expired licenses
+  checkAndUpdateExpiredLicenses();
+  
+  const sql = 'SELECT license_code, license_type, license_period, license_status, start_date, end_date FROM License WHERE server_id = ? LIMIT 1';
   db.query(sql, [serverid], (err, results) => {
     if (err) {
       console.error('Error fetching license details:', err);
@@ -596,14 +663,35 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
       }
       const licenseCodeToUse = licResults.length > 0 ? licResults[0].license_code : null;
 
-      // Update license status to 'activated' and timestamp
+      // Update license status to 'activated' and set start/end dates
       if (licenseCodeToUse) {
-        const updateLicenseSQL = `UPDATE License SET license_status = 'activated', server_id = ? WHERE license_code = ?`;
-        db.query(updateLicenseSQL, [deployment.serverid, licenseCodeToUse], (licUpdateErr, result) => {
-          if (licUpdateErr) {
-            console.error('Error updating license status:', licUpdateErr);
+        // First get the license period to calculate end date
+        const getLicenseSQL = `SELECT license_period FROM License WHERE license_code = ?`;
+        db.query(getLicenseSQL, [licenseCodeToUse], (getLicErr, licResults) => {
+          if (getLicErr) {
+            console.error('Error fetching license period:', getLicErr);
+            // Continue with basic update
+            const updateLicenseSQL = `UPDATE License SET license_status = 'activated', server_id = ? WHERE license_code = ?`;
+            db.query(updateLicenseSQL, [deployment.serverid, licenseCodeToUse], (licUpdateErr, result) => {
+              if (licUpdateErr) {
+                console.error('Error updating license status:', licUpdateErr);
+              } else {
+                console.log('License status updated:', result);
+              }
+            });
           } else {
-            console.log('License status updated:', result);
+            const licensePeriod = licResults[0]?.license_period;
+            const startDate = new Date().toISOString().split('T')[0]; // Today's date
+            const endDate = calculateEndDate(licensePeriod);
+            
+            const updateLicenseSQL = `UPDATE License SET license_status = 'activated', server_id = ?, start_date = ?, end_date = ? WHERE license_code = ?`;
+            db.query(updateLicenseSQL, [deployment.serverid, startDate, endDate, licenseCodeToUse], (licUpdateErr, result) => {
+              if (licUpdateErr) {
+                console.error('Error updating license status:', licUpdateErr);
+              } else {
+                console.log('License status updated with dates:', result);
+              }
+            });
           }
         });
       }
@@ -1420,12 +1508,31 @@ app.post('/api/finalize-child-deployment/:serverid', (req, res) => {
         }
         const licenseCodeToUse = licRows && licRows.length > 0 ? licRows[0].license_code : null;
 
-        // 3) Set license status to 'activated' (optional, like Host)
+        // 3) Set license status to 'activated' and set start/end dates
         if (licenseCodeToUse) {
-          const updLicSQL = `UPDATE License SET license_status = 'activated', server_id = ? WHERE license_code = ?`;
-          db.query(updLicSQL, [serverid, licenseCodeToUse], (licUpdErr) => {
-            if (licUpdErr) {
-              console.error('Error activating child license:', licUpdErr);
+          // First get the license period to calculate end date
+          const getLicenseSQL = `SELECT license_period FROM License WHERE license_code = ?`;
+          db.query(getLicenseSQL, [licenseCodeToUse], (getLicErr, licResults) => {
+            if (getLicErr) {
+              console.error('Error fetching license period for child:', getLicErr);
+              // Continue with basic update
+              const updLicSQL = `UPDATE License SET license_status = 'activated', server_id = ? WHERE license_code = ?`;
+              db.query(updLicSQL, [serverid, licenseCodeToUse], (licUpdErr) => {
+                if (licUpdErr) {
+                  console.error('Error activating child license:', licUpdErr);
+                }
+              });
+            } else {
+              const licensePeriod = licResults[0]?.license_period;
+              const startDate = new Date().toISOString().split('T')[0]; // Today's date
+              const endDate = calculateEndDate(licensePeriod);
+              
+              const updLicSQL = `UPDATE License SET license_status = 'activated', server_id = ?, start_date = ?, end_date = ? WHERE license_code = ?`;
+              db.query(updLicSQL, [serverid, startDate, endDate, licenseCodeToUse], (licUpdErr) => {
+                if (licUpdErr) {
+                  console.error('Error activating child license:', licUpdErr);
+                }
+              });
             }
           });
         }
