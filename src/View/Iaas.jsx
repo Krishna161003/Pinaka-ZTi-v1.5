@@ -217,6 +217,19 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
           {new Date(license.end_date) < new Date() && ' (Expired)'}
         </span>
       ) : <span style={{ color: '#aaa' }}>-</span>}</div>
+      
+      {/* Temporarily enabled for testing - remove license status check */}
+      {license.license_code && (
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #d9d9d9' }}>
+          <Button 
+            type="primary" 
+            onClick={() => setShowUpdateForm(true)}
+            style={{ width: '95px' }}
+          >
+            Update License
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -484,20 +497,18 @@ const FlightDeckHostsTable = () => {
         open={modalVisible === 'license'}
         onCancel={() => setModalVisible(null)}
         title="License Details"
-        footer={(
+        footer={
           <>
-            {modalRecord?.licensecode && (
-              <Button 
-                type="primary" 
-                onClick={() => setShowUpdateForm(true)}
-                style={{ marginRight: 8 }}
-              >
-                Update License
-              </Button>
-            )}
+            <Button 
+              type="primary" 
+              onClick={() => setShowUpdateForm(true)}
+              style={{ marginRight: 8 }}
+            >
+              Update License
+            </Button>
             <Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>
           </>
-        )}
+        }
         width={400}
       >
         <LicenseDetailsModalContent 
@@ -506,7 +517,6 @@ const FlightDeckHostsTable = () => {
             // Refresh the table data when license is updated
             window.location.reload();
           }}
-          onShowUpdateForm={() => setShowUpdateForm(true)}
         />
       </Modal>
     </div>
@@ -719,20 +729,18 @@ const SquadronNodesTable = () => {
         open={modalVisible === 'license'}
         onCancel={() => setModalVisible(null)}
         title="License Details"
-        footer={(
+        footer={
           <>
-            {modalRecord?.licensecode && (
-              <Button 
-                type="primary" 
-                onClick={() => setShowUpdateForm(true)}
-                style={{ marginRight: 8 }}
-              >
-                Update License
-              </Button>
-            )}
+            <Button 
+              type="primary" 
+              onClick={() => setShowUpdateForm(true)}
+              style={{ marginRight: 8 }}
+            >
+              Update License
+            </Button>
             <Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>
           </>
-        )}
+        }
         width={400}
       >
         <LicenseDetailsModalContent 
@@ -741,7 +749,6 @@ const SquadronNodesTable = () => {
             // Refresh the table data when license is updated
             window.location.reload();
           }}
-          onShowUpdateForm={() => setShowUpdateForm(true)}
         />
       </Modal>
     </div>
