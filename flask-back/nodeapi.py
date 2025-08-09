@@ -19,6 +19,55 @@ from collections import deque
 app = Flask(__name__)
 CORS(app)
 
+# Store last 60 seconds of CPU, Memory, and Bandwidth usage
+timestamped_cpu_history = deque(maxlen=60)
+timestamped_memory_history = deque(maxlen=60)
+timestamped_bandwidth_history = deque(maxlen=60)
+
+def add_cpu_history(cpu_percent):
+    timestamped_cpu_history.append({
+        "timestamp": int(time.time()),
+        "cpu": cpu_percent
+    })
+
+def add_memory_history(mem_percent):
+    timestamped_memory_history.append({
+        "timestamp": int(time.time()),
+        "memory": mem_percent
+    })
+
+def get_cpu_history():
+    return list(timestamped_cpu_history)
+
+def get_memory_history():
+    return list(timestamped_memory_history)
+
+# Add bandwidth history
+last_bandwidth = {'rx': 0, 'tx': 0, 'timestamp': 0}
+def add_bandwidth_history(interface):
+    global last_bandwidth
+    rx, tx = get_bandwidth(interface)
+    now = int(time.time())
+    if rx is None or tx is None:
+        return
+    if last_bandwidth['timestamp'] == 0:
+        last_bandwidth = {'rx': rx, 'tx': tx, 'timestamp': now}
+        return
+    elapsed = now - last_bandwidth['timestamp']
+    if elapsed <= 0:
+        return
+    bandwidth_kbps = ((rx - last_bandwidth['rx']) + (tx - last_bandwidth['tx'])) / 1024 / elapsed
+    timestamped_bandwidth_history.append({
+        "timestamp": now,
+        "bandwidth_kbps": round(bandwidth_kbps, 2),
+        "interface": interface
+    })
+    last_bandwidth = {'rx': rx, 'tx': tx, 'timestamp': now}
+
+def get_bandwidth_history():
+    return list(timestamped_bandwidth_history)
+
+
 # ------------------------------------------------ Validate License Start --------------------------------------------
 # Function to decrypt a code (lookup MAC address, key, and key type)
 def decrypt_code(code, lookup_table):

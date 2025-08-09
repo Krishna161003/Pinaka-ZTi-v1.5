@@ -339,7 +339,7 @@ const Dashboard = () => {
     async function fetchNodeStatus() {
       try {
         setNodeStatus('Loading');
-        const res = await fetch(`https://${selectedHostIP}:2020/node-status?ip=${selectedHostIP}`);
+        const res = await fetch(`https://${hostIP}:2020/node-status?ip=${selectedHostIP}`);
         const data = await res.json();
         if (!cancelled) {
           setNodeStatus(data.status === 'UP' ? 'UP' : 'DOWN');
