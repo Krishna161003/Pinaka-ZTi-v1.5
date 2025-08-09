@@ -1417,7 +1417,7 @@ def server_control():
         
         # Try to connect with timeout
         try:
-            ssh.connect(hostname=server_ip, username='pinaka', pkey=key, timeout=5)
+            ssh.connect(hostname=server_ip, username='pinakasupport', pkey=key, timeout=5)
             
             # Handle different actions
             if action == 'status':
