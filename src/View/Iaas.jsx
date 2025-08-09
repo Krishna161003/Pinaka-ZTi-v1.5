@@ -224,7 +224,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
           <Button 
             type="primary" 
             onClick={() => setShowUpdateForm(true)}
-            style={{ width: '100px' }}
+            style={{ width: '110px' }}
           >
             Update License
           </Button>
