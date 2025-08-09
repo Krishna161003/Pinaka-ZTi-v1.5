@@ -112,83 +112,175 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
 
   if (showUpdateForm) {
     return (
-      <div>
-        <div style={{ marginBottom: 16 }}>
+      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <div style={{ marginBottom: '24px' }}>
           <Button 
-            size="small" 
+            type="text"
+            icon={<span style={{ marginRight: '4px' }}>←</span>}
             onClick={() => setShowUpdateForm(false)}
-            style={{ marginBottom: 16 }}
+            style={{ 
+              padding: '4px 0',
+              height: 'auto',
+              color: '#1890ff',
+              fontWeight: 500
+            }}
           >
-            ← Back to License Details
+            Back to License Details
           </Button>
         </div>
         
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
-            Enter New License Code (12 characters max):
-          </label>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <Input
-              value={newLicenseCode}
-              onChange={(e) => {
-                const value = e.target.value.slice(0, 12); // Limit to 12 characters
-                setNewLicenseCode(value);
-              }}
-              placeholder="Enter license code"
-              maxLength={12}
-              style={{ flex: 1 }}
-            />
+        <div style={{ 
+          marginBottom: '24px',
+          backgroundColor: '#fff',
+          padding: '24px',
+          borderRadius: '8px',
+          boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03)'
+        }}>
+          <h3 style={{ 
+            marginTop: 0, 
+            marginBottom: '24px',
+            color: '#1f1f1f',
+            fontSize: '16px',
+            fontWeight: 600
+          }}>
+            Update License
+          </h3>
+          
+          <div style={{ marginBottom: '24px' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '8px', 
+              fontWeight: 500,
+              color: '#1f1f1f'
+            }}>
+              License Code (12 characters)
+            </label>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <Input
+                value={newLicenseCode}
+                onChange={(e) => {
+                  const value = e.target.value.slice(0, 12);
+                  setNewLicenseCode(value);
+                }}
+                placeholder="Enter 12-character license code"
+                maxLength={12}
+                style={{ 
+                  flex: 1,
+                  height: '40px',
+                  borderRadius: '6px'
+                }}
+              />
+              <Button
+                type="primary"
+                onClick={() => checkLicenseCode(newLicenseCode)}
+                loading={checkingLicense}
+                disabled={!newLicenseCode.trim() || newLicenseCode.length !== 12}
+                style={{
+                  height: '40px',
+                  padding: '0 16px',
+                  borderRadius: '6px',
+                  fontWeight: 500
+                }}
+              >
+                Verify
+              </Button>
+            </div>
+          </div>
+
+          {checkingLicense && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '16px 0',
+              marginBottom: '16px',
+              backgroundColor: '#fafafa',
+              borderRadius: '6px'
+            }}>
+              <Spin size="small" style={{ marginRight: '8px' }} />
+              <span>Verifying license code...</span>
+            </div>
+          )}
+
+          {newLicenseCode.length === 12 && !checkingLicense && !newLicenseDetails && (
+            <div style={{ marginBottom: '16px' }}>
+              <Alert 
+                message="Please click 'Verify' to check the license code" 
+                type="info" 
+                showIcon
+                style={{ borderRadius: '6px' }}
+              />
+            </div>
+          )}
+
+          {newLicenseDetails && (
+            <div style={{ 
+              border: '1px solid #e8e8e8',
+              borderRadius: '8px', 
+              padding: '16px', 
+              marginBottom: '24px',
+              backgroundColor: '#fafafa'
+            }}>
+              <h4 style={{ 
+                marginTop: 0, 
+                marginBottom: '16px',
+                color: '#1f1f1f',
+                fontSize: '15px',
+                fontWeight: 600
+              }}>
+                License Information
+              </h4>
+              <div style={{ 
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '12px 24px'
+              }}>
+                <div><b>License Code:</b> <span style={{ color: '#262626' }}>{newLicenseDetails.license_code}</span></div>
+                <div><b>Type:</b> <span style={{ color: '#262626' }}>{newLicenseDetails.license_type || '-'}</span></div>
+                <div><b>Period:</b> <span style={{ color: '#262626' }}>{newLicenseDetails.license_period ? `${newLicenseDetails.license_period} days` : '-'}</span></div>
+                <div><b>Status:</b> <span style={{ 
+                  color: newLicenseDetails.license_status === 'activated' ? '#52c41a' : 
+                         newLicenseDetails.license_status === 'expired' ? '#ff4d4f' : '#faad14'
+                }}>{newLicenseDetails.license_status || '-'}</span></div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            paddingTop: '16px',
+            borderTop: '1px solid #f0f0f0',
+            marginTop: '24px'
+          }}>
             <Button
-              onClick={() => checkLicenseCode(newLicenseCode)}
-              loading={checkingLicense}
-              disabled={!newLicenseCode.trim() || newLicenseCode.length !== 12}
+              onClick={() => setShowUpdateForm(false)}
+              style={{ 
+                marginRight: '12px',
+                height: '40px',
+                padding: '0 16px',
+                borderRadius: '6px'
+              }}
             >
-              Check
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              onClick={handleUpdateLicense}
+              loading={updateLoading}
+              disabled={!newLicenseCode.trim() || !newLicenseDetails}
+              style={{
+                height: '40px',
+                padding: '0 16px',
+                borderRadius: '6px',
+                fontWeight: 500,
+                minWidth: '120px'
+              }}
+            >
+              {updateLoading ? 'Updating...' : 'Update License'}
             </Button>
           </div>
         </div>
-
-        {checkingLicense && (
-          <div style={{ marginBottom: 16 }}>
-            <Spin size="small" tip="Checking license..." />
-          </div>
-        )}
-
-        {newLicenseCode.length === 12 && !checkingLicense && !newLicenseDetails && (
-          <div style={{ marginBottom: 16 }}>
-            <Alert 
-              message="Please click 'Check' to verify the license code" 
-              type="info" 
-              showIcon 
-            />
-          </div>
-        )}
-
-        {newLicenseDetails && (
-          <div style={{ 
-            border: '1px solid #d9d9d9', 
-            borderRadius: 8, 
-            padding: 16, 
-            marginBottom: 16,
-            backgroundColor: '#fafafa'
-          }}>
-            <h4 style={{ marginTop: 0, marginBottom: 12 }}>License Preview:</h4>
-            <div><b>License Code:</b> {newLicenseDetails.license_code}</div>
-            <div><b>Type:</b> {newLicenseDetails.license_type || <span style={{ color: '#aaa' }}>-</span>}</div>
-            <div><b>Period:</b> {newLicenseDetails.license_period ? `${newLicenseDetails.license_period} days` : <span style={{ color: '#aaa' }}>-</span>}</div>
-            <div><b>Status:</b> {newLicenseDetails.license_status || <span style={{ color: '#aaa' }}>-</span>}</div>
-          </div>
-        )}
-
-        <Button
-          type="primary"
-          onClick={handleUpdateLicense}
-          loading={updateLoading}
-          disabled={!newLicenseCode.trim() || !newLicenseDetails}
-          style={{ width: '100px' }}
-        >
-          Update License
-        </Button>
       </div>
     );
   }
