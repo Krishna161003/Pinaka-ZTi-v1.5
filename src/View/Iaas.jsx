@@ -122,7 +122,8 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
               padding: '4px 0',
               height: 'auto',
               color: '#1890ff',
-              fontWeight: 500
+              fontWeight: 500,
+              width: '90px'
             }}
           >
             Back
