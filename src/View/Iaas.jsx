@@ -543,7 +543,7 @@ const FlightDeckHostsTable = () => {
         open={modalVisible === 'credential'}
         onCancel={() => setModalVisible(null)}
         title="Host Credentials"
-        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }} >Close</Button>}
+        // footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }} >Close</Button>}
         width={400}
       >
         <div>
@@ -594,7 +594,7 @@ const FlightDeckHostsTable = () => {
         open={modalVisible === 'license'}
         onCancel={() => setModalVisible(null)}
         title="License Details"
-        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
+        // footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
         width={400}
       >
         <LicenseDetailsModalContent 
@@ -764,7 +764,7 @@ const SquadronNodesTable = () => {
         open={modalVisible === 'credential'}
         onCancel={() => setModalVisible(null)}
         title="Squadron Node Credentials"
-        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
+        // footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
         width={600}
       >
         <div>
@@ -815,7 +815,7 @@ const SquadronNodesTable = () => {
         open={modalVisible === 'license'}
         onCancel={() => setModalVisible(null)}
         title="License Details"
-        footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
+        // footer={<Button onClick={() => setModalVisible(null)} style={{ width: '95px' }}>Close</Button>}
         width={400}
       >
         <LicenseDetailsModalContent 
@@ -920,7 +920,7 @@ const CloudDeploymentsTable = () => {
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         title="Cloud Credentials"
-        footer={<Button onClick={() => setModalVisible(false)} style={{ width: '95px' }}>Close</Button>}
+        // footer={<Button onClick={() => setModalVisible(false)} style={{ width: '95px' }}>Close</Button>}
       >
 
         <div>
