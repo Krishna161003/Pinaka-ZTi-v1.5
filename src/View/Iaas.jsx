@@ -167,7 +167,6 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
                 style={{ 
                   flex: 1,
                   height: '40px',
-                  width: '150px',
                   borderRadius: '6px'
                 }}
               />
@@ -180,7 +179,8 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
                   height: '40px',
                   padding: '0 16px',
                   borderRadius: '6px',
-                  fontWeight: 500
+                  fontWeight: 500,
+                  width: '90px'
                 }}
               >
                 Verify
