@@ -361,12 +361,14 @@ const Inventory = () => {
                               render: (_, record) => (
                                 <div>
                                   <Popconfirm
-                                    title="Are you sure you want to shutdown this server?"
+                                    title="Are you sure?"
                                     onConfirm={() => shutdownServer(record.serverip)}
                                     okText="Yes"
                                     cancelText="No"
                                     disabled={!record.isOnline}
-                                    overlayStyle={{ maxWidth: '95px' }}
+                                    overlayStyle={{ width: '180px' }}
+                                    okButtonProps={{ style: { marginRight: '8px', width: '50px' } }}
+                                    cancelButtonProps={{ style: { width: '50px' } }}
                                   >
                                     <Button 
                                       type="primary" 
@@ -378,12 +380,14 @@ const Inventory = () => {
                                     </Button>
                                   </Popconfirm>
                                   <Popconfirm
-                                    title="Are you sure you want to reboot this server?"
+                                    title="Are you sure?"
                                     onConfirm={() => rebootServer(record.serverip)}
                                     okText="Yes"
                                     cancelText="No"
                                     disabled={!record.isOnline}
-                                    overlayStyle={{ maxWidth: '250px' }}
+                                    overlayStyle={{ width: '180px' }}
+                                    okButtonProps={{ style: { marginRight: '8px', width: '50px' } }}
+                                    cancelButtonProps={{ style: { width: '50px' } }}
                                   >
                                     <Button 
                                       type="primary"
@@ -437,12 +441,14 @@ const Inventory = () => {
                               render: (_, record) => (
                                 <div>
                                   <Popconfirm
-                                    title="Are you sure you want to shutdown this server?"
+                                    title="Are you sure?"
                                     onConfirm={() => shutdownServer(record.serverip)}
                                     okText="Yes"
                                     cancelText="No"
                                     disabled={!record.isOnline}
-                                    overlayStyle={{ maxWidth: '250px' }}
+                                    overlayStyle={{ width: '180px' }}
+                                    okButtonProps={{ style: { marginRight: '8px', width: '50px' } }}
+                                    cancelButtonProps={{ style: { width: '50px' } }}
                                   >
                                     <Button 
                                       type="primary" 
@@ -454,12 +460,14 @@ const Inventory = () => {
                                     </Button>
                                   </Popconfirm>
                                   <Popconfirm
-                                    title="Are you sure you want to reboot this server?"
+                                    title="Are you sure?"
                                     onConfirm={() => rebootServer(record.serverip)}
                                     okText="Yes"
                                     cancelText="No"
                                     disabled={!record.isOnline}
-                                    overlayStyle={{ maxWidth: '250px' }}
+                                    overlayStyle={{ width: '180px' }}
+                                    okButtonProps={{ style: { marginRight: '8px', width: '50px' } }}
+                                    cancelButtonProps={{ style: { width: '50px' } }}
                                   >
                                     <Button 
                                       type="primary"
