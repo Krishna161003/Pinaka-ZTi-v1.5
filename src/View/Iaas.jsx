@@ -123,7 +123,11 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
               height: 'auto',
               color: '#1890ff',
               fontWeight: 500,
-              width: '90px'
+              width: '90px',
+              marginBottom: '-24px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              cursor: 'pointer'
             }}
           >
             Back
