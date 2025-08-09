@@ -124,7 +124,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
               color: '#1890ff',
               fontWeight: 500,
               width: '90px',
-              marginBottom: '-24px',
+              marginBottom: '-64px',
               border: 'none',
               backgroundColor: 'transparent',
               cursor: 'pointer'
