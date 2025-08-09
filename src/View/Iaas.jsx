@@ -125,7 +125,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
               fontWeight: 500
             }}
           >
-            Back to License Details
+            Back
           </Button>
         </div>
         
