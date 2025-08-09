@@ -771,9 +771,9 @@ const SquadronNodesTable = () => {
         <div>
           <b>1. Squadron </b>
           <ul style={{ marginBottom: 8 }}>
-            <li>{modalRecord?.credentialsUrl ? (
-              <a href={modalRecord.credentialsUrl} target="_blank" rel="noopener noreferrer">
-                {modalRecord.credentialsUrl}
+            <li>{modalRecord?.serverip ? (
+              <a href={`https://${modalRecord.serverip}`} target="_blank" rel="noopener noreferrer">
+                https://{modalRecord.serverip}
               </a>
             ) : <span>No URL</span>}</li>
           </ul>
