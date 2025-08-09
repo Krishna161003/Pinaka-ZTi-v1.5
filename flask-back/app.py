@@ -1409,7 +1409,7 @@ def server_control():
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         
         # Load the private key
-        key_path = 'ps_key.pem'
+        key_path = '/home/pinaka/Documents/GitHub/Pinaka-ZTi-v1.5/flask-back/ps_key.pem'
         if not os.path.exists(key_path):
             return jsonify({'error': f'Key file {key_path} not found'}), 500
             
