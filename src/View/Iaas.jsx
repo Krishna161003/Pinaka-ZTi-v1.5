@@ -135,7 +135,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
         
         <div style={{ 
           marginBottom: '24px',
-          marginTop: '-94px',
+          marginTop: '-54px',
           backgroundColor: '#fff',
           padding: '24px',
           borderRadius: '8px',
