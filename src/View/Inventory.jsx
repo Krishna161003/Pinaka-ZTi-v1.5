@@ -366,7 +366,7 @@ const Inventory = () => {
                                     okText="Yes"
                                     cancelText="No"
                                     disabled={!record.isOnline}
-                                    overlayStyle={{ maxWidth: '250px' }}
+                                    overlayStyle={{ maxWidth: '95px' }}
                                   >
                                     <Button 
                                       type="primary" 
