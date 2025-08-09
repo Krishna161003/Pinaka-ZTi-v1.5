@@ -415,7 +415,7 @@ const Inventory = () => {
                             { title: 'S.No', dataIndex: 'sno', key: 'sno', width: '5%' },
                             { title: 'Server ID', dataIndex: 'serverid', key: 'serverid', width: '15%' },
                             { title: 'Server IP', dataIndex: 'serverip', key: 'serverip', width: '15%' },
-                            { title: 'Host Server ID', dataIndex: 'host_serverid', key: 'host_serverid', width: '10%' },
+                            { title: 'Host Server ID', dataIndex: 'host_serverid', key: 'host_serverid', width: '15%' },
                             { 
                               title: 'Status', 
                               dataIndex: 'status', 
@@ -444,7 +444,7 @@ const Inventory = () => {
                                     <Button 
                                       type="primary" 
                                       danger 
-                                      style={{ marginRight: '8px' }}
+                                      style={{ marginRight: '8px', width: '75px' }}
                                       disabled={!record.isOnline}
                                     >
                                       Shutdown
@@ -460,6 +460,7 @@ const Inventory = () => {
                                     <Button 
                                       type="primary"
                                       disabled={!record.isOnline}
+                                      style={{ width: '75px' }}
                                     >
                                       Reboot
                                     </Button>
