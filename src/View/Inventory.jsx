@@ -447,8 +447,8 @@ const Inventory = () => {
                                     cancelText="No"
                                     disabled={!record.isOnline}
                                     overlayStyle={{ width: '180px' }}
-                                    okButtonProps={{ style: { marginRight: '8px', width: '50px' } }}
-                                    cancelButtonProps={{ style: { width: '50px' } }}
+                                    okButtonProps={{ style: { marginRight: '8px', width: '80px' } }}
+                                    cancelButtonProps={{ style: { width: '80px' } }}
                                   >
                                     <Button 
                                       type="primary" 
@@ -466,8 +466,8 @@ const Inventory = () => {
                                     cancelText="No"
                                     disabled={!record.isOnline}
                                     overlayStyle={{ width: '180px' }}
-                                    okButtonProps={{ style: { marginRight: '8px', width: '50px' } }}
-                                    cancelButtonProps={{ style: { width: '50px' } }}
+                                    okButtonProps={{ style: { marginRight: '8px', width: '80px' } }}
+                                    cancelButtonProps={{ style: { width: '80px' } }}
                                   >
                                     <Button 
                                       type="primary"
