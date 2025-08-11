@@ -88,12 +88,6 @@ const Deployment = ({ next }) => {
     fetchDisks();
   }, []);
 
-
-
-
-  const shouldDisableFields = (record) =>
-    configType === 'default' && record.type === 'secondary';
-
   const handleSubmit = async () => {
     setLoading(true); // Start loading spinner
     let validationFailed = false;
@@ -209,141 +203,142 @@ const Deployment = ({ next }) => {
       if (serverIp) {
         sessionStorage.setItem("server_ip", serverIp);
       }
-      // --- Store network role IPs (Management, External_Traffic, Storage, VXLAN) ---
-      const roleTypes = [
-        { key: 'Management', label: 'Management' },
-        { key: 'External_Traffic', label: 'External Traffic' },
-        { key: 'Storage', label: 'Storage' },
-        { key: 'VXLAN', label: 'VXLAN' },
-      ];
-      roleTypes.forEach(({ key, label }) => {
-        // For each row, if type matches (can be string or array), collect IP
-        let ips = tableData
-          .filter(row => {
-            if (Array.isArray(row.type)) {
-              return row.type.includes(label);
-            } else {
-              return row.type === label;
-            }
-          })
-          .map(row => row.ip)
-          .filter(ip => !!ip);
-        if (ips.length > 0) {
-          sessionStorage.setItem(key, ips.join(','));
-        } else {
-          sessionStorage.removeItem(key); // Clean up if not present
-        }
-      });
+    // --- Store network role IPs (Management, External_Traffic, Storage, VXLAN) ---
+    const roleTypes = [
+      { key: 'Management', label: 'Management' },
+      { key: 'External_Traffic', label: 'External Traffic' },
+      { key: 'Storage', label: 'Storage' },
+      { key: 'VXLAN', label: 'VXLAN' },
+    ];
+    roleTypes.forEach(({ key, label }) => {
+      // For each row, if type matches (can be string or array), collect IP
+      let ips = tableData
+        .filter(row => {
+          if (Array.isArray(row.type)) {
+            return row.type.includes(label);
+          } else {
+            return row.type === label;
+          }
+        })
+        .map(row => row.ip)
+        .filter(ip => !!ip);
+      if (ips.length > 0) {
+        sessionStorage.setItem(key, ips.join(','));
+      } else {
+        sessionStorage.removeItem(key); // Clean up if not present
+      }
+    });
 
-      // --- Now create deployment activity log after sessionStorage is fully updated ---
-      const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
-      const userData = loginDetails?.data;
-      const user_id = userData?.id;
-      const username = userData?.companyName;
-      const server_ip = sessionStorage.getItem('server_ip');
-      if (!user_id || !username || !cloudName || !server_ip) {
-        message.error('Missing required fields for deployment log');
-        setLoading(false);
-        validationFailed = true;
-        return;
-      }
-      let backendError = false;
-      try {
-        const res = await fetch(`https://${hostIP}:5000/api/deployment-activity-log`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id,
-            username,
-            cloudname: cloudName || sessionStorage.getItem('cloudName') || cloudName,
-            serverip: server_ip,
-            license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
-            license_type: JSON.parse(sessionStorage.getItem('licenseStatus'))?.type || null,
-            license_period: JSON.parse(sessionStorage.getItem('licenseStatus'))?.period || null,
-            vip: sessionStorage.getItem('vip') || null,
-            Management: sessionStorage.getItem('Management') || null,
-            External_Traffic: sessionStorage.getItem('External_Traffic') || null,
-            Storage: sessionStorage.getItem('Storage') || null,
-            VXLAN: sessionStorage.getItem('VXLAN') || null
-          })
-        });
-        const data = await res.json();
-        if (res.ok && data.serverid) {
-          sessionStorage.setItem('currentServerid', data.serverid);
-        } else {
-          message.error(data.message || 'Error logging deployment activity');
-          backendError = true;
-          validationFailed = true;
-          return;
-        }
-      } catch (e) {
-        message.error('Error logging deployment activity');
-        backendError = true;
-        validationFailed = true;
-        return;
-      } finally {
-        if (backendError) setLoading(false);
-      }
-    } catch (error) {
-      message.error('Please fix the errors in required fields.');
+    // --- Now create deployment activity log after sessionStorage is fully updated ---
+    const loginDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
+    const userData = loginDetails?.data;
+    const user_id = userData?.id;
+    const username = userData?.companyName;
+    const server_ip = sessionStorage.getItem('server_ip');
+    if (!user_id || !username || !cloudName || !server_ip) {
+      message.error('Missing required fields for deployment log');
       setLoading(false);
       validationFailed = true;
       return;
     }
-
-    // Only proceed to backend submission if NO validation failed
-    if (!validationFailed) {
-      try {
-        const vipValues = await vipform.validateFields();
-        const providerValues = Providerform.getFieldsValue();
-        const tenantValues = Tenantform.getFieldsValue();
-
-        // validation logic here (already written in your previous messages)
-        const rawData = {
-          tableData,
-          configType,
-          useBond,
-          vip: vipform.getFieldValue("vip"),
-          disk: vipform.getFieldValue("disk"),
-          // Always send defaultGateway and hostname, regardless of configType
-          defaultGateway: vipform.getFieldValue("defaultGateway") || "",
-          hostname: vipform.getFieldValue("hostname") || "pinakasv",
-          providerNetwork: providerValues,
-          tenantNetwork: tenantValues,
-          // License details
-          license_code: JSON.parse(sessionStorage.getItem('licenseStatus') || '{}')?.license_code || null,
-          license_type: JSON.parse(sessionStorage.getItem('licenseStatus') || '{}')?.type || null,
-          license_period: JSON.parse(sessionStorage.getItem('licenseStatus') || '{}')?.period || null,
-        };
-
-        await submitToBackend(rawData);
-      } catch (err) {
-        message.error("Validation or submission failed.");
-        setLoading(false);
-      }
-    } else {
-      setLoading(false);
+    let backendError = false;
+    // Normalize license details in sessionStorage
+    const licenseStatusRaw = sessionStorage.getItem('licenseStatus') || '{}';
+    const licenseStatus = JSON.parse(licenseStatusRaw);
+    const licenseTypeStr = String(licenseStatus?.type || '').toLowerCase();
+    const isPerpetual = licenseTypeStr === 'perpetual' || licenseTypeStr === 'perpectual';
+    // If already marked activated, ensure frontend stores start_date today and end_date null
+    if (String(licenseStatus?.status || '').toLowerCase() === 'activated') {
+      const today = new Date().toISOString().split('T')[0];
+      sessionStorage.setItem('licenseStatus', JSON.stringify({
+        ...licenseStatus,
+        period: isPerpetual ? null : (licenseStatus?.period ?? null),
+        start_date: today,
+        end_date: null,
+      }));
     }
-  };
+    try {
+      const res = await fetch(`https://${hostIP}:5000/api/deployment-activity-log`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id,
+          username,
+          cloudname: cloudName || sessionStorage.getItem('cloudName') || cloudName,
+          serverip: server_ip,
+          license_code: licenseStatus?.license_code || null,
+          license_type: licenseStatus?.type || null,
+          license_period: isPerpetual ? null : (licenseStatus?.period || null),
+          vip: sessionStorage.getItem('vip') || null,
+          Management: sessionStorage.getItem('Management') || null,
+          External_Traffic: sessionStorage.getItem('External_Traffic') || null,
+          Storage: sessionStorage.getItem('Storage') || null,
+          VXLAN: sessionStorage.getItem('VXLAN') || null
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.serverid) {
+        sessionStorage.setItem('currentServerid', data.serverid);
+      } else {
+        message.error(data.message || 'Error logging deployment activity');
+        backendError = true;
+        validationFailed = true;
+        return;
+      }
+    } catch (e) {
+      message.error('Error logging deployment activity');
+      backendError = true;
+      validationFailed = true;
+      return;
+    } finally {
+      if (backendError) setLoading(false);
+    }
+
+    // Build submission payload and send to backend
+    const ls = JSON.parse(sessionStorage.getItem('licenseStatus') || '{}');
+    const lsType = String(ls?.type || '').toLowerCase();
+    const lsPerpetual = lsType === 'perpetual' || lsType === 'perpectual';
+
+    const rawData = {
+      tableData,
+      configType,
+      useBond,
+      vip: vipform.getFieldValue('vip'),
+      disk: vipform.getFieldValue('disk'),
+      defaultGateway: vipform.getFieldValue('defaultGateway') || '',
+      hostname: vipform.getFieldValue('hostname') || 'pinakasv',
+      providerNetwork: providerValues,
+      tenantNetwork: tenantValues,
+      license_code: ls?.license_code || null,
+      license_type: ls?.type || null,
+      license_period: lsPerpetual ? null : (ls?.period || null),
+    };
+
+    await submitToBackend(rawData);
+  } catch (error) {
+    message.error('Please fix the errors in required fields.');
+    setLoading(false);
+    validationFailed = true;
+    return;
+  }
+
+  // End of handleSubmit
+};
 
   const submitToBackend = async (data) => {
     try {
       const response = await fetch(`https://${hostIP}:2020/submit-network-config`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-
       const result = await response.json();
-
       if (response.ok) {
-        message.success("Data submitted successfully!");
-        message.success("The Deployment will start in a moment");
+        message.success('Data submitted successfully!');
+        message.success('The Deployment will start in a moment');
         if (next) next();
       } else {
-        message.error(`Error: ${result.message || "Submission failed"}`);
+        message.error(`Error: ${result.message || 'Submission failed'}`);
         setLoading(false);
       }
     } catch (err) {
@@ -355,18 +350,18 @@ const Deployment = ({ next }) => {
   const formatSubmissionData = ({ tableData, configType, useBond, useVLAN, vipValues, providerValues, tenantValues, disk }) => {
     const payload = {
       using_interfaces: {},
-      provider_cidr: providerValues?.cidr || "N/A",
-      provider_gateway: providerValues?.gateway || "N/A",
-      provider_startingip: providerValues?.startingIp || "N/A",
-      provider_endingip: providerValues?.endingIp || "N/A",
-      tenant_cidr: tenantValues?.cidr || "10.0.0.0/24",
-      tenant_gateway: tenantValues?.gateway || "10.0.0.1",
-      tenant_nameserver: tenantValues?.nameserver || "8.8.8.8",
-      disk: vipValues?.disk || "",
-      vip: vipValues?.vip || ""
+      provider_cidr: providerValues?.cidr || 'N/A',
+      provider_gateway: providerValues?.gateway || 'N/A',
+      provider_startingip: providerValues?.startingIp || 'N/A',
+      provider_endingip: providerValues?.endingIp || 'N/A',
+      tenant_cidr: tenantValues?.cidr || '10.0.0.0/24',
+      tenant_gateway: tenantValues?.gateway || '10.0.0.1',
+      tenant_nameserver: tenantValues?.nameserver || '8.8.8.8',
+      disk: vipValues?.disk || '',
+      vip: vipValues?.vip || ''
     };
 
-    if (configType === "segregated" && vipValues?.defaultGateway) {
+    if (configType === 'segregated' && vipValues?.defaultGateway) {
       payload.default_gateway = vipValues.defaultGateway;
     }
 
@@ -375,17 +370,38 @@ const Deployment = ({ next }) => {
 
     for (const row of tableData) {
       const isBondRow = !!row.bondName;
-      const isSecondary = row?.type?.includes("Secondary") || row?.type?.includes("External_Traffic");
+      const isSecondary = row?.type?.includes('Secondary') || row?.type?.includes('External_Traffic');
 
       if (isBondRow) {
         const bondKey = `bond${bondIndex++}`;
         payload.using_interfaces[bondKey] = {
           interface_name: row.bondName,
           type: row.type,
-          vlan_id: useVLAN ? row.vlan_id : "NULL",
-          ...(isSecondary
-            ? {}
-            : {
+          vlan_id: useVLAN ? row.vlan_id : 'NULL',
+          ...(isSecondary ? {} : {
+            Properties: {
+              IP_ADDRESS: row.ip,
+              Netmask: row.subnet,
+              DNS: row.dns,
+              gateway: row.gateway,
+            },
+          }),
+        };
+      } else {
+        const ifaceKey = `interface_${ifaceIndex.toString().padStart(2, '0')}`;
+        ifaceIndex++;
+        payload.using_interfaces[ifaceKey] = {
+          interface_name: row.interface,
+          Bond_Slave: useBond ? 'YES' : 'NO',
+          ...(useBond && { Bond_Interface_Name: row.bondName || '' }),
+        };
+
+        if (!useBond) {
+          payload.using_interfaces[ifaceKey] = {
+            ...payload.using_interfaces[ifaceKey],
+            type: row.type,
+            vlan_id: useVLAN ? row.vlan_id : 'NULL',
+            ...(isSecondary ? {} : {
               Properties: {
                 IP_ADDRESS: row.ip,
                 Netmask: row.subnet,
@@ -393,33 +409,6 @@ const Deployment = ({ next }) => {
                 gateway: row.gateway,
               },
             }),
-        };
-      } else {
-        const ifaceKey = `interface_${ifaceIndex.toString().padStart(2, "0")}`;
-        ifaceIndex++;
-        payload.using_interfaces[ifaceKey] = {
-          interface_name: row.interface,
-          Bond_Slave: useBond ? "YES" : "NO",
-          ...(useBond && {
-            Bond_Interface_Name: row.bondName || "",
-          }),
-        };
-
-        if (!useBond) {
-          payload.using_interfaces[ifaceKey] = {
-            ...payload.using_interfaces[ifaceKey],
-            type: row.type,
-            vlan_id: useVLAN ? row.vlan_id : "NULL",
-            ...(isSecondary
-              ? {}
-              : {
-                Properties: {
-                  IP_ADDRESS: row.ip,
-                  Netmask: row.subnet,
-                  DNS: row.dns,
-                  gateway: row.gateway,
-                },
-              }),
           };
         }
       }
@@ -1153,5 +1142,6 @@ const Deployment = ({ next }) => {
     </div >
   );
 };
+
 
 export default Deployment;

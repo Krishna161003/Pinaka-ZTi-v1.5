@@ -713,12 +713,15 @@ app.put('/api/update-license/:serverid', (req, res) => {
   const isPerpetual = normalizedType === 'perpectual' || normalizedType === 'perpetual';
   const effectiveStatus = (status || 'activated').toLowerCase();
 
-  // Decide dates
+  // Decide dates per requirement:
+  // If status is activated:
+  //  - Always set start_date to today
+  //  - Set end_date to NULL for perpetual; otherwise compute from license_period
   let startDate = null;
   let endDate = null;
-  if (!isPerpetual && effectiveStatus === 'activated') {
+  if (effectiveStatus === 'activated') {
     startDate = new Date().toISOString().split('T')[0];
-    endDate = calculateEndDate(license_period);
+    endDate = isPerpetual ? null : calculateEndDate(license_period);
   }
 
   // If type is perpetual, force status activated and dates null as per requirement
@@ -796,8 +799,8 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
 
     const deployment = results[0];
 
-    // Fetch license_code for the serverid from License table
-    const licenseQuery = 'SELECT license_code FROM License WHERE server_id = ? LIMIT 1';
+    // Fetch the latest license_code for the serverid from License table
+    const licenseQuery = 'SELECT license_code FROM License WHERE server_id = ? ORDER BY id DESC LIMIT 1';
     db.query(licenseQuery, [deployment.serverid], (licErr, licResults) => {
       if (licErr) {
         console.error('Error fetching license_code:', licErr);
@@ -807,8 +810,8 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
 
       // Update license status to 'activated' and set start/end dates
       if (licenseCodeToUse) {
-        // First get the license period to calculate end date
-        const getLicenseSQL = `SELECT license_period FROM License WHERE license_code = ?`;
+        // Fetch license details to determine type and period
+        const getLicenseSQL = `SELECT license_period, license_type FROM License WHERE license_code = ?`;
         db.query(getLicenseSQL, [licenseCodeToUse], (getLicErr, licResults) => {
           if (getLicErr) {
             console.error('Error fetching license period:', getLicErr);
@@ -823,17 +826,32 @@ app.post('/api/finalize-deployment/:serverid', (req, res) => {
             });
           } else {
             const licensePeriod = licResults[0]?.license_period;
+            const licenseType = String(licResults[0]?.license_type || '').toLowerCase();
+            const isPerpetual = licenseType === 'perpetual' || licenseType === 'perpectual';
             const startDate = new Date().toISOString().split('T')[0]; // Today's date
-            const endDate = calculateEndDate(licensePeriod);
-            
-            const updateLicenseSQL = `UPDATE License SET license_status = 'activated', server_id = ?, start_date = ?, end_date = ? WHERE license_code = ?`;
-            db.query(updateLicenseSQL, [deployment.serverid, startDate, endDate, licenseCodeToUse], (licUpdateErr, result) => {
-              if (licUpdateErr) {
-                console.error('Error updating license status:', licUpdateErr);
-              } else {
-                console.log('License status updated with dates:', result);
-              }
-            });
+
+            if (isPerpetual) {
+              // Perpetual: set start_date, keep end_date NULL
+              const updateLicenseSQL = `UPDATE License SET license_status = 'activated', server_id = ?, start_date = ?, end_date = NULL WHERE license_code = ?`;
+              db.query(updateLicenseSQL, [deployment.serverid, startDate, licenseCodeToUse], (licUpdateErr, result) => {
+                if (licUpdateErr) {
+                  console.error('Error updating perpetual license status:', licUpdateErr);
+                } else {
+                  console.log('Perpetual license activated with start date and NULL end date:', result);
+                }
+              });
+            } else {
+              // Term licenses: compute end date from period
+              const endDate = calculateEndDate(licensePeriod);
+              const updateLicenseSQL = `UPDATE License SET license_status = 'activated', server_id = ?, start_date = ?, end_date = ? WHERE license_code = ?`;
+              db.query(updateLicenseSQL, [deployment.serverid, startDate, endDate, licenseCodeToUse], (licUpdateErr, result) => {
+                if (licUpdateErr) {
+                  console.error('Error updating term license status:', licUpdateErr);
+                } else {
+                  console.log('Term license activated with dates:', result);
+                }
+              });
+            }
           }
         });
       }
@@ -937,6 +955,8 @@ app.post('/api/child-deployment-activity-log', async (req, res) => {
 
     for (const node of nodes) {
       const { serverip, type, role, Management, Storage, External_Traffic, VXLAN } = node;
+      // Normalize role: allow array of roles to be stored as comma-separated string
+      const normalizedRole = Array.isArray(role) ? role.join(',') : role;
 
       // Validate node required fields
       if (!serverip || !type) {
@@ -957,7 +977,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       await new Promise((resolve, reject) => {
         db.query(sql, [
           serverid, user_id, host_serverid, username, serverip, 'progress', 'child',
-          role || null, Management || null, Storage || null, External_Traffic || null, VXLAN || null
+          normalizedRole || null, Management || null, Storage || null, External_Traffic || null, VXLAN || null
         ], (err, result) => {
           if (err) {
             reject(err);

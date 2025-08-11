@@ -72,9 +72,10 @@ const ActivateKey = ({ next, onValidationResult }) => {
       if (data.success) {
         setResult(data);
         // Store license_code, period, status, type in sessionStorage
+        const isPerpetual = String(data.key_type || '').toLowerCase() === 'perpetual' || String(data.key_type || '').toLowerCase() === 'perpectual';
         sessionStorage.setItem('licenseStatus', JSON.stringify({
           license_code: data.license_code || licenseCode,
-          period: data.license_period,
+          period: isPerpetual ? null : data.license_period,
           status: 'validated',
           type: data.key_type
         }));

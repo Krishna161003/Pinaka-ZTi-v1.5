@@ -57,12 +57,35 @@ const Report = ({ ibn, onDeploymentComplete }) => {
         // Determine server_type based on deployment type or user selection
         const server_type = 'host'; // Default to 'host', you can modify this logic
 
+        // Normalize license from sessionStorage
+        const lsRaw = sessionStorage.getItem('licenseStatus') || '{}';
+        const ls = JSON.parse(lsRaw);
+        const lsTypeStr = String(ls?.type || '').toLowerCase();
+        const lsPerpetual = lsTypeStr === 'perpetual' || lsTypeStr === 'perpectual';
+        // If license already activated, set start_date to today and end_date to null (frontend mirror of backend)
+        if (String(ls?.status || '').toLowerCase() === 'activated') {
+          const today = new Date().toISOString().split('T')[0];
+          const updated = {
+            ...ls,
+            period: lsPerpetual ? null : (ls?.period ?? null),
+            start_date: today,
+            end_date: null,
+          };
+          sessionStorage.setItem('licenseStatus', JSON.stringify(updated));
+        }
+        // Re-read after potential update to ensure we send normalized values
+        const lsNow = JSON.parse(sessionStorage.getItem('licenseStatus') || '{}');
+
         await fetch(`https://${hostIP}:5000/api/finalize-deployment/${currentServerid}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             server_type,
-            license_code: JSON.parse(sessionStorage.getItem('licenseStatus'))?.license_code || null,
+            license_code: lsNow?.license_code || null,
+            license_type: lsNow?.type || null,
+            license_period: (String(lsNow?.type || '').toLowerCase() === 'perpetual' || String(lsNow?.type || '').toLowerCase() === 'perpectual') ? null : (lsNow?.period || null),
+            license_start_date: lsNow?.start_date || null,
+            license_end_date: lsNow?.end_date ?? null,
             role: server_type === 'host' ? 'master' : 'worker',
             host_serverid: server_type === 'child' ? 'parent-host-id' : null, // Only needed for child nodes
             Management: sessionStorage.getItem('Management') || null,

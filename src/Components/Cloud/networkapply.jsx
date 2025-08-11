@@ -881,7 +881,8 @@ const NetworkApply = ({ onGoToReport } = {}) => {
     const nodes = Object.values(configs).map(form => ({
       serverip: form.ip,
       type: form.configType,
-      role: Array.isArray(form.selectedRoles) && form.selectedRoles.length > 0 ? form.selectedRoles[0] : 'child',
+      // Send all selected roles as a comma-separated string to store multiple roles in DB
+      role: Array.isArray(form.selectedRoles) && form.selectedRoles.length > 0 ? form.selectedRoles.join(',') : 'child',
       Management: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('Management') : row.type === 'Management')?.ip || '',
       Storage: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('Storage') : row.type === 'Storage')?.ip || '',
       External_Traffic: form.tableData?.find(row => Array.isArray(row.type) ? row.type.includes('External Traffic') : row.type === 'External Traffic')?.ip || '',
