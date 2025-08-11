@@ -3,3 +3,5 @@ flask-cors
 psutil 
 requests
 paramiko
+scapy
+netifaces

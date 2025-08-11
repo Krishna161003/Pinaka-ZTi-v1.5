@@ -86,8 +86,55 @@ app.use(
 
 
 
-// In server.js
-app.get("/api/check-password-status/:userId", (req, res) => {
+// Check if a license code already exists
+app.post('/api/check-license-exists', (req, res) => {
+  const { license_code } = req.body;
+  
+  if (!license_code) {
+    return res.status(400).json({ error: 'License code is required' });
+  }
+
+  const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: 3306,
+  });
+
+  db.connect((err) => {
+    if (err) {
+      console.error('Database connection error:', err);
+      return res.status(500).json({ error: 'Database connection error' });
+    }
+
+    const sql = 'SELECT * FROM License WHERE license_code = ?';
+    db.query(sql, [license_code], (err, results) => {
+      db.end(); // Close the connection
+      
+      if (err) {
+        console.error('Database query error:', err);
+        return res.status(500).json({ error: 'Error checking license' });
+      }
+      
+      if (results.length > 0) {
+        return res.status(200).json({ 
+          exists: true,
+          message: 'This license code is already in use',
+          license: results[0]
+        });
+      }
+      
+      return res.status(200).json({ 
+        exists: false,
+        message: 'License code is available'
+      });
+    });
+  });
+});
+
+// Get license details by server ID
+app.get('/api/license-details/:serverId', (req, res) => {
   const { userId } = req.params;
 
   const db = mysql.createConnection({
@@ -126,14 +173,17 @@ app.get("/api/check-password-status/:userId", (req, res) => {
 
 // /run-script API to update password and set user status
 app.post("/run-script", (req, res) => {
-  const { userUsername, userId, newPassword } = req.body;
+  const { userUsername, userId, newPassword, hostIP } = req.body;
 
   // Log received request data
   console.log("Received request body:", req.body);
 
   // Ensure all required fields are provided
-  if (!userUsername || !userId || !newPassword) {
-    return res.status(400).send({ message: "Missing required fields: userUsername, userId or newPassword" });
+  if (!userUsername || !userId || !newPassword || !hostIP) {
+    return res.status(400).send({
+      message:
+        "Missing required fields: userUsername, userId, newPassword, or hostIP",
+    });
   }
 
   // Create a MySQL connection inside the route
@@ -149,7 +199,9 @@ app.post("/run-script", (req, res) => {
   db.connect((err) => {
     if (err) {
       console.error("Error connecting to the database:", err);
-      return res.status(500).send({ message: "Error connecting to the database", error: err });
+      return res
+        .status(500)
+        .send({ message: "Error connecting to the database", error: err });
     }
     console.log("MySQL connected...");
 
@@ -160,7 +212,9 @@ app.post("/run-script", (req, res) => {
       (err, results) => {
         if (err) {
           console.error("Database query error:", err);
-          return res.status(500).send({ message: "Database query error", error: err });
+          return res
+            .status(500)
+            .send({ message: "Database query error", error: err });
         }
 
         if (results.length === 0) {
@@ -171,11 +225,13 @@ app.post("/run-script", (req, res) => {
 
         // If password already updated, don't allow another update
         if (updatePwdStatus) {
-          return res.status(400).send({ message: "Password already updated for this user" });
+          return res
+            .status(400)
+            .send({ message: "Password already updated for this user" });
         }
 
         // Command to execute the shell script with the arguments in the correct order
-        const command = `bash /usr/src/app/update-password.sh ${userUsername} ${userId} ${newPassword}`;
+        const command = `bash /usr/src/app/update-password.sh ${userUsername} ${userId} ${newPassword} ${hostIP}`;
 
         console.log(`Executing command: ${command}`);
 
@@ -183,7 +239,9 @@ app.post("/run-script", (req, res) => {
         exec(command, (error, stdout, stderr) => {
           if (error) {
             console.error(`exec error: ${error}`);
-            return res.status(500).send({ message: "Script execution failed", error: stderr });
+            return res
+              .status(500)
+              .send({ message: "Script execution failed", error: stderr });
           }
           console.log(`stdout: ${stdout}`);
 
@@ -191,15 +249,21 @@ app.post("/run-script", (req, res) => {
           db.query(
             "UPDATE users SET update_pwd_status = ? WHERE id = ?",
             [true, userId],
-            (err, results) => {
+            (err) => {
               if (err) {
                 console.error("Error updating password status:", err);
-                return res.status(500).send({ message: "Failed to update password status", error: err });
+                return res.status(500).send({
+                  message: "Failed to update password status",
+                  error: err,
+                });
               }
 
               console.log("Password status updated successfully");
 
-              return res.status(200).send({ message: "Password updated and status updated to true", result: stdout });
+              return res.status(200).send({
+                message: "Password updated and status updated to true",
+                result: stdout,
+              });
             }
           );
         });

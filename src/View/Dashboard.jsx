@@ -504,7 +504,7 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         // Check password status
-        const passwordResponse = await fetch(`https://${selectedHostIP}:5000/api/check-password-status/${userId}`);
+        const passwordResponse = await fetch(`https://${hostIP}:5000/api/check-password-status/${userId}`);
         const passwordData = await passwordResponse.json();
 
         if (passwordData.updatePwdStatus === 1) {

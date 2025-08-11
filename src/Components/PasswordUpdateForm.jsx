@@ -22,6 +22,7 @@ const PasswordUpdateForm = ({ isModalVisible, setIsModalVisible }) => {
           userUsername,
           userId,
           newPassword: String(newPassword),
+          hostIP,
         }),
       });
 

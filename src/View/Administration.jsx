@@ -29,7 +29,8 @@ const layout = {
   },
 };
 
-const hostIP = process.env.REACT_APP_HOST_IP || "localhost";
+// const hostIP = process.env.REACT_APP_HOST_IP || "localhost";
+const hostIP = window.location.hostname;
 
 const getAccessToken = async () => {
   try {

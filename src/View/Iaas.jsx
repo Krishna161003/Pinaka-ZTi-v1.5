@@ -5,7 +5,7 @@ import { theme, Layout, Tabs, Table, Button, Modal, Spin, Alert, Input, Badge } 
 import { SearchOutlined } from '@ant-design/icons';
 
 // LicenseDetailsModalContent: fetches and displays license details for a serverid
-function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
+function LicenseDetailsModalContent({ serverid, server_ip, onLicenseUpdate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [license, setLicense] = useState(null);
@@ -38,29 +38,54 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
     
     setCheckingLicense(true);
     try {
-      const response = await fetch(`https://${hostIP}:5000/api/check-license-exists`, {
+      // First check if license exists in the database
+      const checkResponse = await fetch(`https://${hostIP}:5000/api/check-license-exists`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ license_code: licenseCode })
       });
       
-      if (response.ok) {
-        const result = await response.json();
-        if (result.exists) {
-          // Fetch license details for the new code
-          const detailsResponse = await fetch(`https://${hostIP}:5000/api/license-details-by-code/${licenseCode}`);
-          if (detailsResponse.ok) {
-            const details = await detailsResponse.json();
-            setNewLicenseDetails(details);
-          } else {
-            setNewLicenseDetails(null);
-          }
-        } else {
+      if (checkResponse.ok) {
+        const checkResult = await checkResponse.json();
+        
+        if (checkResult.exists) {
+          // If license exists in DB, show error message
+          message.error('This license code is already in use');
           setNewLicenseDetails(null);
+          return;
         }
+        
+        // If license not found in DB, verify with Python backend using server_ip
+        const pythonBackendUrl = `https://${server_ip}:2020/decrypt-code`;
+          
+        const verifyResponse = await fetch(pythonBackendUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ encrypted_code: licenseCode })
+        });
+        
+        const verifyResult = await verifyResponse.json();
+        
+        if (!verifyResponse.ok || !verifyResult.success) {
+          throw new Error(verifyResult.message || 'Invalid license code');
+        }
+        
+        // If license is valid, set the license details from backend
+        setNewLicenseDetails({
+          license_code: licenseCode,
+          license_type: verifyResult.key_type || 'Standard',
+          license_period: verifyResult.license_period || '30',
+          license_status: 'valid',
+          mac_address: verifyResult.mac_address,
+          socket_count: verifyResult.socket_count,
+          license_verified: true  // Mark license as verified
+        });
+      } else {
+        throw new Error('Failed to check license status');
       }
     } catch (error) {
       console.error('Error checking license:', error);
+      message.error('An error occurred while checking the license');
       setNewLicenseDetails(null);
     } finally {
       setCheckingLicense(false);
@@ -273,7 +298,7 @@ function LicenseDetailsModalContent({ serverid, onLicenseUpdate }) {
               type="primary"
               onClick={handleUpdateLicense}
               loading={updateLoading}
-              disabled={!newLicenseCode.trim() || !newLicenseDetails}
+              disabled={!newLicenseCode.trim() || !newLicenseDetails || !newLicenseDetails.license_verified}
               style={{
                 height: '40px',
                 padding: '0 16px',
@@ -617,7 +642,8 @@ const FlightDeckHostsTable = () => {
         width={400}
       >
         <LicenseDetailsModalContent 
-          serverid={modalRecord?.serverid} 
+          serverid={modalRecord?.serverid}
+          server_ip={modalRecord?.serverip}
           onLicenseUpdate={() => {
             // Refresh the table data when license is updated
             window.location.reload();
@@ -842,7 +868,8 @@ const SquadronNodesTable = () => {
         width={400}
       >
         <LicenseDetailsModalContent 
-          serverid={modalRecord?.serverid} 
+          serverid={modalRecord?.serverid}
+          server_ip={modalRecord?.serverip}
           onLicenseUpdate={() => {
             // Refresh the table data when license is updated
             window.location.reload();
