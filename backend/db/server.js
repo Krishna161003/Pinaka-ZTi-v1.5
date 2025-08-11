@@ -686,7 +686,7 @@ app.get('/api/license-details/:serverid', (req, res) => {
   // First check and update any expired licenses
   checkAndUpdateExpiredLicenses();
   
-  const sql = 'SELECT license_code, license_type, license_period, license_status, start_date, end_date FROM License WHERE server_id = ? LIMIT 1';
+  const sql = 'SELECT license_code, license_type, license_period, license_status, start_date, end_date FROM License WHERE server_id = ? ORDER BY id DESC LIMIT 1';
   db.query(sql, [serverid], (err, results) => {
     if (err) {
       console.error('Error fetching license details:', err);
