@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout1 from '../Components/layout';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { theme, Layout, Tabs, Table, Button, Modal, Spin, Alert, Input, Badge } from 'antd';
+import { theme, Layout, Tabs, Table, Button, Modal, Spin, Alert, Input, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 
 // LicenseDetailsModalContent: fetches and displays license details for a serverid
