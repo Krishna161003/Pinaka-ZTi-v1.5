@@ -675,7 +675,7 @@ app.patch('/api/deployment-activity-log/:serverid', (req, res) => {
       console.error('Error updating deployment activity log:', err);
       return res.status(500).json({ error: 'Failed to update deployment activity log' });
     }
-    res.status(200).json({ message: `Deployment activity log updated to ${newStatus}` });
+    return res.status(200).json({ message: `Deployment activity log updated to ${newStatus}` });
   });
 });
 
@@ -699,10 +699,86 @@ app.get('/api/license-details/:serverid', (req, res) => {
   });
 });
 
+// Create or update license entry for a server
+// Expects body: { license_code, license_type, license_period, serverid, status }
+app.put('/api/update-license/:serverid', (req, res) => {
+  const { serverid } = req.params;
+  const { license_code, license_type, license_period, status } = req.body || {};
+
+  if (!license_code || !license_type || !serverid) {
+    return res.status(400).json({ message: 'license_code, license_type and serverid are required' });
+  }
+
+  const normalizedType = String(license_type).toLowerCase();
+  const isPerpetual = normalizedType === 'perpectual' || normalizedType === 'perpetual';
+  const effectiveStatus = (status || 'activated').toLowerCase();
+
+  // Decide dates
+  let startDate = null;
+  let endDate = null;
+  if (!isPerpetual && effectiveStatus === 'activated') {
+    startDate = new Date().toISOString().split('T')[0];
+    endDate = calculateEndDate(license_period);
+  }
+
+  // If type is perpetual, force status activated and dates null as per requirement
+  const finalStatus = isPerpetual ? 'activated' : effectiveStatus;
+
+  const insertSql = `
+    INSERT INTO License (license_code, license_type, license_period, license_status, server_id, start_date, end_date)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.query(
+    insertSql,
+    [license_code, license_type, license_period || null, finalStatus, serverid, startDate, endDate],
+    (err, result) => {
+      if (err) {
+        if (err.code === 'ER_DUP_ENTRY') {
+          return res.status(409).json({ message: 'License code already exists' });
+        }
+        console.error('Error inserting license:', err);
+        return res.status(500).json({ message: 'Failed to create license entry' });
+      }
+
+      // Also update Host and child_node tables to reflect the new license for this server
+      const updateHostSql = 'UPDATE Host SET license_code = ? WHERE server_id = ?';
+      db.query(updateHostSql, [license_code, serverid], (hostErr) => {
+        if (hostErr) {
+          console.error('Error updating Host with new license:', hostErr);
+          return res.status(500).json({ message: 'License created but failed to update Host table' });
+        }
+
+        const updateChildSql = 'UPDATE child_node SET license_code = ? WHERE server_id = ?';
+        db.query(updateChildSql, [license_code, serverid], (childErr) => {
+          if (childErr) {
+            console.error('Error updating child_node with new license:', childErr);
+            return res.status(500).json({ message: 'License created but failed to update child_node table' });
+          }
+
+          return res.status(200).json({
+            message: 'License updated successfully',
+            license: {
+              license_code,
+              license_type,
+              license_period: license_period || null,
+              license_status: finalStatus,
+              server_id: serverid,
+              start_date: startDate,
+              end_date: endDate
+            }
+          });
+        });
+      });
+    }
+  );
+});
+
 // API to transfer completed deployment to appropriate table
 
 app.post('/api/finalize-deployment/:serverid', (req, res) => {
   const { serverid } = req.params;
+  // ... (rest of the code remains the same)
   const { server_type, role, host_serverid } = req.body;
 
   // First get the deployment data

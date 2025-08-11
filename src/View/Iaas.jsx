@@ -129,9 +129,10 @@ function LicenseDetailsModalContent({ serverid, server_ip, onLicenseUpdate }) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          new_license_code: newLicenseCode,
+          license_code: newLicenseCode,
           license_type: newLicenseDetails.license_type,
-          license_period: newLicenseDetails.license_period
+          license_period: newLicenseDetails.license_period,
+          status: 'activated'
         })
       });
       
