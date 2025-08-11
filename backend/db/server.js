@@ -134,7 +134,7 @@ app.post('/api/check-license-exists', (req, res) => {
 });
 
 // Get license details by server ID
-app.get('/api/license-details/:serverId', (req, res) => {
+app.get("/api/check-password-status/:userId", (req, res) => {
   const { userId } = req.params;
 
   const db = mysql.createConnection({
@@ -170,6 +170,8 @@ app.get('/api/license-details/:serverId', (req, res) => {
     );
   });
 });
+
+
 
 // /run-script API to update password and set user status
 app.post("/run-script", (req, res) => {
