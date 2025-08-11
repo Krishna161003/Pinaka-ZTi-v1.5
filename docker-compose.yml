@@ -14,6 +14,7 @@ services:
       - REACT_APP_HOST_IP=${REACT_APP_HOST_IP} # Dynamically pass the HOST_IP
     volumes:
       - shared-data:/usr/share/nginx/html
+    restart: always
 
   node-backend:
     build:
@@ -37,6 +38,7 @@ services:
       - ./.env:/usr/src/app/.env
     networks:
       - pinakastra-cloud_my-network
+    restart: always
 
   mysql-db:
     image: mysql:8.0
@@ -54,6 +56,7 @@ services:
       retries: 5
     networks:
       - pinakastra-cloud_my-network
+    restart: always
 
 volumes:
   mysql-data:

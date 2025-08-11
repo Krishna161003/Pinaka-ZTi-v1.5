@@ -27,6 +27,7 @@ services:
       - keycloak-db
     networks:
       - pinakastra-cloud_my-network
+    restart: always
 
   keycloak-db:
     image: postgres:15
@@ -39,6 +40,7 @@ services:
       - 5432:5432
     networks:
       - pinakastra-cloud_my-network 
+    restart: always
 
 networks:
   pinakastra-cloud_my-network:
