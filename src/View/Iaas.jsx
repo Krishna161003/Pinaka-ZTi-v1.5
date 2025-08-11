@@ -37,56 +37,84 @@ function LicenseDetailsModalContent({ serverid, server_ip, onLicenseUpdate }) {
     }
     
     setCheckingLicense(true);
+    setNewLicenseDetails(null);
+    
     try {
       // First check if license exists in the database
-      const checkResponse = await fetch(`https://${hostIP}:5000/api/check-license-exists`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ license_code: licenseCode })
-      });
+      let checkResponse;
+      try {
+        checkResponse = await fetch(`https://${hostIP}:5000/api/check-license-exists`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ license_code: licenseCode })
+        });
+      } catch (networkError) {
+        console.error('Network error:', networkError);
+        message.error('Unable to connect to the license server. Please check your network connection.');
+        return;
+      }
       
-      if (checkResponse.ok) {
-        const checkResult = await checkResponse.json();
-        
-        if (checkResult.exists) {
-          // If license exists in DB, show error message
-          message.error('This license code is already in use');
-          setNewLicenseDetails(null);
-          return;
-        }
-        
-        // If license not found in DB, verify with Python backend using server_ip
-        const pythonBackendUrl = `https://${server_ip}:2020/decrypt-code`;
-          
-        const verifyResponse = await fetch(pythonBackendUrl, {
+      if (!checkResponse.ok) {
+        const errorData = await checkResponse.json().catch(() => ({}));
+        const errorMessage = errorData.message || 'Failed to verify license status';
+        message.error(`Error: ${errorMessage}`);
+        return;
+      }
+      
+      const checkResult = await checkResponse.json();
+      
+      if (checkResult.exists) {
+        message.error('This license code is already in use');
+        return;
+      }
+      
+      // If license not found in DB, verify with Python backend using server_ip
+      const pythonBackendUrl = `https://${server_ip}:2020/decrypt-code`;
+      
+      let verifyResponse;
+      try {
+        verifyResponse = await fetch(pythonBackendUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ encrypted_code: licenseCode })
         });
-        
-        const verifyResult = await verifyResponse.json();
-        
-        if (!verifyResponse.ok || !verifyResult.success) {
-          throw new Error(verifyResult.message || 'Invalid license code');
-        }
-        
-        // If license is valid, set the license details from backend
-        setNewLicenseDetails({
-          license_code: licenseCode,
-          license_type: verifyResult.key_type || 'Standard',
-          license_period: verifyResult.license_period || '30',
-          license_status: 'valid',
-          mac_address: verifyResult.mac_address,
-          socket_count: verifyResult.socket_count,
-          license_verified: true  // Mark license as verified
-        });
-      } else {
-        throw new Error('Failed to check license status');
+      } catch (networkError) {
+        console.error('Network error during verification:', networkError);
+        message.error('Unable to connect to the license verification service. Please try again later.');
+        return;
       }
+      
+      let verifyResult;
+      try {
+        verifyResult = await verifyResponse.json();
+      } catch (parseError) {
+        console.error('Error parsing verification response:', parseError);
+        message.error('Invalid response from license verification service');
+        return;
+      }
+      
+      if (!verifyResponse.ok || !verifyResult.success) {
+        const errorMsg = verifyResult.message || 'Invalid license code';
+        message.error(`Verification failed: ${errorMsg}`);
+        return;
+      }
+      
+      // If license is valid, set the license details from backend
+      setNewLicenseDetails({
+        license_code: licenseCode,
+        license_type: verifyResult.key_type || 'Standard',
+        license_period: verifyResult.license_period || '30',
+        license_status: 'valid',
+        mac_address: verifyResult.mac_address,
+        socket_count: verifyResult.socket_count,
+        license_verified: true
+      });
+      
+      message.success('License verified successfully');
+      
     } catch (error) {
-      console.error('Error checking license:', error);
-      message.error('An error occurred while checking the license');
-      setNewLicenseDetails(null);
+      console.error('Unexpected error during license verification:', error);
+      message.error('An unexpected error occurred. Please try again.');
     } finally {
       setCheckingLicense(false);
     }
